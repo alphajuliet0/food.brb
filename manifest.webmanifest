@@ -1,0 +1,13 @@
+{
+  "name": "food.brb",
+  "short_name": "food.brb",
+  "description": "Food, movement and awareness. Your data, on your device.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f7f7",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
