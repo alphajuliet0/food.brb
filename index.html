@@ -536,23 +536,13 @@ TAB_RENDER.food = function(){
       <div class="grid2"><div class="field"><label class="label">Fat (g, optional)</label><input class="input" inputmode="decimal" id="f-cf"></div><div class="field"><label class="label">Carbs (g, optional)</label><input class="input" inputmode="decimal" id="f-cc"></div></div>
       <div class="field"><label class="label">Fibre (g, optional)</label><input class="input" inputmode="decimal" id="f-cb"></div>
       <button class="btn primary" id="f-cadd">Add to selected date</button>`;
-    else body=`<div class="field"><label class="label">Dish name and portion</label><input class="input" id="f-an" value="${esc(dishName)}" placeholder="e.g. homemade chana masala, 1 medium bowl"></div>
-      <div class="field"><label class="label">What is in it? (optional but improves the estimate)</label><input class="input" id="f-ai" value="${esc(dishIng)}" placeholder="e.g. chickpeas, tomato, 1 tsp oil"></div>
-      <label class="btn filebtn">${dishPhotoFile?'Change photo':'Take or choose photo'}<input type="file" accept="image/*" id="f-photo"></label>
-      ${dishPhotoUrl?`<img class="dishpreview" src="${dishPhotoUrl}" alt="Dish photo ready to share">`:''}
-      <p class="note">Estimate works from the dish name and portion alone; a photo usually makes it better. Your photo stays on this phone unless you tap Estimate with Gemini or Share with AI. Any estimate is only a starting point: photos cannot reliably see portion weight, oil, ghee, sauces or hidden ingredients.</p>
-      ${state.profile.geminiKey?`<button class="btn primary" id="f-est">Estimate automatically with Gemini</button>`:`<p class="note">Want automatic estimates? Add your own free Gemini API key in the Data tab (AI dish estimates), then come back here.</p>`}
+    else body=`<div class="card" style="text-align:center"><strong>Photograph your meal</strong><p class="note">Choose a photo and Gemini will estimate it, then add it straight to ${slot}. Add details first only when they help - they are optional.</p>
+      <div class="field" style="text-align:left"><label class="label">Details (optional)</label><input class="input" id="f-ai" value="${esc(dishIng)}" placeholder="e.g. chickpeas, tomato, a little oil"></div>
+      <label class="btn primary filebtn">${dishPhotoFile?'Choose another photo':'Take or choose photo'}<input type="file" accept="image/*" id="f-photo"></label>
+      ${dishPhotoUrl?`<img class="dishpreview" src="${dishPhotoUrl}" alt="Meal photo ready to estimate">`:''}
       ${estMsg?`<p class="note">${esc(estMsg)}</p>`:''}
-      ${estReply?`<div class="card"><div class="dim" style="white-space:pre-wrap">${esc(estReply)}</div></div>`:''}
-      <button class="btn" id="f-share">Share with AI instead</button>
-      <p class="note">Check the estimate's assumptions, adjust the numbers if needed, then save.</p>
-      <div class="grid2"><div class="field"><label class="label">Estimated calories (kcal)</label><input class="input" inputmode="numeric" id="f-ak"></div><div class="field"><label class="label">Estimated protein (g)</label><input class="input" inputmode="decimal" id="f-ap"></div></div>
-      <div class="grid2"><div class="field"><label class="label">Estimated fat (g)</label><input class="input" inputmode="decimal" id="f-af"></div><div class="field"><label class="label">Estimated carbs (g)</label><input class="input" inputmode="decimal" id="f-ac"></div></div>
-      <div class="field"><label class="label">Estimated fibre (g)</label><input class="input" inputmode="decimal" id="f-ab"></div>
-      <div class="field"><label class="label">Servings (scales all the numbers)</label>
-      <div class="chips"><button class="chip" data-estportion="0.5">Half</button><button class="chip" data-estportion="1">Standard</button><button class="chip" data-estportion="1.5">Large</button><button class="chip" data-estportion="2">Double</button></div>
-      <div class="setrow"><button class="btn mini" id="f-sminus" aria-label="Less">-</button><input class="input mini" style="width:96px" inputmode="decimal" id="f-serv" value="${estServ}"><button class="btn mini" id="f-splus" aria-label="More">+</button></div></div>
-      <button class="btn primary" id="f-aadd">Add checked estimate to today</button>`;
+      ${state.profile.geminiKey?'':`<p class="note">Add your Gemini API key in Data & settings first.</p>`}
+      ${dishPhotoFile&&state.profile.geminiKey?`<button class="btn" id="f-est">Guess again</button>`:''}</div>`;
     const pickHtml = pick?`<div class="pickbox"><strong>${esc(pick.name)}</strong><span class="dim">${pick.kcal100} kcal, ${pick.prot100} g protein, ${pick.fat100!=null?pick.fat100:'?'} g fat, ${pick.carb100!=null?pick.carb100:'?'} g carbs per ${esc(pick.per)}</span>
       ${pick.serveGrams?`<div class="chips"><button class="chip${pick.mode!=='s'?' on':''}" data-pm="w">By weight (g/ml)</button><button class="chip${pick.mode==='s'?' on':''}" data-pm="s">By ${esc(pick.serveLabel||'serving')}</button></div>`:''}
       <div class="field"><label class="label">${pick.mode==='s'&&pick.serveGrams?('How many: '+esc(pick.serveLabel||'serving')):'Amount (grams or ml)'}</label>
@@ -570,7 +560,7 @@ TAB_RENDER.food = function(){
     </div>${body}${pickHtml}
     <div class="field"><span class="label">Which slot?</span><div class="chips">
       ${[['breakfast','Breakfast'],['lunch','Lunch'],['dinner','Dinner'],['snack','Snack']].map(sl=>`<button class="chip${slot===sl[0]?' on':''}" data-slot="${sl[0]}">${sl[1]}</button>`).join('')}</div></div>
-    ${slot==='snack'?`<div class="field"><span class="label">What triggered it? Noticing, not judging.</span><div class="chips">${TRIGGERS.map(tr=>`<button class="chip${trigger===tr?' on':''}" data-tr="${esc(tr)}">${esc(tr)}</button>`).join('')}</div></div>`:''}`;
+    `;
   }
   const goals=macroGoals(p), remaining={kcal:p.kcalTarget-t.kcal,protein:p.proteinTarget-t.protein,fat:goals.fatG-t.fat,carbs:goals.carbG-t.carbs,fibre:FIBRE_GOAL-t.fibre};
   function editPanel(f){ return editId===f.id?`<div class="pickbox"><strong>Edit: ${esc(f.name)}</strong>
@@ -633,17 +623,16 @@ TAB_RENDER.food = function(){
     if(!file.type.startsWith('image/')){ toast('Please choose a photo.'); return; }
     if(file.size>12*1024*1024){ toast('That photo is too large. Choose a smaller one.'); return; }
     if(dishPhotoUrl) URL.revokeObjectURL(dishPhotoUrl);
-    dishPhotoFile=file; dishPhotoUrl=URL.createObjectURL(file); TAB_RENDER.food();
+    dishPhotoFile=file; dishPhotoUrl=URL.createObjectURL(file); estMsg='Reading your meal…'; TAB_RENDER.food(); setTimeout(()=>document.getElementById('f-est')?.click(),0);
   };
-  if(q('#f-an')) q('#f-an').oninput=e=>{ dishName=e.target.value; };
   if(q('#f-ai')) q('#f-ai').oninput=e=>{ dishIng=e.target.value; };
   if(q('#f-est')) q('#f-est').onclick=async()=>{
-    const n=dishName.trim(), ingredients=dishIng.trim();
-    if(!n){ toast('Add the dish name and portion first.'); return; }
+    const n=dishName.trim()||'the photographed meal', ingredients=dishIng.trim();
+    if(!dishPhotoFile){ toast('Choose a meal photo first.'); return; }
     if(!state.profile.geminiKey){ toast('Add your Gemini API key in the Data tab first.'); return; }
     estMsg='Estimating with Gemini...'; estReply=''; TAB_RENDER.food();
     try{
-      const prompt='Dietary profile: vegetarian; '+(state.profile.eggs!==false?'eggs are allowed':'no eggs')+'. Use this context when interpreting ambiguous ingredients.\nEstimate the calories, protein, fat, carbohydrates and fibre for this dish: '+n+(ingredients?'\nIngredients/details: '+ingredients:'')+(dishPhotoFile?'':'\nNo photo is attached, so base the estimate on the dish name, portion and details alone.')+'\nGive a sensible range and a single best estimate. State assumptions about portion size, oil, ghee, sauces and hidden ingredients. Do not treat the photo alone as exact. End with a final line in exactly this format: BEST: calories=<number>, protein=<number>, fat=<number>, carbs=<number>, fibre=<number>';
+      const prompt='Dietary profile: vegetarian; '+(state.profile.eggs!==false?'eggs are allowed':'no eggs')+'. Use this context when interpreting ambiguous ingredients.\nEstimate the calories, protein, fat, carbohydrates and fibre for this dish: '+n+(ingredients?'\nIngredients/details: '+ingredients:'')+(dishPhotoFile?'':'\nNo photo is attached, so base the estimate on the dish name, portion and details alone.')+'\nGive a sensible range and a single best estimate. State assumptions about portion size, oil, ghee, sauces and hidden ingredients. Do not treat the photo alone as exact. End with a final line in exactly this format: BEST: name=<short dish name>, calories=<number>, protein=<number>, fat=<number>, carbs=<number>, fibre=<number>';
       const reqParts=[{text:prompt}];
       if(dishPhotoFile){
         try{
@@ -671,12 +660,6 @@ TAB_RENDER.food = function(){
       if(mb&&q('#f-ab')) q('#f-ab').value=mb[1];
     }catch(e){ estMsg='The estimate needs an internet connection. Try again when online, or use Share with AI.'; TAB_RENDER.food(); }
   };
-  function scaleEst(ns){ ns=Math.min(20,Math.max(0.5,Math.round(ns*2)/2)); if(!isFinite(ns)||ns<=0) return; const old=estServ>0?estServ:1; const f=ns/old; estServ=ns;
-    const sv=q('#f-serv'); if(sv) sv.value=String(estServ);
-    [['#f-ak',0],['#f-ap',1],['#f-af',1],['#f-ac',1],['#f-ab',1]].forEach(pair=>{ const el=q(pair[0]); if(!el) return; const v=parseFloat(el.value); if(isFinite(v)&&v>0) el.value=String(pair[1]===0?Math.round(v*f):Math.round(v*f*10)/10); }); }
-  if(q('#f-sminus')) q('#f-sminus').onclick=()=>scaleEst(estServ-0.5);
-  if(q('#f-splus')) q('#f-splus').onclick=()=>scaleEst(estServ+0.5);
-  if(q('#f-serv')) q('#f-serv').onchange=e=>{ const v=parseFloat(e.target.value); if(isFinite(v)&&v>0) scaleEst(v); else e.target.value=String(estServ); };
   if(q('#f-share')) q('#f-share').onclick=async()=>{
     const n=q('#f-an').value.trim(), ingredients=q('#f-ai').value.trim();
     if(!n){ toast('Add the dish name and portion first.'); return; }
@@ -688,7 +671,6 @@ TAB_RENDER.food = function(){
       await navigator.share(data);
     }catch(err){ if(err&&err.name!=='AbortError') toast('Could not open sharing. Try again or enter the estimate manually.'); }
   };
-  if(q('#f-aadd')) q('#f-aadd').onclick=()=>{ const n=q('#f-an').value.trim(), ck=parseFloat(q('#f-ak').value)||0, cp=parseFloat(q('#f-ap').value)||0, cf=parseFloat(q('#f-af').value), cc=parseFloat(q('#f-ac').value), cb=parseFloat(q('#f-ab').value); if(n&&ck>0){ addEntry(n+(estServ!==1?' ('+estServ+' servings)':'')+' (AI estimate checked)',ck,cp,cf,cc,0,cb); if(dishPhotoUrl) URL.revokeObjectURL(dishPhotoUrl); dishPhotoFile=null; dishPhotoUrl=''; dishName=''; dishIng=''; estMsg=''; estReply=''; estServ=1; } else toast('Add the dish name and estimated calories.'); };
   if(q('#f-go')) q('#f-go').onclick=async ()=>{
     const query=q('#f-q').value.trim(); if(!query) return;
     searchQuery=query;
