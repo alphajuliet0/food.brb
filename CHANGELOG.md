@@ -2,6 +2,7 @@
 
 ## 2026-09-22
 
+- Neatened the dashboard: boxed Steps summary without a duplicate steps ring, a separate Health card for HRV/RHR/weight, and explicit Ultrahuman source labels on recovery data.
 - Split the dashboard into clearly labelled Food, Recovery and Steps sections, put units on every total, and replaced the misleading zero-macro ring with an honest empty state.
 - Added a layered BRB daily-progress ring led by calories with protein, fibre and steps, plus desktop hover details across rings, charts and diary rows.
 - Added private cross-device sync through Cloudflare with a one-time email-code device connection, automatic open/change sync, conflict retry/merge, and explicit device-only progress-photo handling.
