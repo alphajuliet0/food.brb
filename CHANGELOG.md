@@ -2,6 +2,7 @@
 
 ## 2026-09-22
 
+- Added weekday/date and week navigation, weekly calorie-bank reporting, daily step rows, weekly/monthly averages, a PT-style monthly archive, an explicit vegetarian-with-eggs profile, transparent target maths, and on-device progress-photo poses with optional Gemini side-by-side comparison. Waist is no longer part of setup or the primary progress view.
 - Reworked Log food into a MyFitnessPal-style diary: meal-first sections, per-meal Add Food actions and subtotals, plus daily total, goal and remaining macros. Food pickers now stay hidden until requested.
 - Rebuilt the product around Ajay’s brief: dashboard-first home, simple date-aware food logging for past/present/future days, clear meal slots, and move-entry controls. Removed mindfulness, training and body tabs from the main experience.
 - Connected the private Ultrahuman Ring sync: Access-gated popup, exact-origin postMessage handoff, 7-day on-device import, and honest dashboard cards for sleep, recovery, HRV, resting heart rate and steps.

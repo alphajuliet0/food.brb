@@ -191,23 +191,28 @@ const STAPLES = [
 const PROTEIN_GUIDE = [['Soya chunks, 50 g dry','about 26 g protein'],['Whey scoop, 30 g','about 24 g protein'],['Paneer, 150 g','about 27 g protein'],['Greek yogurt, 300 g','about 30 g protein'],['Tofu, 200 g','about 30 g protein'],['Lentils, 250 g cooked','about 22 g protein']];
 const SAFETY = ['Breathe out on the effort. Never hold your breath through a rep.','Work at RPE 7 to 8: always 2 or 3 good reps left. No max lifts, no grinders.','Rest 90 to 120 seconds between hard sets. Let your heart rate settle.','Stop if you feel dizzy, tight in the chest, or unusual shortness of breath.','Keep conditioning steady, not frantic. Your blood pressure comes first.'];
 /* ---------- state ---------- */
-function seed(){ return { v:1, profile:{setupDone:false,bpSafe:false,age:null,heightCm:null,kcalTarget:1400,proteinTarget:120,waterTarget:8,stepsTarget:8000,goalWeight:null,startWeight:null,startWaist:null,startDate:null}, days:{}, weights:[], waists:[], photos:[], workouts:[], meditations:[], yogaDone:{} }; }
-function load(){ try{ const raw=localStorage.getItem(KEY); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.profile){ if(s.profile.setupDone===undefined) s.profile.setupDone=true; if(s.profile.kcalTarget===1950){ s.profile.kcalTarget=1700; s.profile.mig171=true; try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} } else if(s.profile.kcalTarget===1400 && s.profile.proteinTarget===130 && !s.profile.mig171){ s.profile.kcalTarget=1700; s.profile.mig171=true; try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} } if(s.profile.goalWeight===67){ s.profile.goalWeight=64; try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} } return s; } } }catch(e){} return seed(); }
+function seed(){ return { v:1, profile:{setupDone:false,bpSafe:false,age:null,heightCm:null,kcalTarget:1400,proteinTarget:120,waterTarget:8,stepsTarget:8000,goalWeight:null,startWeight:null,startWaist:null,startDate:null,diet:'vegetarian',eggs:true}, days:{}, weights:[], waists:[], photos:[], workouts:[], meditations:[], yogaDone:{} }; }
+function load(){ try{ const raw=localStorage.getItem(KEY); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.profile){ if(s.profile.setupDone===undefined) s.profile.setupDone=true; if(!s.profile.diet)s.profile.diet='vegetarian'; if(s.profile.eggs===undefined)s.profile.eggs=true; if(s.profile.kcalTarget===1950){ s.profile.kcalTarget=1700; s.profile.mig171=true; try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} } else if(s.profile.kcalTarget===1400 && s.profile.proteinTarget===130 && !s.profile.mig171){ s.profile.kcalTarget=1700; s.profile.mig171=true; try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} } if(s.profile.goalWeight===67){ s.profile.goalWeight=64; try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} } return s; } } }catch(e){} return seed(); }
 let state = load();
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ toast('Storage is full. Export a backup and delete old photos.'); } }
 function todayKey(d){ d=d||new Date(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return d.getFullYear()+'-'+m+'-'+day; }
-function fmtDate(key){ const p=key.split('-'); const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return parseInt(p[2],10)+' '+(M[parseInt(p[1],10)-1]||''); }
+function fmtDate(key,weekday){ const p=key.split('-'),d=new Date(key+'T12:00:00'); const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return (weekday?['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]+' ':'')+parseInt(p[2],10)+' '+(M[parseInt(p[1],10)-1]||''); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function emptyDay(){ return { water:0, steps:0, walkMin:0, foods:[], pauses:0, sleep:null, bedTime:'', wokeTime:'', mood:'', intention:'', gratitude:['','',''], wentWell:'', noticed:'' }; }
 function dayOf(k){ if(!state.days[k]) state.days[k]=emptyDay(); return state.days[k]; }
 let selectedFoodDate=todayKey();
 function shiftDate(k,n){ const d=new Date(k+'T12:00:00'); d.setDate(d.getDate()+n); return todayKey(d); }
-function dateNav(){ return `<div class="card"><div class="setrow"><button class="btn mini" id="date-prev" aria-label="Previous day">‹</button><input class="input" style="max-width:180px" type="date" id="food-date" value="${selectedFoodDate}"><button class="btn mini" id="date-next" aria-label="Next day">›</button></div><p class="note" style="margin-bottom:0">${selectedFoodDate===todayKey()?'Today':fmtDate(selectedFoodDate)} · past and future planning are both supported</p></div>`; }
+function dateNav(){ return `<div class="card"><div class="setrow"><button class="btn mini" id="date-prev" aria-label="Previous day">‹</button><input class="input" style="max-width:180px" type="date" id="food-date" value="${selectedFoodDate}"><button class="btn mini" id="date-next" aria-label="Next day">›</button></div><p class="note" style="margin-bottom:0">${fmtDate(selectedFoodDate,true)}${selectedFoodDate===todayKey()?' · Today':''} · past and future planning are both supported</p></div>`; }
 function lastDays(n){ const out=[]; const now=new Date(); for(let i=n-1;i>=0;i--){ out.push(todayKey(new Date(now.getFullYear(),now.getMonth(),now.getDate()-i))); } return out; }
 const FIBRE_GOAL=30;
 const ULTRAHUMAN_SYNC_ORIGIN='https://food-brb-ultrahuman.ajay-7a2.workers.dev';
 let ringSyncWindow=null;
 function metricText(v,suffix){ return v==null||v===''?'—':String(Math.round(Number(v)*10)/10)+(suffix||''); }
+let dashboardWeekOffset=0,photoCompareResult='';
+function weekKeys(offset){ const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7)+(offset||0)*7);const a=[];for(let i=0;i<7;i++){const x=new Date(d);x.setDate(d.getDate()+i);a.push(todayKey(x));}return a;}
+function reportRows(keys){return keys.map(k=>{const d=state.days[k],t=d?totals(d):{kcal:0,protein:0,fibre:0};const steps=d?((d.ring&&d.ring.steps!=null)?+d.ring.steps:+d.steps||0):0;return {k,d,t,steps,logged:!!(d&&d.foods&&d.foods.length),stepLogged:!!(d&&(d.steps||(d.ring&&d.ring.steps!=null)))};});}
+function weekSummary(){const keys=weekKeys(dashboardWeekOffset),rs=reportRows(keys),food=rs.filter(x=>x.logged),steps=rs.filter(x=>x.stepLogged),used=food.reduce((a,x)=>a+x.t.kcal,0),budget=state.profile.kcalTarget*7;return `<div class="card"><div class="setrow"><button class="btn mini" id="week-prev">‹ Week</button><strong>${fmtDate(keys[0],true)} - ${fmtDate(keys[6],true)}</strong><button class="btn mini" id="week-next">Week ›</button></div><div class="facts"><div class="fact"><span>Weekly budget</span><strong>${budget.toLocaleString()} kcal</strong></div><div class="fact"><span>Used</span><strong>${used.toLocaleString()} kcal</strong></div><div class="fact"><span>Calories in bank</span><strong>${(budget-used).toLocaleString()} kcal</strong></div><div class="fact"><span>Avg steps</span><strong>${steps.length?Math.round(steps.reduce((a,x)=>a+x.steps,0)/steps.length).toLocaleString():'—'}</strong></div></div><div class="list">${rs.map(x=>`<div class="row"><span><strong>${fmtDate(x.k,true)}</strong></span><span class="dim">${x.logged?x.t.kcal+' kcal · P '+x.t.protein+' g · fibre '+x.t.fibre+' g':'no food'} · ${x.stepLogged?Math.round(x.steps).toLocaleString()+' steps':'steps —'}</span></div>`).join('')}</div><p class="note">Averages only use days with data. Bank = weekly target minus logged calories; future days remain available.</p></div>`;}
+function monthlyArchive(){const groups={};Object.keys(state.days).sort().forEach(k=>{const m=k.slice(0,7);(groups[m]||(groups[m]=[])).push(k);});const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return Object.keys(groups).sort().reverse().map(m=>{const rs=reportRows(groups[m]),f=rs.filter(x=>x.logged),st=rs.filter(x=>x.stepLogged),avg=(arr,fn)=>arr.length?Math.round(arr.reduce((a,x)=>a+fn(x),0)/arr.length*10)/10:null;return `<div class="card"><strong>${names[+m.slice(5)-1]} ${m.slice(0,4)}</strong><div class="facts"><div class="fact"><span>Avg steps</span><strong>${st.length?Math.round(avg(st,x=>x.steps)).toLocaleString():'—'}</strong></div><div class="fact"><span>Avg calories</span><strong>${f.length?Math.round(avg(f,x=>x.t.kcal))+' kcal':'—'}</strong></div><div class="fact"><span>Avg protein</span><strong>${f.length?avg(f,x=>x.t.protein)+' g':'—'}</strong></div><div class="fact"><span>Avg fibre</span><strong>${f.length?avg(f,x=>x.t.fibre||0)+' g':'—'}</strong></div></div><p class="tiny">Coverage: ${f.length} food day${f.length===1?'':'s'}; ${st.length} step day${st.length===1?'':'s'}. Missing days are excluded, not counted as zero.</p></div>`;}).join('')||'<p class="note">Monthly averages appear as data builds.</p>';}
 function ringDashboard(){
   const rows=lastDays(90).slice().reverse().map(k=>({k,d:state.days[k]})).filter(x=>x.d&&x.d.ring);
   if(!rows.length) return `<div class="card"><strong>Ultrahuman Ring</strong><p class="note">No ring data synced yet. Use Sync ring in the Data tab. Missing values stay blank.</p></div>`;
@@ -385,12 +390,11 @@ TAB_RENDER.today = function(){
   <p class="note"><strong>Data quality:</strong> blanks mean no upstream value was supplied. food.brb never invents health data.</p>
   <h2>Today</h2><div class="grid2">${stat('Calories',t.kcal+' / '+p.kcalTarget+' kcal')}${stat('Protein',t.protein+' / '+p.proteinTarget+' g')}${stat('Fibre',t.fibre+' / '+FIBRE_GOAL+' g')}${stat('Meals logged',d.foods.length,'across breakfast, lunch, dinner and snacks')}</div>
   <div class="qr"><button class="btn primary" id="dash-log">Log food today</button><button class="btn" id="dash-plan">Choose another date</button></div>
-  <h2>How the week looks</h2>
-  <div class="facts"><div class="fact"><span>Days logged</span><strong>${logged.length} / 7</strong></div><div class="fact"><span>Average calories</span><strong>${logged.length?Math.round(sums.k/logged.length)+' kcal':'—'}</strong></div><div class="fact"><span>Average protein</span><strong>${logged.length?Math.round(sums.p/logged.length)+' g':'—'}</strong></div><div class="fact"><span>Protein target days</span><strong>${logged.filter(x=>totals(state.days[x]).protein>=p.proteinTarget*.9).length}</strong></div></div>
-  ${weekCharts(p)}
+  <h2>Week summary</h2>${weekSummary()}
+  <h2>Monthly archive</h2>${monthlyArchive()}
   <h2>Progress and patterns</h2>${healthDashboard(p)}
   <p class="note">Coverage and paired-day counts are shown so weak data never looks conclusive.</p>`;
-  const q=x=>document.querySelector(x); q('#dash-sync').onclick=startRingSync; q('#dash-log').onclick=()=>openFood(todayKey()); q('#dash-plan').onclick=()=>openFood(selectedFoodDate);
+  const q=x=>document.querySelector(x); q('#dash-sync').onclick=startRingSync; q('#dash-log').onclick=()=>openFood(todayKey()); q('#dash-plan').onclick=()=>openFood(selectedFoodDate); q('#week-prev').onclick=()=>{dashboardWeekOffset--;TAB_RENDER.today();};q('#week-next').onclick=()=>{dashboardWeekOffset++;TAB_RENDER.today();};
 };
 function openFood(k){ selectedFoodDate=k||todayKey(); foodStage='log'; document.querySelector('[data-tab="food"]').click(); }
 /* ---------- Food ---------- */
@@ -580,7 +584,7 @@ TAB_RENDER.food = function(){
     if(!state.profile.geminiKey){ toast('Add your Gemini API key in the Data tab first.'); return; }
     estMsg='Estimating with Gemini...'; estReply=''; TAB_RENDER.food();
     try{
-      const prompt='Estimate the calories, protein, fat, carbohydrates and fibre for this dish: '+n+(ingredients?'\nIngredients/details: '+ingredients:'')+(dishPhotoFile?'':'\nNo photo is attached, so base the estimate on the dish name, portion and details alone.')+'\nGive a sensible range and a single best estimate. State assumptions about portion size, oil, ghee, sauces and hidden ingredients. Do not treat the photo alone as exact. End with a final line in exactly this format: BEST: calories=<number>, protein=<number>, fat=<number>, carbs=<number>, fibre=<number>';
+      const prompt='Dietary profile: vegetarian; '+(state.profile.eggs!==false?'eggs are allowed':'no eggs')+'. Use this context when interpreting ambiguous ingredients.\nEstimate the calories, protein, fat, carbohydrates and fibre for this dish: '+n+(ingredients?'\nIngredients/details: '+ingredients:'')+(dishPhotoFile?'':'\nNo photo is attached, so base the estimate on the dish name, portion and details alone.')+'\nGive a sensible range and a single best estimate. State assumptions about portion size, oil, ghee, sauces and hidden ingredients. Do not treat the photo alone as exact. End with a final line in exactly this format: BEST: calories=<number>, protein=<number>, fat=<number>, carbs=<number>, fibre=<number>';
       const reqParts=[{text:prompt}];
       if(dishPhotoFile){
         try{
@@ -915,7 +919,7 @@ TAB_RENDER.data = function(){
   const p=state.profile;
   document.getElementById('tab-data').innerHTML=`
   <h2>Daily targets</h2>
-  <p class="note">Set for a gentle deficit with high protein: about 0.4 to 0.5 kg loss a week while muscle is preserved. Adjust only after two still weeks.</p>
+  <p class="note">Targets are manual unless you tap Suggest in setup. Suggest uses the Mifflin-St Jeor male BMR formula: 10 × kg + 6.25 × cm - 5 × age + 5, assumes moderate activity (×1.5), then subtracts 400 kcal and rounds to 50. Protein is 1.8 g/kg. These are planning estimates, not training rules or a generated workout programme.</p>
   <div class="grid2">
     <div class="field"><label class="label">Calories (kcal)</label><input class="input" inputmode="numeric" id="d-kcal" value="${p.kcalTarget}"></div>
     <div class="field"><label class="label">Protein (g)</label><input class="input" inputmode="numeric" id="d-prot" value="${p.proteinTarget}"></div>
@@ -925,17 +929,25 @@ TAB_RENDER.data = function(){
   <button class="btn primary" id="d-save">Save targets</button>
   <h2>Your baseline</h2>
   <div class="facts">
-    <div class="fact"><span>Start${p.startDate?', '+fmtDate(p.startDate):''}</span><strong>${p.startWeight==null?'not set':p.startWeight+' kg'+(p.startWaist==null?'':', '+p.startWaist+' in waist')}</strong></div>
+    <div class="fact"><span>Start${p.startDate?', '+fmtDate(p.startDate):''}</span><strong>${p.startWeight==null?'not set':p.startWeight+' kg'}</strong></div>
     <div class="fact"><span>Goal</span><strong>${p.goalWeight==null?'not set':p.goalWeight+' kg'}</strong></div>
     <div class="fact"><span>Frame</span><strong>${p.age==null?'not set':p.age+(p.heightCm==null?'':', '+p.heightCm+' cm')}</strong></div>
-    <div class="fact"><span>Programme</span><strong>Vegetarian, egg-free</strong></div>
-    <div class="fact"><span>Training rules</span><strong>${p.bpSafe?'BP-safe rules shown':'Standard'}</strong></div>
+    <div class="fact"><span>Diet</span><strong>Vegetarian, eggs allowed</strong></div>
   </div>
   <div class="qr"><button class="btn" id="d-setup">Edit setup</button></div>
+  <h2>Dietary profile</h2><p class="note">Used as context for Gemini dish estimates.</p><label class="check"><input type="checkbox" id="d-eggs"${p.eggs!==false?' checked':''}><span>Vegetarian, eggs allowed</span></label>
   <h2>Ultrahuman Ring</h2>
   <p class="note">Sync the last 7 days through your private Cloudflare email-code gate. Only the daily fields shown in the dashboard are saved on this device. Missing fields remain blank.</p>
   <div class="qr"><button class="btn primary" id="d-ring-sync">Sync ring</button></div>
   ${ringDashboard()}
+  <h2>Weekly and monthly averages</h2>${weekSummary()}${monthlyArchive()}
+  <h2>Progress photos</h2>
+  <p class="note">Use front, side, back or mirror selfie. Photos stay on this device. Select two saved photos for an AI side-by-side comparison; only those two are sent directly to Gemini when you tap Compare.</p>
+  <div class="grid2"><div class="field"><label class="label">Pose</label><select class="input" id="d-photo-pose"><option>front</option><option>side</option><option>back</option><option>mirror selfie</option></select></div><div class="field"><label class="label">Date</label><input class="input" type="date" id="d-photo-date" value="${todayKey()}"></div></div>
+  <label class="btn filebtn">Add progress photo<input type="file" accept="image/*" id="d-progress-photo"></label>
+  <div class="photogrid">${state.photos.map(ph=>`<div class="photo"><img src="${ph.dataUrl}" alt="${esc(ph.pose||'progress')} photo"><div class="photofoot"><span class="dim">${fmtDate(ph.date,true)} · ${esc(ph.pose||'photo')}</span><button class="del" data-pdel="${ph.id}">Delete</button></div></div>`).join('')}</div>
+  ${state.photos.length>=2?`<div class="grid2"><select class="input" id="d-photo-a">${state.photos.map(ph=>`<option value="${ph.id}">${fmtDate(ph.date,true)} · ${esc(ph.pose||'photo')}</option>`).join('')}</select><select class="input" id="d-photo-b">${state.photos.slice().reverse().map(ph=>`<option value="${ph.id}">${fmtDate(ph.date,true)} · ${esc(ph.pose||'photo')}</option>`).join('')}</select></div><button class="btn primary" id="d-photo-compare">Compare two photos with Gemini</button>`:''}
+  ${photoCompareResult?`<div class="card"><strong>AI comparison</strong><p class="note" style="white-space:pre-wrap">${esc(photoCompareResult)}</p></div>`:''}
   <h2>AI dish estimates</h2>
   <p class="note">Optional, and free. Paste your own Google AI Studio (Gemini) API key and the Dish photo tab can estimate calories and protein automatically. Create a key at <a href="https://aistudio.google.com" target="_blank" rel="noopener">aistudio.google.com</a> (Get API key). The key is stored only on this phone and is sent nowhere except directly to Google when you tap Estimate. On Google's free tier, what you send may be used to improve its products - dish photos only go when you tap Estimate.</p>
   <div class="field"><label class="label">Gemini API key</label><input class="input" id="d-gemini" type="password" autocomplete="off" value="${esc(p.geminiKey||'')}" placeholder="AIza..."></div>
@@ -968,7 +980,11 @@ TAB_RENDER.data = function(){
   </ul>`;
   const sec=document.getElementById('tab-data');
   const q=s=>sec.querySelector(s);
-  q('#d-ring-sync').onclick=startRingSync;
+  q('#d-ring-sync').onclick=startRingSync; q('#week-prev').onclick=()=>{dashboardWeekOffset--;TAB_RENDER.data();};q('#week-next').onclick=()=>{dashboardWeekOffset++;TAB_RENDER.data();};
+  q('#d-eggs').onchange=e=>{p.eggs=e.target.checked;save();toast('Dietary profile saved.');};
+  q('#d-progress-photo').onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;try{const dataUrl=await downscaleImage(f,1000,0.76);state.photos.push({id:uid(),date:q('#d-photo-date').value||todayKey(),pose:q('#d-photo-pose').value,dataUrl});save();TAB_RENDER.data();toast('Progress photo saved on this device.');}catch(x){toast('Could not read that photo.');}};
+  sec.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>{state.photos=state.photos.filter(x=>x.id!==b.dataset.pdel);save();TAB_RENDER.data();});
+  if(q('#d-photo-compare'))q('#d-photo-compare').onclick=async()=>{if(!p.geminiKey){toast('Add your Gemini key first.');return;}const a=state.photos.find(x=>x.id===q('#d-photo-a').value),b=state.photos.find(x=>x.id===q('#d-photo-b').value);if(!a||!b||a.id===b.id){toast('Choose two different photos.');return;}photoCompareResult='Comparing...';TAB_RENDER.data();try{const parts=[{text:'Compare these two body-progress photos side by side. Be neutral and specific about visible posture, shape and composition changes only. Do not identify the person, estimate exact body fat, diagnose health, or infer anything not visually supported. Account for pose, lighting, camera angle and clothing. First photo: '+a.date+' '+(a.pose||'photo')+'. Second: '+b.date+' '+(b.pose||'photo')+'.'}, {inline_data:{mime_type:'image/jpeg',data:a.dataUrl.split(',')[1]}},{inline_data:{mime_type:'image/jpeg',data:b.dataUrl.split(',')[1]}}];const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+GEMINI_MODEL+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':p.geminiKey},body:JSON.stringify({contents:[{parts}]})});const j=await r.json();if(!r.ok)throw new Error(j&&j.error&&j.error.message||'Comparison failed');photoCompareResult=(j.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim()||'No readable comparison returned.';}catch(x){photoCompareResult='Comparison failed: '+x.message;}TAB_RENDER.data();};
   q('#d-save').onclick=()=>{
     const k=parseInt(q('#d-kcal').value,10), pr=parseInt(q('#d-prot').value,10), w=parseInt(q('#d-water').value,10), st=parseInt(q('#d-steps').value,10);
     if(!isNaN(k)&&k>0)p.kcalTarget=k; if(!isNaN(pr)&&pr>0)p.proteinTarget=pr; if(!isNaN(w)&&w>0)p.waterTarget=w; if(!isNaN(st)&&st>0)p.stepsTarget=st;
@@ -1081,7 +1097,7 @@ function showSetup(){
   </div>
   <div class="grid2">
     <div class="field"><label class="label">Current weight (kg)</label><input class="input" inputmode="decimal" id="s-wt" value="${p.startWeight==null?'':p.startWeight}"></div>
-    <div class="field"><label class="label">Current waist (inches)</label><input class="input" inputmode="decimal" id="s-waist" value="${p.startWaist==null?'':p.startWaist}"></div>
+
   </div>
   <div class="field"><label class="label">Goal weight (kg)</label><input class="input" inputmode="decimal" id="s-goal" value="${p.goalWeight==null?'':p.goalWeight}"></div>
   <div class="qr"><button class="btn" id="s-suggest">Suggest my daily targets</button></div>
@@ -1091,6 +1107,7 @@ function showSetup(){
     <div class="field"><label class="label">Water (glasses)</label><input class="input" inputmode="numeric" id="s-water" value="${p.waterTarget}"></div>
     <div class="field"><label class="label">Steps</label><input class="input" inputmode="numeric" id="s-steps" value="${p.stepsTarget}"></div>
   </div>
+  <label class="check"><input type="checkbox" id="s-eggs"${p.eggs!==false?' checked':''}><span>Vegetarian, eggs allowed</span></label>
   <label class="check"><input type="checkbox" id="s-bp"${p.bpSafe?' checked':''}><span>I lift with controlled blood pressure. Show the BP-safe lifting and breathwork rules.</span></label>
   <div class="qr" style="margin-top:16px"><button class="btn primary" id="s-save">Begin</button><button class="btn" id="s-skip">Set up later</button></div>`;
   el.classList.add('open');
@@ -1105,17 +1122,16 @@ function showSetup(){
   };
   q('#s-save').onclick=()=>{
     const dob=q('#s-dob').value, age=calcAge(dob), cm=parseHeight(q('#s-height').value);
-    const wt=parseFloat(q('#s-wt').value), waist=parseFloat(q('#s-waist').value), goal=parseFloat(q('#s-goal').value);
+    const wt=parseFloat(q('#s-wt').value), goal=parseFloat(q('#s-goal').value);
     if(age==null){ toast('Add a valid date of birth.'); return; }
     if(cm==null){ toast('Add height as centimetres or feet and inches, for example 178cm or 5\'10".'); return; }
     if(isNaN(wt)||isNaN(goal)){ toast('Add your current and goal weight to begin.'); return; }
     p.dob=dob; p.age=age; p.heightCm=cm;
-    p.startWeight=wt; p.startWaist=isNaN(waist)?null:waist; p.goalWeight=goal;
-    p.startDate=todayKey(); p.bpSafe=q('#s-bp').checked;
+    p.startWeight=wt; p.goalWeight=goal;
+    p.startDate=todayKey(); p.bpSafe=q('#s-bp').checked; p.diet='vegetarian'; p.eggs=q('#s-eggs').checked;
     const k=parseInt(q('#s-kcal').value,10), pr=parseInt(q('#s-prot').value,10), w=parseInt(q('#s-water').value,10), st=parseInt(q('#s-steps').value,10);
     if(!isNaN(k)&&k>0)p.kcalTarget=k; if(!isNaN(pr)&&pr>0)p.proteinTarget=pr; if(!isNaN(w)&&w>0)p.waterTarget=w; if(!isNaN(st)&&st>0)p.stepsTarget=st;
     if(!state.weights.length) state.weights=[{date:p.startDate,kg:wt}];
-    if(p.startWaist!=null&&!state.waists.length) state.waists=[{date:p.startDate,inches:p.startWaist}];
     p.setupDone=true; save(); el.classList.remove('open'); TAB_RENDER.today(); window.scrollTo(0,0);
   };
   q('#s-skip').onclick=()=>{ el.classList.remove('open'); };
