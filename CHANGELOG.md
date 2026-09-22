@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-22
+
+- Aligned food.brb to the official Big Red Box Brand Identity Guide v1.3 supplied by Ajay.
+- Added the official embedded Nasalization logo font and Inter web font as local app assets.
+- Reworked the food.brb wordmark so the lowercase brb mark uses Nasalization, keeps the r red and has protected clear space inside a restrained lockup.
+- Standardised the web palette and UI typography to the official tokens: web red `#E5321B`, ink `#0A0A0A`, off white `#F7F7F7`, white, greys and square controls.
+- Added the official light-background brb SVG artwork as a local brand-reference asset. No assets are hotlinked.
+- Bumped the PWA cache so installed copies receive the branding update.
+
 ## 2026-09-21
 
 - Copied the Sadhana app into Ajay's separate `alphajuliet0/food.brb` repository. Sandeep gave written permission to copy, host and modify it; his source repository records this in `LICENSE`.
