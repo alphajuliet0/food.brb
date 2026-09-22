@@ -3,10 +3,10 @@
 ## 2026-09-22
 
 - Aligned food.brb to the official Big Red Box Brand Identity Guide v1.3 supplied by Ajay.
-- Added the official embedded Nasalization logo font and Inter web font as local app assets.
+- Embedded the official Nasalization logo font and Inter web font directly in the app so the brand typography works offline.
 - Reworked the food.brb wordmark so the lowercase brb mark uses Nasalization, keeps the r red and has protected clear space inside a restrained lockup.
 - Standardised the web palette and UI typography to the official tokens: web red `#E5321B`, ink `#0A0A0A`, off white `#F7F7F7`, white, greys and square controls.
-- Added the official light-background brb SVG artwork as a local brand-reference asset. No assets are hotlinked.
+- Recreated the food.brb lockup from the official font and colour rules without hotlinking any assets.
 - Bumped the PWA cache so installed copies receive the branding update.
 
 ## 2026-09-21
