@@ -2,6 +2,7 @@
 
 ## 2026-09-22
 
+- Tightened dashboard stats: removed repeated step units where the card label already provides context, and reduced the size/weight of large numbers for a calmer mobile layout.
 - Added user-toggleable dark and light modes with a premium BRB visual system: glowing gradient arcs, animated fills, elevated surfaces, translucent navigation and motion-aware micro-interactions.
 - Fixed Ultrahuman sleep parsing for the partner API nested schema: sleep score, total sleep, time in bed and efficiency now sync and appear in Recovery.
 - Neatened the dashboard: boxed Steps summary without a duplicate steps ring, a separate Health card for HRV/RHR/weight, and explicit Ultrahuman source labels on recovery data.
