@@ -789,7 +789,6 @@ TAB_RENDER.train = function(){
   }
   document.getElementById('tab-train').innerHTML=`
   <h2>Before you lift</h2>
-  ${state.profile.bpSafe?`<div class="callout"><strong>Blood pressure rules</strong><ul class="plain">${SAFETY.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`:''}
   <p class="note">Three slow breaths before the first set. Leave the ego at the door: RPE 7 to 8 is the work, and the stomach shrinks from the kitchen and the walking, not from grinding reps.</p>
   <h2>The programme</h2>
   <p class="note">Three strength days a week: A, B, C in order, with a recovery day between hard sessions when possible. Day 4 is optional and should feel easier, not like another test.</p>
@@ -953,7 +952,7 @@ TAB_RENDER.mind = function(){
   ${[0,1,2].map(i=>`<div class="field"><input class="input" data-grat="${i}" value="${esc(d.gratitude[i]||'')}" placeholder="${i+1}."></div>`).join('')}
   <h2>Words to sit with</h2>
   ${QUOTES.map(qt=>`<div class="card"><div class="quote" style="border:none;padding:0;margin:0"><div class="t">"${esc(qt.t)}"</div><div class="b">${esc(qt.b)}</div></div></div>`).join('')}
-  ${state.profile.bpSafe?`<h2>Breathwork note</h2><p class="note">With blood pressure, keep breathwork gentle: slow nasal breathing, easy counts, no long retentions and no forceful techniques. Stillness, not strain.</p>`:''}`;
+  `;
   const sec=document.getElementById('tab-mind');
   const q=s=>sec.querySelector(s); const qa=s=>sec.querySelectorAll(s);
   qa('[data-min]').forEach(b=>b.onclick=()=>{ medMin=parseInt(b.dataset.min,10); medLeft=medMin*60; clearInterval(medTimer); medTimer=null; TAB_RENDER.mind(); });
@@ -1149,8 +1148,6 @@ function showSetup(){
     <div class="field"><label class="label">Water (glasses)</label><input class="input" inputmode="numeric" id="s-water" value="${p.waterTarget}"></div>
     <div class="field"><label class="label">Steps</label><input class="input" inputmode="numeric" id="s-steps" value="${p.stepsTarget}"></div>
   </div>
-  <label class="check"><input type="checkbox" id="s-eggs"${p.eggs!==false?' checked':''}><span>Vegetarian, eggs allowed</span></label>
-  <label class="check"><input type="checkbox" id="s-bp"${p.bpSafe?' checked':''}><span>I lift with controlled blood pressure. Show the BP-safe lifting and breathwork rules.</span></label>
   <div class="qr" style="margin-top:16px"><button class="btn primary" id="s-save">Save and continue</button><button class="btn" id="s-skip">Use defaults</button></div>`;
   el.classList.add('open');
   const q=s=>box.querySelector(s);
@@ -1170,7 +1167,7 @@ function showSetup(){
     if(isNaN(wt)||isNaN(goal)){ toast('Add your current and goal weight to begin.'); return; }
     p.dob=dob; p.age=age; p.heightCm=cm;
     p.startWeight=wt; p.goalWeight=goal;
-    p.startDate=todayKey(); p.bpSafe=q('#s-bp').checked; p.diet='vegetarian'; p.eggs=q('#s-eggs').checked;
+    p.startDate=todayKey();
     const k=parseInt(q('#s-kcal').value,10), pr=parseInt(q('#s-prot').value,10), w=parseInt(q('#s-water').value,10), st=parseInt(q('#s-steps').value,10);
     if(!isNaN(k)&&k>0)p.kcalTarget=k; if(!isNaN(pr)&&pr>0)p.proteinTarget=pr; if(!isNaN(w)&&w>0)p.waterTarget=w; if(!isNaN(st)&&st>0)p.stepsTarget=st;
     if(!state.weights.length) state.weights=[{date:p.startDate,kg:wt}];
