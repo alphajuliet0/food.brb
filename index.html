@@ -130,7 +130,7 @@ section.tab.on{animation:fadeup .35s ease}.card,.metric{animation:fadeup .45s bo
 .shelltoggle{position:fixed;left:16px;top:16px;z-index:32;width:42px;height:42px;border:1px solid var(--hair);border-radius:50%;background:var(--surface);color:var(--ink);font-size:20px;box-shadow:var(--shadow);cursor:pointer}.appshade{display:none;position:fixed;inset:0;background:#0008;z-index:29}.appside{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);z-index:30;background:var(--surface);border-right:1px solid var(--hair);padding:76px 18px 24px;transform:translateX(-103%);transition:transform .25s ease;box-shadow:20px 0 60px #0003}.appside.open{transform:none}.appshade.open{display:block}.appavatar{width:52px;height:52px;border-radius:16px;background:linear-gradient(145deg,#E5321B,#961d10);color:white;display:grid;place-items:center;font-size:20px;font-weight:750;box-shadow:0 10px 28px var(--glow)}.appidentity{display:flex;align-items:center;gap:12px;margin-bottom:24px}.appidentity strong,.appidentity span{display:block}.appidentity span{font-size:12px;color:var(--ink2);margin-top:3px}.sidenav{display:grid;gap:6px}.sidenav button{border:0;background:transparent;color:var(--ink);text-align:left;padding:13px 12px;border-radius:12px;font:inherit;cursor:pointer}.sidenav button:hover,.sidenav button.on{background:var(--surface2)}.sideprivacy{position:absolute;left:18px;right:18px;bottom:20px;color:var(--ink2);font-size:11px;line-height:1.45}.hoverdetail{position:absolute;left:50%;bottom:calc(100% + 9px);transform:translateX(-50%) translateY(4px);opacity:0;pointer-events:none;white-space:nowrap;background:var(--ink);color:var(--page);font-size:11px;font-weight:550;padding:7px 9px;border-radius:9px;box-shadow:var(--shadow);transition:.15s;z-index:10}.ringviz:hover .hoverdetail,.spark i:hover .hoverdetail,.activitystack:hover .hoverdetail{opacity:1;transform:translateX(-50%) translateY(0)}@media(min-width:1050px){body.sidepinned .wrap{margin-left:320px}.appside{transform:none}.appshade,.shelltoggle{display:none!important}}@media(max-width:700px){.shelltoggle{top:12px;left:12px}.topline{padding-left:48px}}
 </style>
 </head>
-<body class="sidepinned"><button class="shelltoggle" id="shell-toggle" aria-label="Open profile and settings">☰</button><div class="appshade" id="app-shade"></div><aside class="appside" id="app-side" aria-label="Profile and app navigation"><div class="appidentity"><div class="appavatar">AP</div><div><strong>Ajay</strong><span>Private food.brb profile</span></div></div><nav class="sidenav"><button data-go="today" class="on">Dashboard</button><button data-go="food">Log food</button><button data-go="data">Profile & settings</button></nav><p class="sideprivacy">Food data syncs privately. Progress photos and your Gemini key stay on this device.</p></aside>
+<body class="sidepinned"><button class="shelltoggle" id="shell-toggle" aria-label="Open profile and settings">☰</button><div class="appshade" id="app-shade"></div><aside class="appside" id="app-side" aria-label="Profile and app navigation"><div class="appidentity"><div class="appavatar">AP</div><div><strong>Ajay</strong><span>Private food.brb profile</span></div></div><nav class="sidenav"><button data-go="today" class="on">Dashboard</button><button data-go="food">Log food</button><button data-go="data">Data</button><button data-go="settings">Settings</button></nav><p class="sideprivacy">Food data syncs privately. Progress photos and your Gemini key stay on this device.</p></aside>
 <div id="setup"><div class="inner"></div></div>
 <div class="wrap">
 <div class="topline"><h1 class="brand" aria-label="food.brb"><span class="food-name"><span class="food-prefix">food.</span><span class="food-brb"><span>b</span><span class="red">r</span><span>b</span></span></span></h1><button class="themebtn" id="theme-toggle" aria-label="Switch colour theme">◐</button></div>
@@ -139,14 +139,14 @@ section.tab.on{animation:fadeup .35s ease}.card,.metric{animation:fadeup .45s bo
 <nav class="tabs" id="tabs">
 <button data-tab="today" class="on">Dashboard</button>
 <button data-tab="food">Log food</button>
-<button data-tab="data">Data & settings</button>
+<button data-tab="data">Data</button><button data-tab="settings">Settings</button>
 </nav>
 <section class="tab on" id="tab-today"></section>
 <section class="tab" id="tab-food"></section>
 <section class="tab" id="tab-train"></section>
 <section class="tab" id="tab-body"></section>
 <section class="tab" id="tab-mind"></section>
-<section class="tab" id="tab-data"></section>
+<section class="tab" id="tab-data"></section><section class="tab" id="tab-settings"></section>
 <p class="closing">Your food log syncs through your private Cloudflare storage when connected. Progress photos and your Gemini key stay on this device.</p>
 </div>
 <script src="xlsx.mini.min.js"></script>
@@ -232,10 +232,11 @@ const SAFETY = ['Breathe out on the effort. Never hold your breath through a rep
 function seed(){ return { v:1, profile:{setupDone:false,bpSafe:false,age:null,heightCm:null,kcalTarget:1400,proteinTarget:120,waterTarget:8,stepsTarget:8000,goalWeight:null,startWeight:null,startWaist:null,startDate:null,diet:'vegetarian',eggs:true}, days:{}, weights:[], waists:[], photos:[], workouts:[], meditations:[], yogaDone:{} }; }
 function load(){ try{ const raw=localStorage.getItem(KEY); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.profile){ if(s.profile.setupDone===undefined) s.profile.setupDone=true; if(!s.profile.diet)s.profile.diet='vegetarian'; if(s.profile.eggs===undefined)s.profile.eggs=true; if(s.profile.kcalTarget===1950){ s.profile.kcalTarget=1700; s.profile.mig171=true; try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} } else if(s.profile.kcalTarget===1400 && s.profile.proteinTarget===130 && !s.profile.mig171){ s.profile.kcalTarget=1700; s.profile.mig171=true; try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} } if(s.profile.goalWeight===67){ s.profile.goalWeight=64; try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} } return s; } } }catch(e){} return seed(); }
 let state = load();
-const GEMINI_KEY_STORE='foodBrbGeminiKey';
+const GEMINI_KEY_STORE='foodBrbGeminiKey',SETUP_DONE_STORE='foodBrbSetupDone';
 function getGeminiKey(){return (localStorage.getItem(GEMINI_KEY_STORE)||state.profile.geminiKey||'').trim();}
 function setGeminiKey(v){v=(v||'').trim();if(v)localStorage.setItem(GEMINI_KEY_STORE,v);else localStorage.removeItem(GEMINI_KEY_STORE);if(state.profile)delete state.profile.geminiKey;return v;}
 if(state.profile.geminiKey){setGeminiKey(state.profile.geminiKey);try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+if(state.profile.setupDone)localStorage.setItem(SETUP_DONE_STORE,'1');
 function save(){ try{localStorage.setItem(KEY,JSON.stringify(state));scheduleCloudSync();}catch(e){toast('Storage is full. Export a backup and delete old photos.');} }
 function todayKey(d){ d=d||new Date(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return d.getFullYear()+'-'+m+'-'+day; }
 function fmtDate(key,weekday){ const p=key.split('-'),d=new Date(key+'T12:00:00'); const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return (weekday?['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]+' ':'')+parseInt(p[2],10)+' '+(M[parseInt(p[1],10)-1]||''); }
@@ -964,22 +965,6 @@ TAB_RENDER.mind = function(){
 TAB_RENDER.data = function(){
   const p=state.profile;
   document.getElementById('tab-data').innerHTML=`
-  <h2>Daily targets</h2>
-  <p class="note">Targets are manual unless you tap Suggest in setup. Suggest uses the Mifflin-St Jeor male BMR formula: 10 × kg + 6.25 × cm - 5 × age + 5, assumes moderate activity (×1.5), then subtracts 400 kcal and rounds to 50. Protein is 1.8 g/kg. These are planning estimates, not training rules or a generated workout programme.</p>
-  <div class="grid2">
-    <div class="field"><label class="label">Calories (kcal)</label><input class="input" inputmode="numeric" id="d-kcal" value="${p.kcalTarget}"></div>
-    <div class="field"><label class="label">Protein (g)</label><input class="input" inputmode="numeric" id="d-prot" value="${p.proteinTarget}"></div>
-    <div class="field"><label class="label">Water (glasses)</label><input class="input" inputmode="numeric" id="d-water" value="${p.waterTarget}"></div>
-    <div class="field"><label class="label">Steps</label><input class="input" inputmode="numeric" id="d-steps" value="${p.stepsTarget}"></div>
-  </div>
-  <button class="btn primary" id="d-save">Save targets</button>
-  <h2>Your baseline</h2>
-  <div class="facts">
-    <div class="fact"><span>Start${p.startDate?', '+fmtDate(p.startDate):''}</span><strong>${p.startWeight==null?'not set':p.startWeight+' kg'}</strong></div>
-    <div class="fact"><span>Goal</span><strong>${p.goalWeight==null?'not set':p.goalWeight+' kg'}</strong></div>
-    <div class="fact"><span>Frame</span><strong>${p.age==null?'not set':p.age+(p.heightCm==null?'':', '+p.heightCm+' cm')}</strong></div>
-  </div>
-  <div class="qr"><button class="btn" id="d-setup">Edit setup</button></div>
   <h2>Ultrahuman Ring</h2>
   <p class="note">Sync the last 7 days through your private Cloudflare email-code gate. Only the daily fields shown in the dashboard are saved on this device. Missing fields remain blank.</p>
   <div class="qr"><button class="btn primary" id="d-ring-sync">Sync ring</button></div>
@@ -992,10 +977,6 @@ TAB_RENDER.data = function(){
   <div class="photogrid">${state.photos.map(ph=>`<div class="photo"><img src="${ph.dataUrl}" alt="${esc(ph.pose||'progress')} photo"><div class="photofoot"><span class="dim">${fmtDate(ph.date,true)} · ${esc(ph.pose||'photo')}</span><button class="del" data-pdel="${ph.id}">Delete</button></div></div>`).join('')}</div>
   ${state.photos.length>=2?`<div class="grid2"><select class="input" id="d-photo-a">${state.photos.map(ph=>`<option value="${ph.id}">${fmtDate(ph.date,true)} · ${esc(ph.pose||'photo')}</option>`).join('')}</select><select class="input" id="d-photo-b">${state.photos.slice().reverse().map(ph=>`<option value="${ph.id}">${fmtDate(ph.date,true)} · ${esc(ph.pose||'photo')}</option>`).join('')}</select></div><button class="btn primary" id="d-photo-compare">Compare two photos with Gemini</button>`:''}
   ${photoCompareResult?`<div class="card"><strong>AI comparison</strong><p class="note" style="white-space:pre-wrap">${esc(photoCompareResult)}</p></div>`:''}
-  <h2>AI dish estimates</h2>
-  <p class="note">Optional, and free. Paste your own Google AI Studio (Gemini) API key and the Dish photo tab can estimate calories and protein automatically. Create a key at <a href="https://aistudio.google.com" target="_blank" rel="noopener">aistudio.google.com</a> (Get API key). The key is stored only on this phone and is sent nowhere except directly to Google when you tap Estimate. On Google's free tier, what you send may be used to improve its products - dish photos only go when you tap Estimate.</p>
-  <div class="field"><label class="label">Gemini API key</label><input class="input" id="d-gemini" type="password" autocomplete="off" value="${esc(getGeminiKey())}" placeholder="AIza..."></div>
-  <div class="qr"><button class="btn primary" id="d-gemini-save">Save key on this phone</button>${getGeminiKey()?'<button class="btn danger" id="d-gemini-clear">Remove key</button>':''}</div>
   <h2>Fill in missing fat and carbs</h2>
   <p class="note">Entries saved before fat and carbs were tracked have no values, so old days look empty in the charts. This estimates the missing numbers on this phone${p.geminiKey?', using your Gemini key for dishes it does not recognise':''}, shows you every change first, and only writes after you confirm. Existing values are never changed.</p>
   ${backfillList===null?'<button class="btn primary" id="d-backfill">Review what is missing</button>':backfillList.length===0?'<p class="note">Nothing to fill - every saved entry already has fat and carbs.</p><button class="btn" id="d-bf-cancel">Close</button>':`<div class="list">${backfillList.map(it=>`<div class="row"><span><strong>${esc(it.name)}</strong><br><span class="dim">${it.dayKey}: ${[it.needFat?'+ '+it.fat+' g fat':'', it.needCarbs?'+ '+it.carbs+' g carbs':''].filter(Boolean).join(', ')} <span class="tiny">(${it.src})</span></span></span></div>`).join('')}</div>
@@ -1032,12 +1013,12 @@ TAB_RENDER.data = function(){
   q('#d-progress-photo').onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;try{const dataUrl=await downscaleImage(f,1000,0.76);state.photos.push({id:uid(),date:q('#d-photo-date').value||todayKey(),pose:q('#d-photo-pose').value,dataUrl});save();TAB_RENDER.data();toast('Progress photo saved on this device.');}catch(x){toast('Could not read that photo.');}};
   sec.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>{state.photos=state.photos.filter(x=>x.id!==b.dataset.pdel);save();TAB_RENDER.data();});
   if(q('#d-photo-compare'))q('#d-photo-compare').onclick=async()=>{if(!p.geminiKey){toast('Add your Gemini key first.');return;}const a=state.photos.find(x=>x.id===q('#d-photo-a').value),b=state.photos.find(x=>x.id===q('#d-photo-b').value);if(!a||!b||a.id===b.id){toast('Choose two different photos.');return;}photoCompareResult='Comparing...';TAB_RENDER.data();try{const parts=[{text:'Compare these two body-progress photos side by side. Be neutral and specific about visible posture, shape and composition changes only. Do not identify the person, estimate exact body fat, diagnose health, or infer anything not visually supported. Account for pose, lighting, camera angle and clothing. First photo: '+a.date+' '+(a.pose||'photo')+'. Second: '+b.date+' '+(b.pose||'photo')+'.'}, {inline_data:{mime_type:'image/jpeg',data:a.dataUrl.split(',')[1]}},{inline_data:{mime_type:'image/jpeg',data:b.dataUrl.split(',')[1]}}];const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+GEMINI_MODEL+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':p.geminiKey},body:JSON.stringify({contents:[{parts}]})});const j=await r.json();if(!r.ok)throw new Error(j&&j.error&&j.error.message||'Comparison failed');photoCompareResult=(j.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim()||'No readable comparison returned.';}catch(x){photoCompareResult='Comparison failed: '+x.message;}TAB_RENDER.data();};
-  q('#d-save').onclick=()=>{
+  if(q('#d-save'))q('#d-save').onclick=()=>{
     const k=parseInt(q('#d-kcal').value,10), pr=parseInt(q('#d-prot').value,10), w=parseInt(q('#d-water').value,10), st=parseInt(q('#d-steps').value,10);
     if(!isNaN(k)&&k>0)p.kcalTarget=k; if(!isNaN(pr)&&pr>0)p.proteinTarget=pr; if(!isNaN(w)&&w>0)p.waterTarget=w; if(!isNaN(st)&&st>0)p.stepsTarget=st;
     save(); toast('Targets saved.');
   };
-  q('#d-gemini-save').onclick=()=>{const v=setGeminiKey(q('#d-gemini').value);save();TAB_RENDER.data();toast(v?'Gemini key saved on this device.':'No key saved.');};
+  if(q('#d-gemini-save'))q('#d-gemini-save').onclick=()=>{const v=setGeminiKey(q('#d-gemini').value);save();TAB_RENDER.data();toast(v?'Gemini key saved on this device.':'No key saved.');};
   if(q('#d-gemini-clear'))q('#d-gemini-clear').onclick=()=>{setGeminiKey('');save();TAB_RENDER.data();toast('Key removed from this device.');};
   if(q('#d-backfill')) q('#d-backfill').onclick=async()=>{
     const missing=[]; for(const kk of Object.keys(state.days)){ for(const f of (state.days[kk].foods||[])){ if(f.fat==null||f.carbs==null) missing.push({dayKey:kk,id:f.id,name:f.name,kcal:f.kcal,protein:f.protein,needFat:f.fat==null,needCarbs:f.carbs==null}); } }
@@ -1113,8 +1094,16 @@ TAB_RENDER.data = function(){
     if(q('#d-clear').dataset.arm==='1'){ localStorage.removeItem(KEY); location.reload(); }
     else { q('#d-clear').dataset.arm='1'; q('#d-clear').textContent='Tap again to erase everything'; }
   };
-  q('#d-setup').onclick=()=>{ showSetup(); };
+  if(q('#d-setup'))q('#d-setup').onclick=()=>{showSetup();};
 };
+/* ---------- Settings ---------- */
+TAB_RENDER.settings=function(){const p=state.profile,sec=document.getElementById('tab-settings');sec.innerHTML=`
+<h2>Settings</h2><p class="note">Targets, personal setup and device-only AI access.</p>
+<div class="card"><h3>Daily targets</h3><div class="grid2"><div class="field"><label class="label">Calories</label><input class="input" id="s2-kcal" inputmode="numeric" value="${p.kcalTarget}"></div><div class="field"><label class="label">Protein (g)</label><input class="input" id="s2-prot" inputmode="numeric" value="${p.proteinTarget}"></div><div class="field"><label class="label">Water (glasses)</label><input class="input" id="s2-water" inputmode="numeric" value="${p.waterTarget}"></div><div class="field"><label class="label">Steps</label><input class="input" id="s2-steps" inputmode="numeric" value="${p.stepsTarget}"></div></div><button class="btn primary" id="s2-save">Save targets</button></div>
+<div class="card"><h3>Your setup</h3><div class="facts"><div class="fact"><span>Start</span><strong>${p.startWeight==null?'not set':p.startWeight+' kg'}</strong></div><div class="fact"><span>Goal</span><strong>${p.goalWeight==null?'not set':p.goalWeight+' kg'}</strong></div><div class="fact"><span>Frame</span><strong>${p.age==null?'not set':p.age+(p.heightCm==null?'':', '+p.heightCm+' cm')}</strong></div></div><button class="btn" id="s2-setup">Edit setup</button></div>
+<div class="card"><h3>AI dish estimates</h3><p class="note">Your Gemini key stays only on this device.</p><div class="field"><label class="label">Gemini API key</label><input class="input" id="s2-gemini" type="password" autocomplete="off" value="${esc(getGeminiKey())}" placeholder="AIza..."></div><div class="qr"><button class="btn primary" id="s2-gemini-save">Save key</button>${getGeminiKey()?'<button class="btn" id="s2-gemini-clear">Remove key</button>':''}</div></div>
+<div class="card"><h3>Start Fresh</h3><p class="note">Downloads a full backup first, then clears this device. Your backup can restore everything later.</p><button class="btn danger" id="s2-fresh">Start Fresh</button></div>`;
+const q=x=>sec.querySelector(x);q('#s2-save').onclick=()=>{for(const [id,key] of [['#s2-kcal','kcalTarget'],['#s2-prot','proteinTarget'],['#s2-water','waterTarget'],['#s2-steps','stepsTarget']]){const v=parseInt(q(id).value,10);if(v>0)p[key]=v;}save();toast('Targets saved.');};q('#s2-setup').onclick=showSetup;q('#s2-gemini-save').onclick=()=>{const v=setGeminiKey(q('#s2-gemini').value);save();TAB_RENDER.settings();toast(v?'Gemini key saved on this device.':'No key saved.');};if(q('#s2-gemini-clear'))q('#s2-gemini-clear').onclick=()=>{setGeminiKey('');save();TAB_RENDER.settings();toast('Key removed.');};q('#s2-fresh').onclick=()=>{if(q('#s2-fresh').dataset.arm!=='1'){q('#s2-fresh').dataset.arm='1';q('#s2-fresh').textContent='Download backup and clear';return;}const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='food-brb-before-start-fresh-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);localStorage.removeItem(KEY);localStorage.removeItem(SETUP_DONE_STORE);location.reload();},800);};};
 /* ---------- first-run setup ---------- */
 function calcAge(dob){
   if(!dob) return null;
@@ -1184,14 +1173,14 @@ function showSetup(){
     const k=parseInt(q('#s-kcal').value,10), pr=parseInt(q('#s-prot').value,10), w=parseInt(q('#s-water').value,10), st=parseInt(q('#s-steps').value,10);
     if(!isNaN(k)&&k>0)p.kcalTarget=k; if(!isNaN(pr)&&pr>0)p.proteinTarget=pr; if(!isNaN(w)&&w>0)p.waterTarget=w; if(!isNaN(st)&&st>0)p.stepsTarget=st;
     if(!state.weights.length) state.weights=[{date:p.startDate,kg:wt}];
-    p.setupDone=true; save(); el.classList.remove('open'); TAB_RENDER.today(); window.scrollTo(0,0);
+    p.setupDone=true;localStorage.setItem(SETUP_DONE_STORE,'1');save(); el.classList.remove('open'); TAB_RENDER.today(); window.scrollTo(0,0);
   };
-  q('#s-skip').onclick=()=>{p.setupDone=true;save();el.classList.remove('open');TAB_RENDER.today();window.scrollTo(0,0);};
+  q('#s-skip').onclick=()=>{p.setupDone=true;localStorage.setItem(SETUP_DONE_STORE,'1');save();el.classList.remove('open');TAB_RENDER.today();window.scrollTo(0,0);};
 }
 /* ---------- boot ---------- */
 TAB_RENDER.today();
 if(localStorage.getItem(SYNC_TOKEN_KEY))cloudSync();
-if(!state.profile.setupDone) showSetup();
+if(localStorage.getItem(SETUP_DONE_STORE)!=='1')showSetup();
 </script>
 <script>
 if ('serviceWorker' in navigator) {
