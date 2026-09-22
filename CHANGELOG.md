@@ -2,6 +2,8 @@
 
 ## 2026-09-22
 
+- Added a one-screen review flow for photo and barcode logging, with editable nutrition before save, half/standard/large/double portion presets, recent meals, favourites and copy-previous-day.
+- Added a reporting dashboard with 7/28/90-day intake averages, protein/fibre consistency, weight rate, sleep/steps correlations and explicit data-quality coverage markers.
 - Aligned food.brb to the official Big Red Box Brand Identity Guide v1.3 supplied by Ajay.
 - Embedded the official Nasalization logo font and Inter web font directly in the app so the brand typography works offline.
 - Reworked the food.brb wordmark so the lowercase brb mark uses Nasalization, keeps the r red and has protected clear space inside a restrained lockup.

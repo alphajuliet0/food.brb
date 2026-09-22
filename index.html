@@ -227,6 +227,21 @@ function weekCharts(p){
   return chart('Calories, kcal', t=>t.kcal, p.kcalTarget, '#251f21')+chart('Protein, g', t=>t.protein, g.proteinG, '#73a89a')+chart('Fat, g', t=>t.fat, g.fatG, '#d9a441')+chart('Carbs, g', t=>t.carbs, g.carbG, '#6f7fbf')+chart('Fibre, g', t=>t.fibre||0, FIBRE_GOAL, '#8a6fbf');
 }
 
+function healthDashboard(p){
+  const scopes=[7,28,90];
+  function corr(a,b){ const pairs=a.map((v,i)=>[v,b[i]]).filter(x=>isFinite(x[0])&&isFinite(x[1])); if(pairs.length<5)return null; const n=pairs.length,ma=pairs.reduce((x,y)=>x+y[0],0)/n,mb=pairs.reduce((x,y)=>x+y[1],0)/n; let num=0,da=0,db=0; for(const x of pairs){const aa=x[0]-ma,bb=x[1]-mb;num+=aa*bb;da+=aa*aa;db+=bb*bb;} return da&&db?num/Math.sqrt(da*db):null; }
+  function scope(n){ const keys=lastDays(n), rows=keys.map(k=>{const d=state.days[k],t=d?totals(d):null;return {k,d,t};}), logged=rows.filter(x=>x.t&&x.d.foods&&x.d.foods.length), kc=logged.map(x=>x.t.kcal),pr=logged.map(x=>x.t.protein),fi=logged.map(x=>x.t.fibre||0); return {n,rows,logged,avg:kc.length?Math.round(kc.reduce((a,b)=>a+b,0)/kc.length):0,pro:pr.length?Math.round(pr.filter(x=>x>=p.proteinTarget*.9).length/pr.length*100):0,fib:fi.length?Math.round(fi.filter(x=>x>=FIBRE_GOAL*.9).length/fi.length*100):0,coverage:Math.round(logged.length/n*100),sleep:corr(kc,logged.map(x=>x.d.sleep)),steps:corr(kc,logged.map(x=>x.d.steps||NaN))}; }
+  const ss=scopes.map(scope), weights=[...state.weights].sort((a,b)=>a.date<b.date?-1:1), first=weights.length?weights[0]:null,last=weights.length?weights[weights.length-1]:null,days=first&&last?Math.max(1,(new Date(last.date+'T12:00:00')-new Date(first.date+'T12:00:00'))/864e5):0,rate=days?Math.round((last.kg-first.kg)/days*70)/10:null;
+  const cards=ss.map(x=>`<div class="card"><strong>${x.n} days</strong><div class="facts"><div class="fact"><span>Average intake</span><strong>${x.avg||'—'}${x.avg?' kcal':''}</strong></div><div class="fact"><span>Protein consistency</span><strong>${x.pro}%</strong></div><div class="fact"><span>Fibre consistency</span><strong>${x.fib}%</strong></div><div class="fact"><span>Logged-day coverage</span><strong>${x.coverage}%</strong></div></div></div>`).join('');
+  const q=ss[1], label=r=>r==null?'not enough paired days':Math.abs(r)<.2?'no clear link yet':(r>0?'moves with intake':'moves opposite intake')+' ('+r.toFixed(2)+')';
+  return `<div class="grid2">${cards}</div><div class="facts"><div class="fact"><span>Weight rate</span><strong>${rate==null?'not enough weigh-ins':(rate>0?'+':'')+rate+' kg/week'}</strong></div><div class="fact"><span>Intake vs sleep, 28 days</span><strong>${label(q.sleep)}</strong></div><div class="fact"><span>Intake vs steps, 28 days</span><strong>${label(q.steps)}</strong></div></div><p class="note"><strong>Data quality:</strong> ${q.coverage>=80?'Strong coverage for a useful 28-day view.':q.coverage>=50?'Partial coverage - trends are directional.':'Low coverage - log more days before treating correlations as meaningful.'} Correlation is a clue, not proof of cause.</p>`;
+}
+function quickMealsHtml(){
+  const all=[]; Object.keys(state.days).sort().reverse().forEach(k=>{const d=state.days[k];(d&&d.foods||[]).slice().reverse().forEach(f=>all.push(f));});
+  const seen=new Set(),recent=[]; for(const f of all){const key=(f.name||'').toLowerCase();if(!key||seen.has(key))continue;seen.add(key);recent.push(f);if(recent.length===6)break;}
+  const fav=state.favorites||(state.favorites=[]); const row=(f,type,i)=>`<div class="row"><span><strong>${esc(f.name)}</strong><br><span class="dim">${f.kcal} kcal, ${f.protein} g protein${f.fibre!=null?', '+f.fibre+' g fibre':''}</span></span><button class="btn mini" data-quick="${type}:${i}">Add</button></div>`;
+  return `${fav.length?`<h3 class="slothead">Favourites</h3><div class="list">${fav.map((f,i)=>row(f,'f',i)).join('')}</div>`:''}${recent.length?`<h3 class="slothead">Recent meals</h3><div class="list">${recent.map((f,i)=>row(f,'r',i)).join('')}</div>`:''}`;
+}
 function macrosHtml(p){
   const g=macroGoals(p);
   let t;
@@ -479,11 +494,13 @@ TAB_RENDER.food = function(){
       <div class="grid2"><div class="field"><label class="label">Estimated fat (g)</label><input class="input" inputmode="decimal" id="f-af"></div><div class="field"><label class="label">Estimated carbs (g)</label><input class="input" inputmode="decimal" id="f-ac"></div></div>
       <div class="field"><label class="label">Estimated fibre (g)</label><input class="input" inputmode="decimal" id="f-ab"></div>
       <div class="field"><label class="label">Servings (scales all the numbers)</label>
+      <div class="chips"><button class="chip" data-estportion="0.5">Half</button><button class="chip" data-estportion="1">Standard</button><button class="chip" data-estportion="1.5">Large</button><button class="chip" data-estportion="2">Double</button></div>
       <div class="setrow"><button class="btn mini" id="f-sminus" aria-label="Less">-</button><input class="input mini" style="width:96px" inputmode="decimal" id="f-serv" value="${estServ}"><button class="btn mini" id="f-splus" aria-label="More">+</button></div></div>
       <button class="btn primary" id="f-aadd">Add checked estimate to today</button>`;
     const pickHtml = pick?`<div class="pickbox"><strong>${esc(pick.name)}</strong><span class="dim">${pick.kcal100} kcal, ${pick.prot100} g protein, ${pick.fat100!=null?pick.fat100:'?'} g fat, ${pick.carb100!=null?pick.carb100:'?'} g carbs per ${esc(pick.per)}</span>
       ${pick.serveGrams?`<div class="chips"><button class="chip${pick.mode!=='s'?' on':''}" data-pm="w">By weight (g/ml)</button><button class="chip${pick.mode==='s'?' on':''}" data-pm="s">By ${esc(pick.serveLabel||'serving')}</button></div>`:''}
       <div class="field"><label class="label">${pick.mode==='s'&&pick.serveGrams?('How many: '+esc(pick.serveLabel||'serving')):'Amount (grams or ml)'}</label>
+      <div class="chips"><button class="chip" data-portion="0.5">Half</button><button class="chip" data-portion="1">Standard</button><button class="chip" data-portion="1.5">Large</button><button class="chip" data-portion="2">Double</button></div>
       <div class="setrow"><button class="btn mini" id="f-qminus" aria-label="Less">-</button><input class="input mini" style="width:96px" inputmode="decimal" id="f-grams" value="${esc(pick.qty||pick.defGrams)}"><button class="btn mini" id="f-qplus" aria-label="More">+</button></div>
       <div class="dim" id="f-preview"></div></div>
       <button class="btn primary" id="f-addg">Add to today</button></div>`:'';
@@ -501,15 +518,19 @@ TAB_RENDER.food = function(){
   }
   document.getElementById('tab-food').innerHTML=`
   <h2>The pause</h2>${pauseHtml}${addHtml}
+  ${foodStage==='log'?`<h2>Quick add</h2>${quickMealsHtml()}`:''}
   <h2>Today on the plate</h2>
   <div class="facts"><div class="fact"><span>Calories</span><strong>${t.kcal} / ${p.kcalTarget} kcal</strong></div><div class="fact"><span>Protein</span><strong>${t.protein} / ${p.proteinTarget} g</strong></div><div class="fact"><span>Fat</span><strong>${t.fat} / ${macroGoals(p).fatG} g</strong></div><div class="fact"><span>Carbs</span><strong>${t.carbs} / ${macroGoals(p).carbG} g</strong></div><div class="fact"><span>Fibre</span><strong>${t.fibre} / ${FIBRE_GOAL} g</strong></div></div>
   <h2>This week's budget</h2>
   ${weekBudgetHtml(p)}
-  <h2>This week</h2>
+  <h2>Dashboard</h2>
+  <p class="note">7, 28 and 90-day views show consistency and useful relationships, not just totals.</p>
+  ${healthDashboard(p)}
+  <h2>Daily charts</h2>
   ${weekCharts(p)}
   <h2>Macros</h2>
   ${macrosHtml(p)}
-  ${d.foods.length===0?'<p class="note">Nothing logged yet today.</p>':['breakfast','lunch','dinner','snack',''].filter(sl=>d.foods.some(f=>(f.slot||(f.snack?'snack':''))===sl)).map(sl=>`<h3 class="slothead">${{breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snacks','':'Meals'}[sl]}</h3><div class="list">${d.foods.filter(f=>(f.slot||(f.snack?'snack':''))===sl).map(f=>`<div class="row"><span><strong>${esc(f.name)}</strong>${f.snack&&f.trigger?`<span class="tagchip">${esc(f.trigger)}</span>`:''}<br><span class="dim">${f.kcal} kcal, ${f.protein} g protein${f.fat!=null?', '+f.fat+' g fat':''}${f.carbs!=null?', '+f.carbs+' g carbs':''}${f.fibre!=null?', '+f.fibre+' g fibre':''}</span></span><button class="del" data-edit="${f.id}">Edit</button><button class="del" data-del="${f.id}">Remove</button></div>
+  ${d.foods.length===0?'<p class="note">Nothing logged yet today.</p>':['breakfast','lunch','dinner','snack',''].filter(sl=>d.foods.some(f=>(f.slot||(f.snack?'snack':''))===sl)).map(sl=>`<h3 class="slothead">${{breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snacks','':'Meals'}[sl]}</h3><div class="list">${d.foods.filter(f=>(f.slot||(f.snack?'snack':''))===sl).map(f=>`<div class="row"><span><strong>${esc(f.name)}</strong>${f.snack&&f.trigger?`<span class="tagchip">${esc(f.trigger)}</span>`:''}<br><span class="dim">${f.kcal} kcal, ${f.protein} g protein${f.fat!=null?', '+f.fat+' g fat':''}${f.carbs!=null?', '+f.carbs+' g carbs':''}${f.fibre!=null?', '+f.fibre+' g fibre':''}</span></span><button class="del" data-fav="${f.id}">Favourite</button><button class="del" data-edit="${f.id}">Edit</button><button class="del" data-del="${f.id}">Remove</button></div>
       ${editId===f.id?`<div class="pickbox"><strong>Edit: ${esc(f.name)}</strong>
         <div class="grid2"><div class="field"><label class="label">Calories (kcal)</label><input class="input" inputmode="numeric" id="e-kcal" value="${f.kcal}"></div><div class="field"><label class="label">Protein (g)</label><input class="input" inputmode="decimal" id="e-prot" value="${f.protein}"></div></div>
         <div class="grid2"><div class="field"><label class="label">Fat (g)</label><input class="input" inputmode="decimal" id="e-fat" value="${f.fat!=null?f.fat:''}"></div><div class="field"><label class="label">Carbs (g)</label><input class="input" inputmode="decimal" id="e-carbs" value="${f.carbs!=null?f.carbs:''}"></div></div>
@@ -538,6 +559,11 @@ TAB_RENDER.food = function(){
     TAB_RENDER.food(); });
   qa('[data-found]').forEach(b=>b.onclick=()=>{ const r=searchResults[parseInt(b.dataset.found,10)]; pick={name:r.name,kcal100:r.kcal100,prot100:r.prot100,fat100:r.fat100,carb100:r.carb100,fib100:r.fib100,per:'100 g',defGrams:'100',qty:'100',mode:'w',serveGrams:r.serveGrams,serveLabel:r.serveLabel}; TAB_RENDER.food(); });
   qa('[data-slot]').forEach(b=>b.onclick=()=>{ slot=b.dataset.slot; TAB_RENDER.food(); });
+  qa('[data-portion]').forEach(b=>b.onclick=()=>{ if(!pick)return; const f=parseFloat(b.dataset.portion); pick.qty=String(Math.round((parseFloat(pick.defGrams)||100)*f*10)/10); TAB_RENDER.food(); });
+  qa('[data-estportion]').forEach(b=>b.onclick=()=>{ const target=parseFloat(b.dataset.estportion); scaleEst(target); });
+  qa('[data-fav]').forEach(b=>b.onclick=()=>{ const f=d.foods.find(x=>x.id===b.dataset.fav); if(!f)return; state.favorites||(state.favorites=[]); const copy=Object.assign({},f); delete copy.id; delete copy.ts; if(!state.favorites.some(x=>x.name===copy.name)) state.favorites.push(copy); save(); TAB_RENDER.food(); toast('Saved to favourites.'); });
+  const quickAll=[]; Object.keys(state.days).sort().reverse().forEach(k=>{const dd=state.days[k];(dd&&dd.foods||[]).slice().reverse().forEach(f=>quickAll.push(f));}); const quickSeen=new Set(),quickRecent=[]; for(const f of quickAll){const key=(f.name||'').toLowerCase();if(!key||quickSeen.has(key))continue;quickSeen.add(key);quickRecent.push(f);if(quickRecent.length===6)break;}
+  qa('[data-quick]').forEach(b=>b.onclick=()=>{ const [type,si]=b.dataset.quick.split(':'),src=type==='f'?(state.favorites||[])[+si]:quickRecent[+si]; if(!src)return; const e=Object.assign({},src,{id:uid(),ts:Date.now(),slot,snack:slot==='snack',trigger:slot==='snack'?trigger:''}); d.foods.push(e); save(); TAB_RENDER.food(); toast('Added to '+slot+'.'); });
   qa('[data-ms]').forEach(b=>b.onclick=()=>{ macroScope=b.dataset.ms; TAB_RENDER.food(); });
   if(q('#w-evadd')) q('#w-evadd').onclick=()=>{ const n=q('#w-evn').value.trim(), dtv=q('#w-evd').value, ex=parseInt(q('#w-eve').value,10); if(!n||!dtv||!(ex>0)){ toast('Name, date and expected extra are needed.'); return; } (state.events||(state.events=[])).push({id:uid(),name:n,date:dtv,extra:ex}); save(); TAB_RENDER.food(); toast('Event added.'); };
   qa('[data-evdel]').forEach(b=>b.onclick=()=>{ state.events=(state.events||[]).filter(x=>x.id!==b.dataset.evdel); save(); TAB_RENDER.food(); });
