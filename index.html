@@ -1141,8 +1141,8 @@ function showSetup(){
   box.innerHTML=`
   <h1 class="brand" aria-label="food.brb"><span class="food-name"><span class="food-prefix">food.</span><span class="food-brb"><span>b</span><span class="red">r</span><span>b</span></span></span></h1>
   <p class="tag">Your food, recovery and progress. Clear at a glance.</p>
-  <h2>Begin your practice</h2>
-  <p class="note">food.brb keeps your log in your private Cloudflare storage once sync is connected, so Mac and iPhone share one dataset. Progress photos stay on this device only. Set your baseline once; you can change it later in the Data tab.</p>
+  <h2>Set up food.brb</h2>
+  <p class="note">food.brb keeps your log in your private Cloudflare storage once sync is connected, so Mac and iPhone share one dataset. Progress photos stay on this device only. Set your starting details once. You can change them later in Settings.</p>
   <div class="grid2">
     <div class="field"><label class="label">Date of birth</label><input class="input" type="date" id="s-dob" max="${todayKey()}" value="${p.dob||''}"><p class="tiny" id="s-age-readout">${p.dob&&calcAge(p.dob)!=null?'Age '+calcAge(p.dob):'Your age is worked out automatically.'}</p></div>
     <div class="field"><label class="label">Height</label><input class="input" id="s-height" placeholder="e.g. 178cm or 5'10&quot;" value="${displayHeight(p.heightCm)}"><p class="tiny">Metric or imperial. Stored as centimetres.</p></div>
@@ -1161,7 +1161,7 @@ function showSetup(){
   </div>
   <label class="check"><input type="checkbox" id="s-eggs"${p.eggs!==false?' checked':''}><span>Vegetarian, eggs allowed</span></label>
   <label class="check"><input type="checkbox" id="s-bp"${p.bpSafe?' checked':''}><span>I lift with controlled blood pressure. Show the BP-safe lifting and breathwork rules.</span></label>
-  <div class="qr" style="margin-top:16px"><button class="btn primary" id="s-save">Begin</button><button class="btn" id="s-skip">Set up later</button></div>`;
+  <div class="qr" style="margin-top:16px"><button class="btn primary" id="s-save">Save and continue</button><button class="btn" id="s-skip">Use defaults</button></div>`;
   el.classList.add('open');
   const q=s=>box.querySelector(s);
   q('#s-dob').oninput=()=>{ const a=calcAge(q('#s-dob').value); q('#s-age-readout').textContent=a==null?'Enter a valid date of birth.':'Age '+a; };
@@ -1186,7 +1186,7 @@ function showSetup(){
     if(!state.weights.length) state.weights=[{date:p.startDate,kg:wt}];
     p.setupDone=true; save(); el.classList.remove('open'); TAB_RENDER.today(); window.scrollTo(0,0);
   };
-  q('#s-skip').onclick=()=>{ el.classList.remove('open'); };
+  q('#s-skip').onclick=()=>{p.setupDone=true;save();el.classList.remove('open');TAB_RENDER.today();window.scrollTo(0,0);};
 }
 /* ---------- boot ---------- */
 TAB_RENDER.today();
