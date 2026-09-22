@@ -568,11 +568,11 @@ TAB_RENDER.food = function(){
     <div class="grid2"><div class="field"><label class="label">Fat (g)</label><input class="input" inputmode="decimal" id="e-fat" value="${f.fat!=null?f.fat:''}"></div><div class="field"><label class="label">Carbs (g)</label><input class="input" inputmode="decimal" id="e-carbs" value="${f.carbs!=null?f.carbs:''}"></div></div>
     <div class="field"><label class="label">Fibre (g)</label><input class="input" inputmode="decimal" id="e-fib" value="${f.fibre!=null?f.fibre:''}"></div>
     <div class="field"><label class="label">Servings</label><div class="setrow"><button class="btn mini" id="e-sminus">-</button><input class="input mini" style="width:96px" inputmode="decimal" id="e-serv" value="${editServ}"><button class="btn mini" id="e-splus">+</button></div></div>
-    <div class="qr"><button class="btn primary" id="e-save">Save changes</button><button class="btn" id="e-cancel">Cancel</button></div></div>`:''; }
+    <div class="field"><label class="label">Meal</label><select class="input" id="e-slot">${[['breakfast','Breakfast'],['lunch','Lunch'],['dinner','Dinner'],['snack','Snacks']].map(x=>`<option value="${x[0]}" ${((f.slot||(f.snack?'snack':'breakfast'))===x[0])?'selected':''}>${x[1]}</option>`).join('')}</select></div><div class="qr"><button class="btn primary" id="e-save">Save changes</button><button class="btn" id="e-tomorrow">Move to tomorrow</button><button class="btn" id="e-cancel">Cancel</button></div></div>`:''; }
   const mealNames={breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snacks'};
   const diary=['breakfast','lunch','dinner','snack'].map(sl=>{ const fs=d.foods.filter(f=>(f.slot||(f.snack?'snack':'breakfast'))===sl), mt=fs.reduce((a,f)=>{a.k+=+f.kcal||0;a.p+=+f.protein||0;a.c+=+f.carbs||0;a.f+=+f.fat||0;return a;},{k:0,p:0,c:0,f:0}); return `<div class="card"><div class="setrow"><h3 style="margin:0">${mealNames[sl]}</h3><strong>${Math.round(mt.k)} kcal</strong></div>
     ${fs.length?`<div class="list">${fs.map(f=>`<div class="row" title="${esc(f.name)} · ${f.kcal} kcal · protein ${f.protein} g${f.carbs!=null?' · carbs '+f.carbs+' g':''}${f.fat!=null?' · fat '+f.fat+' g':''}"><span><strong>${esc(f.name)}</strong><br><span class="dim">${f.kcal} kcal · P ${f.protein} g${f.carbs!=null?' · C '+f.carbs+' g':''}${f.fat!=null?' · F '+f.fat+' g':''}</span></span><span><button class="del" data-edit="${f.id}">Edit</button><button class="del" data-move="${f.id}">Move</button><button class="del" data-del="${f.id}">Remove</button></span></div>${editPanel(f)}`).join('')}</div>`:'<p class="note">Nothing logged.</p>'}
-    <div class="setrow"><button class="btn mini mealadd" data-addmeal="${sl}" aria-label="Add food to ${mealNames[sl]}">＋ <span>Add</span></button>${fs.length?`<span class="tiny">P ${Math.round(mt.p)} g · C ${Math.round(mt.c)} g · F ${Math.round(mt.f)} g</span>`:''}</div>${foodAdding&&slot===sl?addHtml:''}</div>`; }).join('');
+    <div class="setrow"><button class="btn mini mealadd" data-addmeal="${sl}" aria-label="Add food to ${mealNames[sl]}">＋ <span>Add</span></button>${fs.length?`<button class="del" data-mealtomorrow="${sl}">Move meal to tomorrow</button><span class="tiny">P ${Math.round(mt.p)} g · C ${Math.round(mt.c)} g · F ${Math.round(mt.f)} g</span>`:''}</div>${foodAdding&&slot===sl?addHtml:''}</div>`; }).join('');
   document.getElementById('tab-food').innerHTML=`
   <h2>Food diary</h2><div class="syncbar"><span class="syncdot ${syncState}" data-syncdot></span><span class="tiny" data-synctext>${esc(syncText)}</span>${localStorage.getItem(SYNC_TOKEN_KEY)?`<button class="del" id="cloud-sync-now">Sync now</button>`:`<button class="btn mini" id="cloud-connect">Connect private sync</button>`}</div>${dateNav()}
   <h2>Daily summary</h2>
@@ -721,10 +721,11 @@ TAB_RENDER.food = function(){
   if(q('#e-splus')) q('#e-splus').onclick=()=>scaleEdit(editServ+0.5);
   if(q('#e-serv')) q('#e-serv').onchange=e=>{ const v=parseFloat(e.target.value); if(isFinite(v)&&v>0) scaleEdit(v); else e.target.value=String(editServ); };
   if(q('#e-cancel')) q('#e-cancel').onclick=()=>{ editId=null; TAB_RENDER.food(); };
+  if(q('#e-tomorrow')) q('#e-tomorrow').onclick=()=>{const f=d.foods.find(x=>x.id===editId);if(!f)return;const nd=dayOf(shiftDate(selectedFoodDate,1));d.foods=d.foods.filter(x=>x.id!==f.id);nd.foods.push({...f,id:uid(),ts:Date.now()});save();editId=null;TAB_RENDER.food();toast('Moved item to tomorrow.');};
   if(q('#e-save')) q('#e-save').onclick=()=>{ const f=d.foods.find(x=>x.id===editId); if(!f){ editId=null; TAB_RENDER.food(); return; }
     const ek=parseFloat(q('#e-kcal').value), ep=parseFloat(q('#e-prot').value), ef=parseFloat(q('#e-fat').value), ec=parseFloat(q('#e-carbs').value), eb=parseFloat(q('#e-fib').value);
     if(!(ek>0)){ toast('Calories are needed.'); return; }
-    f.kcal=Math.round(ek); f.protein=isFinite(ep)?Math.round(ep*10)/10:0;
+    const newSlot=q('#e-slot').value;f.slot=newSlot;f.snack=newSlot==='snack';f.kcal=Math.round(ek); f.protein=isFinite(ep)?Math.round(ep*10)/10:0;
     if(isFinite(ef)) f.fat=Math.round(ef*10)/10; else delete f.fat;
     if(isFinite(ec)) f.carbs=Math.round(ec*10)/10; else delete f.carbs;
     if(isFinite(eb)) f.fibre=Math.round(eb*10)/10; else delete f.fibre;
