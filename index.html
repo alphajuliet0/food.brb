@@ -205,6 +205,29 @@ function emptyDay(){ return { water:0, steps:0, walkMin:0, foods:[], pauses:0, s
 function dayOf(k){ if(!state.days[k]) state.days[k]=emptyDay(); return state.days[k]; }
 function lastDays(n){ const out=[]; const now=new Date(); for(let i=n-1;i>=0;i--){ out.push(todayKey(new Date(now.getFullYear(),now.getMonth(),now.getDate()-i))); } return out; }
 const FIBRE_GOAL=30;
+const ULTRAHUMAN_SYNC_ORIGIN='https://food-brb-ultrahuman.ajay-7a2.workers.dev';
+let ringSyncWindow=null;
+function metricText(v,suffix){ return v==null||v===''?'—':String(Math.round(Number(v)*10)/10)+(suffix||''); }
+function ringDashboard(){
+  const rows=lastDays(90).slice().reverse().map(k=>({k,d:state.days[k]})).filter(x=>x.d&&x.d.ring);
+  if(!rows.length) return `<div class="card"><strong>Ultrahuman Ring</strong><p class="note">No ring data synced yet. Use Sync ring in the Data tab. Missing values stay blank.</p></div>`;
+  const x=rows[0],r=x.d.ring, supplied=['sleep_score','total_sleep','recovery_score','avg_sleep_hrv','sleep_rhr','steps'].filter(k=>r[k]!=null).length;
+  return `<div class="card"><strong>Ultrahuman Ring, ${fmtDate(x.k)}</strong><div class="facts"><div class="fact"><span>Sleep score</span><strong>${metricText(r.sleep_score)}</strong></div><div class="fact"><span>Total sleep</span><strong>${metricText(r.total_sleep)}</strong></div><div class="fact"><span>Recovery</span><strong>${metricText(r.recovery_score)}</strong></div><div class="fact"><span>Sleep HRV</span><strong>${metricText(r.avg_sleep_hrv,' ms')}</strong></div><div class="fact"><span>Sleep RHR</span><strong>${metricText(r.sleep_rhr,' bpm')}</strong></div><div class="fact"><span>Steps</span><strong>${r.steps==null?'—':Math.round(r.steps).toLocaleString()}</strong></div></div><p class="note"><strong>Data quality:</strong> ${supplied}/6 core ring fields supplied for this day. Blank means Ultrahuman did not return a value; food.brb does not infer one.</p></div>`;
+}
+function startRingSync(){
+  const dates=lastDays(7).join(',');
+  ringSyncWindow=window.open(ULTRAHUMAN_SYNC_ORIGIN+'/sync?dates='+encodeURIComponent(dates),'foodBrbRingSync','popup,width=520,height=680');
+  if(!ringSyncWindow) toast('Allow pop-ups for food.brb, then tap Sync ring again.');
+}
+window.addEventListener('message',e=>{
+  if(e.origin!==ULTRAHUMAN_SYNC_ORIGIN||e.source!==ringSyncWindow||!e.data||e.data.type!=='food-brb-ultrahuman'||!Array.isArray(e.data.days)) return;
+  let days=0,fields=0;
+  for(const r of e.data.days){ if(!r||!/^\d{4}-\d{2}-\d{2}$/.test(r.date||'')||r.error) continue; const out={};
+    for(const k of ['sleep_score','total_sleep','sleep_efficiency','recovery_score','avg_sleep_hrv','sleep_rhr','steps','active_minutes','temperature_deviation','vo2_max','movement_index','metabolic_score','spo2']) if(r[k]!=null&&(['number','string','boolean'].includes(typeof r[k]))){out[k]=r[k];fields++;}
+    dayOf(r.date).ring=out; days++;
+  }
+  ringSyncWindow=null; save(); if(document.getElementById('tab-food').classList.contains('active')) TAB_RENDER.food(); if(document.getElementById('tab-data').classList.contains('active')) TAB_RENDER.data(); toast('Ring synced: '+days+' days, '+fields+' supplied values.');
+});
 function totals(d){ let k=0,p=0,fa=0,c=0,fb=0; for(const f of d.foods){k+=f.kcal;p+=f.protein;fa+=f.fat||0;c+=f.carbs||0;fb+=f.fibre||0;} return {kcal:Math.round(k),protein:Math.round(p*10)/10,fat:Math.round(fa*10)/10,carbs:Math.round(c*10)/10,fibre:Math.round(fb*10)/10}; }
 function macroGoals(p){ const fatG=Math.round(p.kcalTarget*0.30/9); const carbG=Math.round((p.kcalTarget-p.proteinTarget*4-fatG*9)/4); return {proteinG:p.proteinTarget, fatG, carbG}; }
 function weekCharts(p){
@@ -526,6 +549,9 @@ TAB_RENDER.food = function(){
   <h2>Dashboard</h2>
   <p class="note">7, 28 and 90-day views show consistency and useful relationships, not just totals.</p>
   ${healthDashboard(p)}
+  <h2>Ring health</h2>
+  ${ringDashboard()}
+  <button class="btn" id="f-ring-sync">Sync ring</button>
   <h2>Daily charts</h2>
   ${weekCharts(p)}
   <h2>Macros</h2>
@@ -548,6 +574,7 @@ TAB_RENDER.food = function(){
   const sec=document.getElementById('tab-food');
   const q=s=>sec.querySelector(s);
   const qa=s=>sec.querySelectorAll(s);
+  if(q('#f-ring-sync')) q('#f-ring-sync').onclick=startRingSync;
   if(q('#f-start')) q('#f-start').onclick=()=>{ foodStage='pause'; TAB_RENDER.food(); };
   qa('[data-pc]').forEach(b=>b.onclick=()=>{ pauseChoice=b.dataset.pc; TAB_RENDER.food(); });
   if(q('#f-continue')) q('#f-continue').onclick=()=>{ d.pauses++; save(); foodStage='log'; TAB_RENDER.food(); };
@@ -949,6 +976,10 @@ TAB_RENDER.data = function(){
     <div class="fact"><span>Training rules</span><strong>${p.bpSafe?'BP-safe rules shown':'Standard'}</strong></div>
   </div>
   <div class="qr"><button class="btn" id="d-setup">Edit setup</button></div>
+  <h2>Ultrahuman Ring</h2>
+  <p class="note">Sync the last 7 days through your private Cloudflare email-code gate. Only the daily fields shown in the dashboard are saved on this device. Missing fields remain blank.</p>
+  <div class="qr"><button class="btn primary" id="d-ring-sync">Sync ring</button></div>
+  ${ringDashboard()}
   <h2>AI dish estimates</h2>
   <p class="note">Optional, and free. Paste your own Google AI Studio (Gemini) API key and the Dish photo tab can estimate calories and protein automatically. Create a key at <a href="https://aistudio.google.com" target="_blank" rel="noopener">aistudio.google.com</a> (Get API key). The key is stored only on this phone and is sent nowhere except directly to Google when you tap Estimate. On Google's free tier, what you send may be used to improve its products - dish photos only go when you tap Estimate.</p>
   <div class="field"><label class="label">Gemini API key</label><input class="input" id="d-gemini" type="password" autocomplete="off" value="${esc(p.geminiKey||'')}" placeholder="AIza..."></div>
@@ -981,6 +1012,7 @@ TAB_RENDER.data = function(){
   </ul>`;
   const sec=document.getElementById('tab-data');
   const q=s=>sec.querySelector(s);
+  q('#d-ring-sync').onclick=startRingSync;
   q('#d-save').onclick=()=>{
     const k=parseInt(q('#d-kcal').value,10), pr=parseInt(q('#d-prot').value,10), w=parseInt(q('#d-water').value,10), st=parseInt(q('#d-steps').value,10);
     if(!isNaN(k)&&k>0)p.kcalTarget=k; if(!isNaN(pr)&&pr>0)p.proteinTarget=pr; if(!isNaN(w)&&w>0)p.waterTarget=w; if(!isNaN(st)&&st>0)p.stepsTarget=st;

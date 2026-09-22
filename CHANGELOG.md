@@ -2,6 +2,7 @@
 
 ## 2026-09-22
 
+- Connected the private Ultrahuman Ring sync: Access-gated popup, exact-origin postMessage handoff, 7-day on-device import, and honest dashboard cards for sleep, recovery, HRV, resting heart rate and steps.
 - Removed the box around the brb mark and reduced the overall food.brb lockup size following Ajay’s design direction.
 - Added a one-screen review flow for photo and barcode logging, with editable nutrition before save, half/standard/large/double portion presets, recent meals, favourites and copy-previous-day.
 - Added a reporting dashboard with 7/28/90-day intake averages, protein/fibre consistency, weight rate, sleep/steps correlations and explicit data-quality coverage markers.
