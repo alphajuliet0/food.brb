@@ -2,6 +2,7 @@
 
 ## 2026-09-22
 
+- Added a self-serve PT tracker XLSX/CSV importer with dry-run preview, anomaly and duplicate counts, field-safe merge, provenance, and historical daily totals that feed monthly archives without inventing meal entries or overwriting Ring/diary data.
 - Removed the unnecessary visible Dietary profile controls; vegetarian-with-eggs remains silent context for AI dish estimates.
 - Fixed Ultrahuman steps parsing to use the daily `total` instead of the per-sample `avg`, refreshed the dashboard immediately after sync, and clarified today vs 7-day totals/averages. Polished the dashboard into a visual-first BRB layout with progress rings, a 7-day step chart, macro donut, cleaner metric tiles and pill controls.
 - Added weekday/date and week navigation, weekly calorie-bank reporting, daily step rows, weekly/monthly averages, a PT-style monthly archive, an explicit vegetarian-with-eggs profile, transparent target maths, and on-device progress-photo poses with optional Gemini side-by-side comparison. Waist is no longer part of setup or the primary progress view.
