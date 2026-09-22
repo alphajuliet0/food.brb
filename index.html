@@ -158,7 +158,7 @@ applyTheme(localStorage.getItem(THEME_KEY)||((matchMedia('(prefers-color-scheme:
 document.getElementById('theme-toggle').onclick=()=>{const t=document.documentElement.dataset.theme==='dark'?'light':'dark';localStorage.setItem(THEME_KEY,t);applyTheme(t);};
 /* ---------- data ---------- */
 const KEY = 'sadhana-v1';
-const GEMINI_MODEL = 'gemini-3.6-flash'; // Google's current free-tier vision model; update here if Google retires it.
+const GEMINI_MODEL = 'gemini-2.5-flash'; // Google's current free-tier vision model; update here if Google retires it.
 const PROGRAM = [
 {id:'A',title:'Day A',sub:'Squat, horizontal push and pull',exercises:[
 {name:'Back squat',sets:'3 x 6-8',note:'RPE 7-8. Smooth reps; exhale through the sticking point.'},
@@ -232,6 +232,10 @@ const SAFETY = ['Breathe out on the effort. Never hold your breath through a rep
 function seed(){ return { v:1, profile:{setupDone:false,bpSafe:false,age:null,heightCm:null,kcalTarget:1400,proteinTarget:120,waterTarget:8,stepsTarget:8000,goalWeight:null,startWeight:null,startWaist:null,startDate:null,diet:'vegetarian',eggs:true}, days:{}, weights:[], waists:[], photos:[], workouts:[], meditations:[], yogaDone:{} }; }
 function load(){ try{ const raw=localStorage.getItem(KEY); if(raw){ const s=JSON.parse(raw); if(s&&s.v===1&&s.profile){ if(s.profile.setupDone===undefined) s.profile.setupDone=true; if(!s.profile.diet)s.profile.diet='vegetarian'; if(s.profile.eggs===undefined)s.profile.eggs=true; if(s.profile.kcalTarget===1950){ s.profile.kcalTarget=1700; s.profile.mig171=true; try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} } else if(s.profile.kcalTarget===1400 && s.profile.proteinTarget===130 && !s.profile.mig171){ s.profile.kcalTarget=1700; s.profile.mig171=true; try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} } if(s.profile.goalWeight===67){ s.profile.goalWeight=64; try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} } return s; } } }catch(e){} return seed(); }
 let state = load();
+const GEMINI_KEY_STORE='foodBrbGeminiKey';
+function getGeminiKey(){return (localStorage.getItem(GEMINI_KEY_STORE)||state.profile.geminiKey||'').trim();}
+function setGeminiKey(v){v=(v||'').trim();if(v)localStorage.setItem(GEMINI_KEY_STORE,v);else localStorage.removeItem(GEMINI_KEY_STORE);if(state.profile)delete state.profile.geminiKey;return v;}
+if(state.profile.geminiKey){setGeminiKey(state.profile.geminiKey);try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
 function save(){ try{localStorage.setItem(KEY,JSON.stringify(state));scheduleCloudSync();}catch(e){toast('Storage is full. Export a backup and delete old photos.');} }
 function todayKey(d){ d=d||new Date(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return d.getFullYear()+'-'+m+'-'+day; }
 function fmtDate(key,weekday){ const p=key.split('-'),d=new Date(key+'T12:00:00'); const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return (weekday?['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]+' ':'')+parseInt(p[2],10)+' '+(M[parseInt(p[1],10)-1]||''); }
@@ -541,8 +545,8 @@ TAB_RENDER.food = function(){
       <label class="btn primary filebtn">${dishPhotoFile?'Choose another photo':'Take or choose photo'}<input type="file" accept="image/*" id="f-photo"></label>
       ${dishPhotoUrl?`<img class="dishpreview" src="${dishPhotoUrl}" alt="Meal photo ready to estimate">`:''}
       ${estMsg?`<p class="note">${esc(estMsg)}</p>`:''}
-      ${state.profile.geminiKey?'':`<p class="note">Add your Gemini API key in Data & settings first.</p>`}
-      ${dishPhotoFile&&state.profile.geminiKey?`<button class="btn" id="f-est">Guess again</button>`:''}</div>`;
+      ${getGeminiKey()?'':`<p class="note">No Gemini key is saved on this device. Open Data & settings, paste it, then tap Save key.</p>`}
+      ${dishPhotoFile&&getGeminiKey()?`<button class="btn" id="f-est">Guess again</button>`:''}</div>`;
     const pickHtml = pick?`<div class="pickbox"><strong>${esc(pick.name)}</strong><span class="dim">${pick.kcal100} kcal, ${pick.prot100} g protein, ${pick.fat100!=null?pick.fat100:'?'} g fat, ${pick.carb100!=null?pick.carb100:'?'} g carbs per ${esc(pick.per)}</span>
       ${pick.serveGrams?`<div class="chips"><button class="chip${pick.mode!=='s'?' on':''}" data-pm="w">By weight (g/ml)</button><button class="chip${pick.mode==='s'?' on':''}" data-pm="s">By ${esc(pick.serveLabel||'serving')}</button></div>`:''}
       <div class="field"><label class="label">${pick.mode==='s'&&pick.serveGrams?('How many: '+esc(pick.serveLabel||'serving')):'Amount (grams or ml)'}</label>
@@ -623,13 +627,13 @@ TAB_RENDER.food = function(){
     if(!file.type.startsWith('image/')){ toast('Please choose a photo.'); return; }
     if(file.size>12*1024*1024){ toast('That photo is too large. Choose a smaller one.'); return; }
     if(dishPhotoUrl) URL.revokeObjectURL(dishPhotoUrl);
-    dishPhotoFile=file; dishPhotoUrl=URL.createObjectURL(file); estMsg='Reading your meal…'; TAB_RENDER.food(); setTimeout(()=>document.getElementById('f-est')?.click(),0);
+    dishPhotoFile=file;dishPhotoUrl=URL.createObjectURL(file);if(getGeminiKey()){estMsg='Reading your meal…';TAB_RENDER.food();setTimeout(()=>document.getElementById('f-est')?.click(),0);}else{estMsg='Photo ready, but no Gemini key is saved on this device. Open Data & settings, paste it, and tap Save key.';TAB_RENDER.food();}
   };
   if(q('#f-ai')) q('#f-ai').oninput=e=>{ dishIng=e.target.value; };
   if(q('#f-est')) q('#f-est').onclick=async()=>{
     const n=dishName.trim()||'the photographed meal', ingredients=dishIng.trim();
     if(!dishPhotoFile){ toast('Choose a meal photo first.'); return; }
-    if(!state.profile.geminiKey){ toast('Add your Gemini API key in the Data tab first.'); return; }
+    const geminiKey=getGeminiKey();if(!geminiKey){ estMsg='No Gemini key is saved on this device. Open Data & settings, paste it, and tap Save key.';TAB_RENDER.food();return; }
     estMsg='Estimating with Gemini...'; estReply=''; TAB_RENDER.food();
     try{
       const prompt='Dietary profile: vegetarian; '+(state.profile.eggs!==false?'eggs are allowed':'no eggs')+'. Use this context when interpreting ambiguous ingredients.\nEstimate the calories, protein, fat, carbohydrates and fibre for this dish: '+n+(ingredients?'\nIngredients/details: '+ingredients:'')+(dishPhotoFile?'':'\nNo photo is attached, so base the estimate on the dish name, portion and details alone.')+'\nGive a sensible range and a single best estimate. State assumptions about portion size, oil, ghee, sauces and hidden ingredients. Do not treat the photo alone as exact. End with a final line in exactly this format: BEST: name=<short dish name>, calories=<number>, protein=<number>, fat=<number>, carbs=<number>, fibre=<number>';
@@ -640,7 +644,7 @@ TAB_RENDER.food = function(){
           reqParts.push({inline_data:{mime_type:'image/jpeg',data:String(dataUrl).split(',')[1]}});
         }catch(pe){ estMsg='Could not read that photo. Remove it to estimate from the name alone, or choose a different photo.'; TAB_RENDER.food(); return; }
       }
-      const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+GEMINI_MODEL+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':state.profile.geminiKey},body:JSON.stringify({contents:[{parts:reqParts}]})});
+      const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+GEMINI_MODEL+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':geminiKey},body:JSON.stringify({contents:[{parts:reqParts}]})});
       const j=await r.json().catch(()=>null);
       if(!r.ok){
         const em=(j&&j.error&&j.error.message)||'';
@@ -990,8 +994,8 @@ TAB_RENDER.data = function(){
   ${photoCompareResult?`<div class="card"><strong>AI comparison</strong><p class="note" style="white-space:pre-wrap">${esc(photoCompareResult)}</p></div>`:''}
   <h2>AI dish estimates</h2>
   <p class="note">Optional, and free. Paste your own Google AI Studio (Gemini) API key and the Dish photo tab can estimate calories and protein automatically. Create a key at <a href="https://aistudio.google.com" target="_blank" rel="noopener">aistudio.google.com</a> (Get API key). The key is stored only on this phone and is sent nowhere except directly to Google when you tap Estimate. On Google's free tier, what you send may be used to improve its products - dish photos only go when you tap Estimate.</p>
-  <div class="field"><label class="label">Gemini API key</label><input class="input" id="d-gemini" type="password" autocomplete="off" value="${esc(p.geminiKey||'')}" placeholder="AIza..."></div>
-  <div class="qr"><button class="btn primary" id="d-gemini-save">Save key on this phone</button>${p.geminiKey?'<button class="btn danger" id="d-gemini-clear">Remove key</button>':''}</div>
+  <div class="field"><label class="label">Gemini API key</label><input class="input" id="d-gemini" type="password" autocomplete="off" value="${esc(getGeminiKey())}" placeholder="AIza..."></div>
+  <div class="qr"><button class="btn primary" id="d-gemini-save">Save key on this phone</button>${getGeminiKey()?'<button class="btn danger" id="d-gemini-clear">Remove key</button>':''}</div>
   <h2>Fill in missing fat and carbs</h2>
   <p class="note">Entries saved before fat and carbs were tracked have no values, so old days look empty in the charts. This estimates the missing numbers on this phone${p.geminiKey?', using your Gemini key for dishes it does not recognise':''}, shows you every change first, and only writes after you confirm. Existing values are never changed.</p>
   ${backfillList===null?'<button class="btn primary" id="d-backfill">Review what is missing</button>':backfillList.length===0?'<p class="note">Nothing to fill - every saved entry already has fat and carbs.</p><button class="btn" id="d-bf-cancel">Close</button>':`<div class="list">${backfillList.map(it=>`<div class="row"><span><strong>${esc(it.name)}</strong><br><span class="dim">${it.dayKey}: ${[it.needFat?'+ '+it.fat+' g fat':'', it.needCarbs?'+ '+it.carbs+' g carbs':''].filter(Boolean).join(', ')} <span class="tiny">(${it.src})</span></span></span></div>`).join('')}</div>
@@ -1033,8 +1037,8 @@ TAB_RENDER.data = function(){
     if(!isNaN(k)&&k>0)p.kcalTarget=k; if(!isNaN(pr)&&pr>0)p.proteinTarget=pr; if(!isNaN(w)&&w>0)p.waterTarget=w; if(!isNaN(st)&&st>0)p.stepsTarget=st;
     save(); toast('Targets saved.');
   };
-  q('#d-gemini-save').onclick=()=>{ const v=q('#d-gemini').value.trim(); p.geminiKey=v; save(); TAB_RENDER.data(); toast(v?'Key saved on this phone.':'Key field cleared - tap Save again if you meant to remove it.'); };
-  if(q('#d-gemini-clear')) q('#d-gemini-clear').onclick=()=>{ delete p.geminiKey; save(); TAB_RENDER.data(); toast('Key removed from this phone.'); };
+  q('#d-gemini-save').onclick=()=>{const v=setGeminiKey(q('#d-gemini').value);save();TAB_RENDER.data();toast(v?'Gemini key saved on this device.':'No key saved.');};
+  if(q('#d-gemini-clear'))q('#d-gemini-clear').onclick=()=>{setGeminiKey('');save();TAB_RENDER.data();toast('Key removed from this device.');};
   if(q('#d-backfill')) q('#d-backfill').onclick=async()=>{
     const missing=[]; for(const kk of Object.keys(state.days)){ for(const f of (state.days[kk].foods||[])){ if(f.fat==null||f.carbs==null) missing.push({dayKey:kk,id:f.id,name:f.name,kcal:f.kcal,protein:f.protein,needFat:f.fat==null,needCarbs:f.carbs==null}); } }
     if(!missing.length){ backfillList=[]; TAB_RENDER.data(); return; }
