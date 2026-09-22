@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-23
+
+- Rebuilt dish-photo estimates with an automatic fallback: Gemini is tried first with live model discovery, then OpenRouter vision models (free/cheapest first, discovered at call time). Settings holds a separate device-only OpenRouter key with a link to openrouter.ai/keys, and a failure says plainly what happened on each provider.
+- Design sweep: Apple Fitness-style rings on light neutral tracks with no heavy track or glow, tighter meal rows, no always-visible Sync ring control on Today, and a Fitness integrations section in Settings led by Ultrahuman Ring and private cloud sync, replacing the old Start/Goal/Frame card.
+- Reworked Log food into a compact panel: one type-to-find field (searches as you type), camera and barcode icons, smart per-meal suggestions with a permanent dismiss X, meal chips and a small Done chip. The per-meal action now says Log food.
+- Added MyFitnessPal-style swipe gestures on diary items: swipe left to reveal Delete, swipe right to reveal Copy tomorrow; actions only fire on tap. Desktop keeps Edit, Move, Copy and Remove buttons.
+- Added pull-to-refresh: pull down from the top of any screen on a phone to re-check for app updates and run cloud sync, with a Refresh app data button in Settings as the desktop equivalent. Ring sync stays a deliberate tap in Fitness integrations because it uses an Access-gated popup.
+- Loading states (AI estimate, food search, barcode lookup, sync, pull-to-refresh) now use a quiet Classic-style spinner chosen from loading.dev.
+
 ## 2026-09-22
 
 - Tightened dashboard stats: removed repeated step units where the card label already provides context, and reduced the size/weight of large numbers for a calmer mobile layout.
