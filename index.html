@@ -12,12 +12,18 @@
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="icon.svg">
 <style>
-:root { --ink:#0a0a0a; --ink2:#595959; --ink3:#969394; --hair:#d9d9d9; --teal:#e5321b; --red:#e5321b; --sand:#ededed; --page:#f7f7f7; }
+@font-face { font-family:"Nasalization"; src:url("assets/nasalization.otf") format("opentype"); font-weight:400; font-display:swap; }
+@font-face { font-family:"Inter"; src:url("assets/inter.woff2") format("woff2"); font-weight:100 900; font-display:swap; }
+:root { --ink:#0A0A0A; --ink2:#595959; --ink3:#999999; --hair:#D9D9D9; --teal:#E5321B; --red:#E5321B; --sand:#EFEFEF; --page:#F7F7F7; --white:#FFFFFF; }
 * { box-sizing: border-box; }
-body { margin:0; background:var(--page); color:var(--ink); font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:15px; line-height:1.5; }
+body { margin:0; background:var(--page); color:var(--ink); font-family:Inter,-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:16px; line-height:1.6; }
 .wrap { max-width:640px; margin:0 auto; padding:18px 16px 90px; }
-h1 { font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-weight:900; font-size:34px; letter-spacing:-0.07em; margin:8px 0 2px; }
-h1.brand span { color:var(--red); }
+h1 { font-family:Inter,-apple-system,'Helvetica Neue',Arial,sans-serif; font-weight:500; font-size:34px; letter-spacing:-0.055em; line-height:1.08; margin:8px 0 2px; }
+h1.brand { display:flex; align-items:center; min-height:52px; margin:4px 0 0; letter-spacing:0; }
+.food-name { display:inline-flex; align-items:baseline; gap:.08em; white-space:nowrap; }
+.food-prefix { font-family:Inter,-apple-system,sans-serif; font-weight:600; letter-spacing:-.045em; }
+.food-brb { display:inline-flex; align-items:center; margin-left:.03em; padding:.24em .34em; font-family:Nasalization,monospace; font-weight:400; letter-spacing:.02em; border:1px solid var(--hair); }
+.food-brb .red { color:var(--red); }
 .tag { color:var(--ink2); font-size:14px; margin:0 0 8px; }
 .intro { color:var(--ink); font-size:15px; line-height:24px; margin:0 0 14px; }
 nav.tabs { display:flex; gap:16px; border-bottom:1px solid var(--hair); overflow-x:auto; position:sticky; top:0; background:var(--page); z-index:5; -webkit-overflow-scrolling:touch; }
@@ -25,7 +31,7 @@ nav.tabs button { flex:0 0 auto; border:none; background:none; padding:12px 2px;
 nav.tabs button.on { color:var(--ink); box-shadow:inset 0 -2px 0 var(--ink); font-weight:600; }
 section.tab { display:none; }
 section.tab.on { display:block; }
-h2 { font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-weight:800; font-size:22px; letter-spacing:-0.035em; margin:26px 0 6px; }
+h2 { font-family:Inter,-apple-system,sans-serif; font-weight:500; font-size:22px; letter-spacing:-0.035em; line-height:1.15; margin:28px 0 6px; }
 h3 { font-size:15px; margin:0; }
 .slothead { margin:12px 0 4px; }
 .note { color:var(--ink2); font-size:14px; line-height:21px; margin:8px 0; }
@@ -37,7 +43,7 @@ h3 { font-size:15px; margin:0; }
 .stat .v { font-size:17px; font-weight:600; margin:2px 0 6px; }
 .bar { height:6px; border-radius:3px; background:var(--sand); overflow:hidden; }
 .bar i { display:block; height:100%; background:var(--teal); border-radius:3px; }
-.btn { display:inline-flex; font-weight:650; align-items:center; justify-content:center; min-height:44px; padding:8px 16px; border-radius:6px; border:1px solid var(--hair); background:#fff; color:var(--ink); font-size:15px; cursor:pointer; font-family:inherit; text-decoration:none; }
+.btn { display:inline-flex; font-weight:650; align-items:center; justify-content:center; min-height:44px; padding:8px 16px; border-radius:2px; border:1px solid var(--hair); background:#fff; color:var(--ink); font-size:15px; cursor:pointer; font-family:inherit; text-decoration:none; }
 .btn.primary { background:var(--ink); border-color:var(--ink); color:#fff; }
 .btn.danger { color:var(--red); border-color:#f5aaae; }
 .btn:disabled { color:#c0bebf; cursor:default; }
@@ -94,7 +100,7 @@ a { color:var(--ink); }
 <body>
 <div id="setup"><div class="inner"></div></div>
 <div class="wrap">
-<h1 class="brand" aria-label="food.brb">food.b<span>r</span>b</h1>
+<h1 class="brand" aria-label="food.brb"><span class="food-name"><span class="food-prefix">food.</span><span class="food-brb"><span>b</span><span class="red">r</span><span>b</span></span></span></h1>
 <p class="tag">Food, movement and awareness. Your data, on your device.</p>
 <p class="intro">A quiet daily practice: three lifting days, yoga, walking, high vegetarian protein, and a pause before every plate. Everything saves on this device, private to you.</p>
 <nav class="tabs" id="tabs">
@@ -1051,7 +1057,7 @@ function showSetup(){
   const box=el.querySelector('.inner');
   const p=state.profile;
   box.innerHTML=`
-  <h1 class="brand" aria-label="food.brb">food.b<span>r</span>b</h1>
+  <h1 class="brand" aria-label="food.brb"><span class="food-name"><span class="food-prefix">food.</span><span class="food-brb"><span>b</span><span class="red">r</span><span>b</span></span></span></h1>
   <p class="tag">Food, movement and awareness. Your data, on your device.</p>
   <h2>Begin your practice</h2>
   <p class="note">food.brb keeps everything on this device only. Nothing you enter here is sent anywhere. Set your baseline once; you can change it later in the Data tab.</p>
