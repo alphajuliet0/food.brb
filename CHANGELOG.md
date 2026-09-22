@@ -2,6 +2,7 @@
 
 ## 2026-09-22
 
+- Split the dashboard into clearly labelled Food, Recovery and Steps sections, put units on every total, and replaced the misleading zero-macro ring with an honest empty state.
 - Added a layered BRB daily-progress ring led by calories with protein, fibre and steps, plus desktop hover details across rings, charts and diary rows.
 - Added private cross-device sync through Cloudflare with a one-time email-code device connection, automatic open/change sync, conflict retry/merge, and explicit device-only progress-photo handling.
 - Replaced generic Staples with frequency/recency-based per-meal suggestions and moved the Add flow inline inside the selected meal, while keeping search, barcode, custom and dish-photo overrides.
