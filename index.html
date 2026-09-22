@@ -450,11 +450,10 @@ TAB_RENDER.today = function(){
   document.getElementById('tab-today').innerHTML=`
   <div class="setrow"><div><h2 style="margin-bottom:2px">Today</h2><p class="note" style="margin:0">${fmtDate(k,true)}</p></div><button class="btn primary" id="dash-sync">↻ Sync ring</button></div>
   ${visualDashboard(p,d,t)}
-  <h2>Today</h2><div class="grid2">${stat('Calories',t.kcal+' / '+p.kcalTarget+' kcal')}${stat('Protein',t.protein+' / '+p.proteinTarget+' g')}${stat('Fibre',t.fibre+' / '+FIBRE_GOAL+' g')}${stat('Meals logged',d.foods.length,'across breakfast, lunch, dinner and snacks')}</div>
-  <div class="qr"><button class="btn primary" id="dash-log">Log food today</button><button class="btn" id="dash-plan">Choose another date</button></div>
-  <h2>Week summary</h2>${weekSummary()}
+  <div class="card insights"><div class="insightshead"><h2>Insights</h2><button class="del" id="insights-week">View full history</button></div><div class="insightgrid"><div class="insight"><span>7-day calories</span><strong>${logged.length?Math.round(sums.k/logged.length).toLocaleString():'—'}</strong></div><div class="insight"><span>Avg protein</span><strong>${logged.length?Math.round(sums.p/logged.length)+' g':'—'}</strong></div><div class="insight"><span>Avg fibre</span><strong>${logged.length?Math.round(sums.f/logged.length)+' g':'—'}</strong></div></div><p class="insightsnote">${logged.length}/7 food days logged · missing days excluded</p></div>
+  <div class="qr"><button class="btn primary" id="dash-log">Log food</button><button class="btn" id="dash-plan">Choose date</button></div>
 `;
-  const q=x=>document.querySelector(x); bindActivityRings(); document.querySelectorAll('[data-todaymeal]').forEach(b=>b.onclick=()=>{slot=b.dataset.todaymeal;selectedFoodDate=k;document.querySelector('[data-tab=food]').click();}); q('#dash-sync').onclick=startRingSync; q('#dash-log').onclick=()=>openFood(todayKey()); q('#dash-plan').onclick=()=>openFood(selectedFoodDate); q('#week-prev').onclick=()=>{dashboardWeekOffset--;TAB_RENDER.today();};q('#week-next').onclick=()=>{dashboardWeekOffset++;TAB_RENDER.today();};
+  const q=x=>document.querySelector(x); bindActivityRings(); document.querySelectorAll('[data-todaymeal]').forEach(b=>b.onclick=()=>{slot=b.dataset.todaymeal;selectedFoodDate=k;document.querySelector('[data-tab=food]').click();}); q('#dash-sync').onclick=startRingSync; q('#dash-log').onclick=()=>openFood(todayKey()); q('#dash-plan').onclick=()=>openFood(selectedFoodDate); q('#insights-week').onclick=()=>document.querySelector('[data-tab=data]').click();
 };
 function openFood(k){ selectedFoodDate=k||todayKey(); foodStage='log'; document.querySelector('[data-tab="food"]').click(); }
 /* ---------- Food ---------- */
