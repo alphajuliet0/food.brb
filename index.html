@@ -394,7 +394,7 @@ TAB_RENDER.today = function(){
 };
 function openFood(k){ selectedFoodDate=k||todayKey(); foodStage='log'; document.querySelector('[data-tab="food"]').click(); }
 /* ---------- Food ---------- */
-let foodStage='log', foodTab='staples', pauseChoice='', pick=null, slot=defaultSlot(), trigger='Real hunger', searchResults=[], searchMsg='', dishPhotoFile=null, dishPhotoUrl='', macroScope='day', estServ=1, editId=null, editServ=1, backfillList=null;
+let foodStage='log', foodAdding=false, foodTab='staples', pauseChoice='', pick=null, slot=defaultSlot(), trigger='Real hunger', searchResults=[], searchMsg='', dishPhotoFile=null, dishPhotoUrl='', macroScope='day', estServ=1, editId=null, editServ=1, backfillList=null;
 function defaultSlot(){ const h=new Date().getHours(); return h<11?'breakfast':h<15?'lunch':h<21?'dinner':'snack'; }
 let dishName='', dishIng='', estMsg='', estReply='';
 let scanLive=false, scanStream=null, scanMsg='', scanTimer=null, scanDetector=null;
@@ -450,7 +450,7 @@ TAB_RENDER.food = function(){
     <p class="note">Whatever the answer, there is no judgement here. You noticed, and that is enough.</p>`;
   else pauseHtml=`<p class="note">Pause taken. Now log what you ate, as close to the real amounts as you can.</p>`;
   let addHtml='';
-  if(foodStage==='log'){
+  if(foodStage==='log'&&foodAdding){
     let body='';
     if(foodTab==='staples') body=`<div class="list">${STAPLES.map((s,i)=>`<button class="rowbtn" data-staple="${i}"><span><strong>${esc(s[0])}</strong></span><span class="dim">${s[1]} kcal, ${s[2]} g protein, ${s[3]} g fat, ${s[4]} g carbs per ${esc(s[5])}</span></button>`).join('')}</div>`;
     else if(foodTab==='search') body=`<div class="searchrow"><input class="input" id="f-q" placeholder="Search a food, e.g. paneer"><button class="btn" id="f-go">Search</button></div>
@@ -490,7 +490,7 @@ TAB_RENDER.food = function(){
       <div class="setrow"><button class="btn mini" id="f-qminus" aria-label="Less">-</button><input class="input mini" style="width:96px" inputmode="decimal" id="f-grams" value="${esc(pick.qty||pick.defGrams)}"><button class="btn mini" id="f-qplus" aria-label="More">+</button></div>
       <div class="dim" id="f-preview"></div></div>
       <button class="btn primary" id="f-addg">Add to selected date</button></div>`:'';
-    addHtml=`<h2>Add food</h2>
+    addHtml=`<div class="setrow"><h2>Add to ${slot[0].toUpperCase()+slot.slice(1)}</h2><button class="btn mini" id="f-close-add">Close</button></div>
     <div class="chips">
       <button class="chip${foodTab==='staples'?' on':''}" data-ft="staples">Staples</button>
       <button class="chip${foodTab==='search'?' on':''}" data-ft="search">Search online</button>
@@ -502,24 +502,32 @@ TAB_RENDER.food = function(){
       ${[['breakfast','Breakfast'],['lunch','Lunch'],['dinner','Dinner'],['snack','Snack']].map(sl=>`<button class="chip${slot===sl[0]?' on':''}" data-slot="${sl[0]}">${sl[1]}</button>`).join('')}</div></div>
     ${slot==='snack'?`<div class="field"><span class="label">What triggered it? Noticing, not judging.</span><div class="chips">${TRIGGERS.map(tr=>`<button class="chip${trigger===tr?' on':''}" data-tr="${esc(tr)}">${esc(tr)}</button>`).join('')}</div></div>`:''}`;
   }
+  const goals=macroGoals(p), remaining={kcal:p.kcalTarget-t.kcal,protein:p.proteinTarget-t.protein,fat:goals.fatG-t.fat,carbs:goals.carbG-t.carbs,fibre:FIBRE_GOAL-t.fibre};
+  function editPanel(f){ return editId===f.id?`<div class="pickbox"><strong>Edit: ${esc(f.name)}</strong>
+    <div class="grid2"><div class="field"><label class="label">Calories</label><input class="input" inputmode="numeric" id="e-kcal" value="${f.kcal}"></div><div class="field"><label class="label">Protein (g)</label><input class="input" inputmode="decimal" id="e-prot" value="${f.protein}"></div></div>
+    <div class="grid2"><div class="field"><label class="label">Fat (g)</label><input class="input" inputmode="decimal" id="e-fat" value="${f.fat!=null?f.fat:''}"></div><div class="field"><label class="label">Carbs (g)</label><input class="input" inputmode="decimal" id="e-carbs" value="${f.carbs!=null?f.carbs:''}"></div></div>
+    <div class="field"><label class="label">Fibre (g)</label><input class="input" inputmode="decimal" id="e-fib" value="${f.fibre!=null?f.fibre:''}"></div>
+    <div class="field"><label class="label">Servings</label><div class="setrow"><button class="btn mini" id="e-sminus">-</button><input class="input mini" style="width:96px" inputmode="decimal" id="e-serv" value="${editServ}"><button class="btn mini" id="e-splus">+</button></div></div>
+    <div class="qr"><button class="btn primary" id="e-save">Save changes</button><button class="btn" id="e-cancel">Cancel</button></div></div>`:''; }
+  const mealNames={breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snacks'};
+  const diary=['breakfast','lunch','dinner','snack'].map(sl=>{ const fs=d.foods.filter(f=>(f.slot||(f.snack?'snack':'breakfast'))===sl), mt=fs.reduce((a,f)=>{a.k+=+f.kcal||0;a.p+=+f.protein||0;a.c+=+f.carbs||0;a.f+=+f.fat||0;return a;},{k:0,p:0,c:0,f:0}); return `<div class="card"><div class="setrow"><h3 style="margin:0">${mealNames[sl]}</h3><strong>${Math.round(mt.k)} kcal</strong></div>
+    ${fs.length?`<div class="list">${fs.map(f=>`<div class="row"><span><strong>${esc(f.name)}</strong><br><span class="dim">${f.kcal} kcal · P ${f.protein} g${f.carbs!=null?' · C '+f.carbs+' g':''}${f.fat!=null?' · F '+f.fat+' g':''}</span></span><span><button class="del" data-edit="${f.id}">Edit</button><button class="del" data-move="${f.id}">Move</button><button class="del" data-del="${f.id}">Remove</button></span></div>${editPanel(f)}`).join('')}</div>`:'<p class="note">Nothing logged.</p>'}
+    <div class="setrow"><button class="btn mini" data-addmeal="${sl}">+ Add Food</button><span class="tiny">P ${Math.round(mt.p)} g · C ${Math.round(mt.c)} g · F ${Math.round(mt.f)} g</span></div></div>`; }).join('');
   document.getElementById('tab-food').innerHTML=`
-  <h2>Log food</h2>${dateNav()}${addHtml}
-  ${foodStage==='log'?`<h2>Quick add</h2>${quickMealsHtml()}`:''}
-  <h2>${selectedFoodDate===todayKey()?'Today':fmtDate(selectedFoodDate)} on the plate</h2>
-  <div class="facts"><div class="fact"><span>Calories</span><strong>${t.kcal} / ${p.kcalTarget} kcal</strong></div><div class="fact"><span>Protein</span><strong>${t.protein} / ${p.proteinTarget} g</strong></div><div class="fact"><span>Fat</span><strong>${t.fat} / ${macroGoals(p).fatG} g</strong></div><div class="fact"><span>Carbs</span><strong>${t.carbs} / ${macroGoals(p).carbG} g</strong></div><div class="fact"><span>Fibre</span><strong>${t.fibre} / ${FIBRE_GOAL} g</strong></div></div>
-  <h2>Meals</h2>
-  ${d.foods.length===0?'<p class="note">Nothing logged for this date.</p>':['breakfast','lunch','dinner','snack',''].filter(sl=>d.foods.some(f=>(f.slot||(f.snack?'snack':''))===sl)).map(sl=>`<h3 class="slothead">${{breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snacks','':'Meals'}[sl]}</h3><div class="list">${d.foods.filter(f=>(f.slot||(f.snack?'snack':''))===sl).map(f=>`<div class="row"><span><strong>${esc(f.name)}</strong>${f.snack&&f.trigger?`<span class="tagchip">${esc(f.trigger)}</span>`:''}<br><span class="dim">${f.kcal} kcal, ${f.protein} g protein${f.fat!=null?', '+f.fat+' g fat':''}${f.carbs!=null?', '+f.carbs+' g carbs':''}${f.fibre!=null?', '+f.fibre+' g fibre':''}</span></span><button class="del" data-fav="${f.id}">Favourite</button><button class="del" data-edit="${f.id}">Edit</button><button class="del" data-move="${f.id}">Move</button><button class="del" data-del="${f.id}">Remove</button></div>
-      ${editId===f.id?`<div class="pickbox"><strong>Edit: ${esc(f.name)}</strong>
-        <div class="grid2"><div class="field"><label class="label">Calories (kcal)</label><input class="input" inputmode="numeric" id="e-kcal" value="${f.kcal}"></div><div class="field"><label class="label">Protein (g)</label><input class="input" inputmode="decimal" id="e-prot" value="${f.protein}"></div></div>
-        <div class="grid2"><div class="field"><label class="label">Fat (g)</label><input class="input" inputmode="decimal" id="e-fat" value="${f.fat!=null?f.fat:''}"></div><div class="field"><label class="label">Carbs (g)</label><input class="input" inputmode="decimal" id="e-carbs" value="${f.carbs!=null?f.carbs:''}"></div></div>
-        <div class="field"><label class="label">Fibre (g)</label><input class="input" inputmode="decimal" id="e-fib" value="${f.fibre!=null?f.fibre:''}"></div>
-        <div class="field"><label class="label">Servings (scales all the numbers)</label>
-        <div class="setrow"><button class="btn mini" id="e-sminus" aria-label="Less">-</button><input class="input mini" style="width:96px" inputmode="decimal" id="e-serv" value="${editServ}"><button class="btn mini" id="e-splus" aria-label="More">+</button></div></div>
-        <div class="qr"><button class="btn primary" id="e-save">Save changes</button><button class="btn" id="e-cancel">Cancel</button></div></div>`:''}`).join('')}</div>`).join('')}
-  <p class="note">Tap Move to send an item to the next meal slot. Edit changes its nutrition; Remove deletes it.</p>`;
+  <h2>Food diary</h2>${dateNav()}
+  <h2>Daily summary</h2>
+  <div class="card"><div class="row"><strong></strong><span class="tiny">Calories · Protein · Carbs · Fat · Fibre</span></div>
+  <div class="row"><span>Total</span><strong>${t.kcal} · ${t.protein}g · ${t.carbs}g · ${t.fat}g · ${t.fibre}g</strong></div>
+  <div class="row"><span>Goal</span><strong>${p.kcalTarget} · ${p.proteinTarget}g · ${goals.carbG}g · ${goals.fatG}g · ${FIBRE_GOAL}g</strong></div>
+  <div class="row"><span>Remaining</span><strong>${remaining.kcal} · ${remaining.protein}g · ${remaining.carbs}g · ${remaining.fat}g · ${remaining.fibre}g</strong></div></div>
+  <h2>Meals</h2>${diary}
+  ${addHtml}
+  <p class="note">Use Add Food inside a meal. Edit nutrition, Move an item to the next meal, or Remove it.</p>`;
   const sec=document.getElementById('tab-food');
   const q=s=>sec.querySelector(s);
   const qa=s=>sec.querySelectorAll(s);
+  qa('[data-addmeal]').forEach(b=>b.onclick=()=>{slot=b.dataset.addmeal;foodAdding=true;pick=null;foodTab='staples';TAB_RENDER.food();setTimeout(()=>document.getElementById('f-close-add')?.scrollIntoView({behavior:'smooth',block:'start'}),0);});
+  if(q('#f-close-add')) q('#f-close-add').onclick=()=>{foodAdding=false;pick=null;stopScan();TAB_RENDER.food();};
   q('#food-date').onchange=e=>{ selectedFoodDate=e.target.value||todayKey(); TAB_RENDER.food(); }; q('#date-prev').onclick=()=>{selectedFoodDate=shiftDate(selectedFoodDate,-1);TAB_RENDER.food();}; q('#date-next').onclick=()=>{selectedFoodDate=shiftDate(selectedFoodDate,1);TAB_RENDER.food();};
   qa('[data-move]').forEach(b=>b.onclick=()=>{ const f=d.foods.find(x=>x.id===b.dataset.move); if(!f)return; const order=['breakfast','lunch','dinner','snack'],cur=f.slot||(f.snack?'snack':'breakfast'),next=order[(order.indexOf(cur)+1)%order.length]; f.slot=next;f.snack=next==='snack';save();TAB_RENDER.food();toast('Moved to '+next+'.'); });
   if(q('#f-ring-sync')) q('#f-ring-sync').onclick=startRingSync;
@@ -538,12 +546,12 @@ TAB_RENDER.food = function(){
   qa('[data-estportion]').forEach(b=>b.onclick=()=>{ const target=parseFloat(b.dataset.estportion); scaleEst(target); });
   qa('[data-fav]').forEach(b=>b.onclick=()=>{ const f=d.foods.find(x=>x.id===b.dataset.fav); if(!f)return; state.favorites||(state.favorites=[]); const copy=Object.assign({},f); delete copy.id; delete copy.ts; if(!state.favorites.some(x=>x.name===copy.name)) state.favorites.push(copy); save(); TAB_RENDER.food(); toast('Saved to favourites.'); });
   const quickAll=[]; Object.keys(state.days).sort().reverse().forEach(k=>{const dd=state.days[k];(dd&&dd.foods||[]).slice().reverse().forEach(f=>quickAll.push(f));}); const quickSeen=new Set(),quickRecent=[]; for(const f of quickAll){const key=(f.name||'').toLowerCase();if(!key||quickSeen.has(key))continue;quickSeen.add(key);quickRecent.push(f);if(quickRecent.length===6)break;}
-  qa('[data-quick]').forEach(b=>b.onclick=()=>{ const [type,si]=b.dataset.quick.split(':'),src=type==='f'?(state.favorites||[])[+si]:quickRecent[+si]; if(!src)return; const e=Object.assign({},src,{id:uid(),ts:Date.now(),slot,snack:slot==='snack',trigger:slot==='snack'?trigger:''}); d.foods.push(e); save(); TAB_RENDER.food(); toast('Added to '+slot+'.'); });
+  qa('[data-quick]').forEach(b=>b.onclick=()=>{ const [type,si]=b.dataset.quick.split(':'),src=type==='f'?(state.favorites||[])[+si]:quickRecent[+si]; if(!src)return; const e=Object.assign({},src,{id:uid(),ts:Date.now(),slot,snack:slot==='snack',trigger:slot==='snack'?trigger:''}); d.foods.push(e); save(); foodAdding=false; TAB_RENDER.food(); toast('Added to '+slot+'.'); });
   qa('[data-ms]').forEach(b=>b.onclick=()=>{ macroScope=b.dataset.ms; TAB_RENDER.food(); });
   if(q('#w-evadd')) q('#w-evadd').onclick=()=>{ const n=q('#w-evn').value.trim(), dtv=q('#w-evd').value, ex=parseInt(q('#w-eve').value,10); if(!n||!dtv||!(ex>0)){ toast('Name, date and expected extra are needed.'); return; } (state.events||(state.events=[])).push({id:uid(),name:n,date:dtv,extra:ex}); save(); TAB_RENDER.food(); toast('Event added.'); };
   qa('[data-evdel]').forEach(b=>b.onclick=()=>{ state.events=(state.events||[]).filter(x=>x.id!==b.dataset.evdel); save(); TAB_RENDER.food(); });
   qa('[data-tr]').forEach(b=>b.onclick=()=>{ trigger=b.dataset.tr; TAB_RENDER.food(); });
-  function addEntry(name,kcal,prot,fat,carbs,g,fibre){ const e={id:uid(),name,grams:g,kcal:Math.round(kcal),protein:Math.round(prot*10)/10,snack:slot==='snack',slot,trigger:slot==='snack'?trigger:'',ts:Date.now()}; if(isFinite(fat)) e.fat=Math.round(fat*10)/10; if(isFinite(carbs)) e.carbs=Math.round(carbs*10)/10; if(isFinite(fibre)) e.fibre=Math.round(fibre*10)/10; d.foods.push(e); save(); pick=null; TAB_RENDER.food(); toast('Logged.'); }
+  function addEntry(name,kcal,prot,fat,carbs,g,fibre){ const e={id:uid(),name,grams:g,kcal:Math.round(kcal),protein:Math.round(prot*10)/10,snack:slot==='snack',slot,trigger:slot==='snack'?trigger:'',ts:Date.now()}; if(isFinite(fat)) e.fat=Math.round(fat*10)/10; if(isFinite(carbs)) e.carbs=Math.round(carbs*10)/10; if(isFinite(fibre)) e.fibre=Math.round(fibre*10)/10; d.foods.push(e); save(); pick=null; foodAdding=false; TAB_RENDER.food(); toast('Logged to '+slot+'.'); }
   if(q('#f-addg')) q('#f-addg').onclick=()=>{ if(!pick) return; pick.qty=q('#f-grams').value; const g=pickGrams(); if(g<=0) return;
     const g10=Math.round(g*10)/10;
     const suffix=pick.mode==='s'&&pick.serveGrams?(' ('+pick.qty+' x '+pick.serveLabel+')'):(Math.abs(g-100)>0.001?' ('+g10+' g)':'');
