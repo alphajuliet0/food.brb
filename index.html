@@ -646,24 +646,19 @@ TAB_RENDER.food = function(){
           reqParts.push({inline_data:{mime_type:'image/jpeg',data:String(dataUrl).split(',')[1]}});
         }catch(pe){ estMsg='Could not read that photo. Remove it to estimate from the name alone, or choose a different photo.'; TAB_RENDER.food(); return; }
       }
-      const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+GEMINI_MODEL+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':geminiKey},body:JSON.stringify({contents:[{parts:reqParts}]})});
-      const j=await r.json().catch(()=>null);
-      if(!r.ok){
-        const em=(j&&j.error&&j.error.message)||'';
-        if(/no longer available|not found|not supported|deprecated/i.test(em)&&/model/i.test(em)){ estMsg='Google has retired the Gemini version this app uses. This needs an app update - message Instinct and it will be fixed. The Share with AI option still works.'; }
-        else{ estMsg='The estimate failed'+(em?(': '+em):'. Check the key in the Data tab.')+' The Share with AI option still works.'; }
-        TAB_RENDER.food(); return; }
-      const parts=j&&j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts||[];
+      let models=[];
+      try{const lm=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(geminiKey)),lj=await lm.json();if(lm.ok)models=(lj.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')&&/gemini/i.test(m.name)).map(m=>m.name.replace(/^models\//,''));}catch(x){}
+      const preferred=['gemini-2.5-flash-lite','gemini-2.0-flash','gemini-2.5-pro','gemini-flash-latest','gemini-pro-latest'];models=[...preferred,...models].filter((v,i,a)=>a.indexOf(v)===i);
+      let j=null,lastError='';
+      for(const model of models){const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':geminiKey},body:JSON.stringify({contents:[{parts:reqParts}]})});j=await r.json().catch(()=>null);if(r.ok)break;const em=(j&&j.error&&j.error.message)||('HTTP '+r.status);lastError=em;if(!(/no longer available|not found|not supported|deprecated/i.test(em)&&/model/i.test(em)))break;j=null;}
+      if(!j||!j.candidates){estMsg='The estimate failed'+(lastError?(': '+lastError):'.')+' Check the key in Settings, then try again.';TAB_RENDER.food();return;}
+      const parts=j.candidates?.[0]?.content?.parts||[];
       estReply=parts.map(p=>p.text||'').join('').trim();
-      if(!estReply){ estMsg='Gemini sent back nothing readable. Try again, or use Share with AI.'; TAB_RENDER.food(); return; }
-      estMsg='Estimate below. Check its assumptions, adjust the numbers, then save.';
-      const mk=estReply.match(/calories\s*=\s*(\d+)/i); const mp=estReply.match(/protein\s*=\s*(\d+(?:\.\d+)?)/i); const mf=estReply.match(/fat\s*=\s*(\d+(?:\.\d+)?)/i); const mc=estReply.match(/carb(?:ohydrate)?s?\s*=\s*(\d+(?:\.\d+)?)/i); const mb=estReply.match(/fib(?:er|re)\s*=\s*(\d+(?:\.\d+)?)/i);
-      TAB_RENDER.food();
-      if(mk&&q('#f-ak')) q('#f-ak').value=mk[1];
-      if(mp&&q('#f-ap')) q('#f-ap').value=mp[1];
-      if(mf&&q('#f-af')) q('#f-af').value=mf[1];
-      if(mc&&q('#f-ac')) q('#f-ac').value=mc[1];
-      if(mb&&q('#f-ab')) q('#f-ab').value=mb[1];
+      if(!estReply){estMsg='The AI returned no readable estimate. Try the photo again.';TAB_RENDER.food();return;}
+      const mn=estReply.match(/name\s*=\s*([^,\n]+)/i),mk=estReply.match(/calories\s*=\s*(\d+)/i),mp=estReply.match(/protein\s*=\s*(\d+(?:\.\d+)?)/i),mf=estReply.match(/fat\s*=\s*(\d+(?:\.\d+)?)/i),mc=estReply.match(/carb(?:ohydrate)?s?\s*=\s*(\d+(?:\.\d+)?)/i),mb=estReply.match(/fib(?:er|re)\s*=\s*(\d+(?:\.\d+)?)/i);
+      if(!mk){estMsg='The AI could not return usable numbers. Add a little detail and tap Guess again.';TAB_RENDER.food();return;}
+      const guessed=(mn&&mn[1].trim())||'AI meal estimate';addEntry(guessed+' (AI estimate)',+mk[1],mp?+mp[1]:0,mf?+mf[1]:0,mc?+mc[1]:0,0,mb?+mb[1]:0);
+      if(dishPhotoUrl)URL.revokeObjectURL(dishPhotoUrl);dishPhotoFile=null;dishPhotoUrl='';dishIng='';estMsg='';estReply='';toast('Meal guessed and added to '+slot+'.');
     }catch(e){ estMsg='The estimate needs an internet connection. Try again when online, or use Share with AI.'; TAB_RENDER.food(); }
   };
   if(q('#f-share')) q('#f-share').onclick=async()=>{
