@@ -2,6 +2,9 @@
 
 ## 2026-09-22
 
+- Added a layered BRB daily-progress ring led by calories with protein, fibre and steps, plus desktop hover details across rings, charts and diary rows.
+- Added private cross-device sync through Cloudflare with a one-time email-code device connection, automatic open/change sync, conflict retry/merge, and explicit device-only progress-photo handling.
+- Replaced generic Staples with frequency/recency-based per-meal suggestions and moved the Add flow inline inside the selected meal, while keeping search, barcode, custom and dish-photo overrides.
 - Polished meal cards with a compact single-line + Add control and removed empty-meal macro noise.
 - Added a self-serve PT tracker XLSX/CSV importer with dry-run preview, anomaly and duplicate counts, field-safe merge, provenance, and historical daily totals that feed monthly archives without inventing meal entries or overwriting Ring/diary data.
 - Removed the unnecessary visible Dietary profile controls; vegetarian-with-eggs remains silent context for AI dish estimates.
