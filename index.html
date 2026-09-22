@@ -101,15 +101,12 @@ a { color:var(--ink); }
 <div id="setup"><div class="inner"></div></div>
 <div class="wrap">
 <h1 class="brand" aria-label="food.brb"><span class="food-name"><span class="food-prefix">food.</span><span class="food-brb"><span>b</span><span class="red">r</span><span>b</span></span></span></h1>
-<p class="tag">Food, movement and awareness. Your data, on your device.</p>
-<p class="intro">A quiet daily practice: three lifting days, yoga, walking, high vegetarian protein, and a pause before every plate. Everything saves on this device, private to you.</p>
+<p class="tag">Your food, recovery and progress. Clear at a glance.</p>
+<p class="intro">A private, on-device dashboard and fast food log. See the week, choose any date, and log without friction.</p>
 <nav class="tabs" id="tabs">
-<button data-tab="today" class="on">Today</button>
-<button data-tab="food">Food</button>
-<button data-tab="train">Train</button>
-<button data-tab="body">Body</button>
-<button data-tab="mind">Mind</button>
-<button data-tab="data">Data</button>
+<button data-tab="today" class="on">Dashboard</button>
+<button data-tab="food">Log food</button>
+<button data-tab="data">Data & settings</button>
 </nav>
 <section class="tab on" id="tab-today"></section>
 <section class="tab" id="tab-food"></section>
@@ -203,6 +200,9 @@ function fmtDate(key){ const p=key.split('-'); const M=['Jan','Feb','Mar','Apr',
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function emptyDay(){ return { water:0, steps:0, walkMin:0, foods:[], pauses:0, sleep:null, bedTime:'', wokeTime:'', mood:'', intention:'', gratitude:['','',''], wentWell:'', noticed:'' }; }
 function dayOf(k){ if(!state.days[k]) state.days[k]=emptyDay(); return state.days[k]; }
+let selectedFoodDate=todayKey();
+function shiftDate(k,n){ const d=new Date(k+'T12:00:00'); d.setDate(d.getDate()+n); return todayKey(d); }
+function dateNav(){ return `<div class="card"><div class="setrow"><button class="btn mini" id="date-prev" aria-label="Previous day">‹</button><input class="input" style="max-width:180px" type="date" id="food-date" value="${selectedFoodDate}"><button class="btn mini" id="date-next" aria-label="Next day">›</button></div><p class="note" style="margin-bottom:0">${selectedFoodDate===todayKey()?'Today':fmtDate(selectedFoodDate)} · past and future planning are both supported</p></div>`; }
 function lastDays(n){ const out=[]; const now=new Date(); for(let i=n-1;i>=0;i--){ out.push(todayKey(new Date(now.getFullYear(),now.getMonth(),now.getDate()-i))); } return out; }
 const FIBRE_GOAL=30;
 const ULTRAHUMAN_SYNC_ORIGIN='https://food-brb-ultrahuman.ajay-7a2.workers.dev';
@@ -269,7 +269,7 @@ function macrosHtml(p){
   const g=macroGoals(p);
   let t;
   if(macroScope==='week'){ t={kcal:0,protein:0,fat:0,carbs:0}; for(const kk of lastDays(7)){ const dd=state.days[kk]; if(!dd) continue; const x=totals(dd); t.kcal+=x.kcal; t.protein+=x.protein; t.fat+=x.fat; t.carbs+=x.carbs; } }
-  else t=totals(dayOf(todayKey()));
+  else t=totals(dayOf(selectedFoodDate));
   const parts=[{n:'Carbs',grams:t.carbs,k:t.carbs*4,color:'#6f7fbf',goalG:g.carbG},{n:'Fat',grams:t.fat,k:t.fat*9,color:'#d9a441',goalG:g.fatG},{n:'Protein',grams:t.protein,k:t.protein*4,color:'#73a89a',goalG:g.proteinG}];
   const totK=parts.reduce((a,x)=>a+x.k,0);
   const goalK=g.carbG*4+g.fatG*9+g.proteinG*4;
@@ -371,68 +371,30 @@ document.getElementById('tabs').addEventListener('click', e=>{
 });
 /* ---------- Today ---------- */
 TAB_RENDER.today = function(){
-  const k=todayKey(), d=dayOf(k), p=state.profile, t=totals(d);
-  const quote=QUOTES[Math.floor(Date.now()/86400000)%QUOTES.length];
-  const sorted=[...state.weights].sort((a,b)=>a.date<b.date?-1:1);
-  const lastW=sorted.slice(-7);
-  const avg7=lastW.length?Math.round(lastW.reduce((s,x)=>s+x.kg,0)/lastW.length*10)/10:null;
-  let pdays=0; for(const kk of lastDays(7)){ if(totals(dayOf(kk)).protein>=p.proteinTarget) pdays++; }
-  const stat=(l,v,pct,hint)=>`<div class="stat"><div class="l">${l}</div><div class="v">${v}</div><div class="bar"><i style="width:${Math.max(0,Math.min(100,pct))}%"></i></div>${hint?`<div class="tiny">${hint}</div>`:''}</div>`;
+  const p=state.profile, k=todayKey(), d=dayOf(k), t=totals(d), ring=d.ring||{};
+  const week=lastDays(7), logged=week.filter(x=>state.days[x]&&state.days[x].foods&&state.days[x].foods.length), sums=logged.reduce((a,x)=>{const z=totals(state.days[x]);a.k+=z.kcal;a.p+=z.protein;a.f+=z.fibre||0;return a;},{k:0,p:0,f:0});
+  const weights=[...state.weights].sort((a,b)=>a.date<b.date?-1:1), lw=weights.length?weights[weights.length-1]:null;
+  const stat=(l,v,h)=>`<div class="stat"><div class="l">${l}</div><div class="v">${v}</div>${h?`<div class="tiny">${h}</div>`:''}</div>`;
   document.getElementById('tab-today').innerHTML=`
-  <h2>Today</h2>
-  <div class="quote"><div class="t">"${esc(quote.t)}"</div><div class="b">${esc(quote.b)}</div></div>
+  <div class="setrow"><div><h2 style="margin-bottom:2px">Your dashboard</h2><p class="note" style="margin:0">Today and the last 7 days</p></div><button class="btn" id="dash-sync">Sync ring</button></div>
   <div class="grid2">
-    ${stat('Calories',t.kcal+' / '+p.kcalTarget+' kcal',t.kcal/p.kcalTarget*100)}
-    ${stat('Protein',t.protein+' / '+p.proteinTarget+' g',t.protein/p.proteinTarget*100)}
-    ${stat('Water',d.water+' / '+p.waterTarget+' glasses',d.water/p.waterTarget*100)}
-    ${stat('Steps',String(d.steps),d.steps/p.stepsTarget*100,'goal '+p.stepsTarget.toLocaleString())}
+    ${stat('Recovery',metricText(ring.recovery_score),'Ultrahuman')}${stat('Sleep',metricText(ring.sleep_score),'score')}
+    ${stat('HRV',metricText(ring.avg_sleep_hrv,' ms'),'sleep average')}${stat('Resting HR',metricText(ring.sleep_rhr,' bpm'),'during sleep')}
+    ${stat('Steps',ring.steps==null?'—':Math.round(ring.steps).toLocaleString(),ring.steps==null?'not supplied':'goal '+p.stepsTarget.toLocaleString())}${stat('Weight',lw?lw.kg+' kg':'—',lw?'last logged '+fmtDate(lw.date):'no weigh-in yet')}
   </div>
-  <div class="qr">
-    <button class="btn" data-act="water">+ glass of water</button>
-    <button class="btn" data-act="steps1k">+ 1,000 steps</button>
-  </div>
-  <div class="field"><label class="label">Exact steps today</label><input class="input" inputmode="numeric" id="f-steps" value="${d.steps||''}" placeholder="0"></div>
-  <h2>Morning check-in</h2>
-  <div class="grid2"><div class="field"><label class="label">Went to bed</label><input class="input" type="time" id="f-bed" value="${esc(d.bedTime||'')}"></div><div class="field"><label class="label">Woke up</label><input class="input" type="time" id="f-woke" value="${esc(d.wokeTime||'')}"></div></div>
-  <div class="field"><label class="label">Hours of sleep</label><input class="input" inputmode="decimal" id="f-sleep" value="${d.sleep==null?'':d.sleep}" placeholder="7.5"></div>
-  ${d.bedTime&&d.wokeTime&&d.sleep!=null?`<p class="note">${esc(d.bedTime)} to ${esc(d.wokeTime)} = ${d.sleep} h. Edit the hours directly if you need to.</p>`:''}
-  <h2>Your daily rhythm</h2>
-  <p class="note">Asleep by 10 pm. Awake 4:15 on weekdays, 6:00 on weekends. These anchors keep that rhythm steady.</p>
-  <ul class="plain">
-    <li><strong>First light.</strong> Bright light as soon as you wake. At 4:15 the UK is dark for much of the year, so indoor light carries the morning - step outside once the sun is up.</li>
-    <li><strong>Food window.</strong> Eat roughly between 6:30 am and 6:30 pm, with the last bite about three hours before bed.</li>
-    <li><strong>Caffeine.</strong> Last cup around midday, so it is well clear by 10 pm.</li>
-    <li><strong>Training.</strong> Morning or early afternoon suits this rhythm. Nothing hard late in the evening.</li>
-    <li><strong>Evening.</strong> Wind down from about 8:30: dim lights, easy on screens, gratitude, bed by 10.</li>
-  </ul>
-  <div class="field"><span class="label">How are you arriving today?</span><div class="chips" id="f-mood">${MOODS.map(m=>`<button class="chip${d.mood===m?' on':''}" data-mood="${esc(m)}">${esc(m)}</button>`).join('')}</div></div>
-  <div class="field"><label class="label">Intention for today</label><input class="input" id="f-intent" value="${esc(d.intention)}" placeholder="One sentence. Small and real."></div>
-  <h2>Evening reflection</h2>
-  <div class="field"><label class="label">What went well?</label><textarea class="input" id="f-well">${esc(d.wentWell)}</textarea></div>
-  <div class="field"><label class="label">What did you notice about your eating, mind or body?</label><textarea class="input" id="f-noticed">${esc(d.noticed)}</textarea></div>
-  <h2>This week</h2>
-  <div class="facts">
-    <div class="fact"><span>7-weigh-in average</span><strong>${avg7==null?'not enough data yet':avg7+' kg'}</strong></div>
-    <div class="fact"><span>Goal</span><strong>${p.goalWeight==null?'not set':p.goalWeight+' kg'}</strong></div>
-    <div class="fact"><span>Days at protein target</span><strong>${pdays} of 7</strong></div>
-    <div class="fact"><span>Mindful pauses today</span><strong>${d.pauses}</strong></div>
-  </div>
-  <p class="note">Judge the week by the average, not by any single morning. The trend decides, not one weigh-in.</p>`;
-  const sec=document.getElementById('tab-today');
-  sec.querySelector('[data-act=water]').onclick=()=>{ d.water++; save(); TAB_RENDER.today(); };
-  sec.querySelector('[data-act=steps1k]').onclick=()=>{ d.steps+=1000; save(); TAB_RENDER.today(); };
-  sec.querySelector('#f-steps').onchange=e=>{ d.steps=parseInt(e.target.value,10)||0; save(); TAB_RENDER.today(); };
-  sec.querySelector('#f-sleep').onchange=e=>{ const v=parseFloat(e.target.value); d.sleep=isNaN(v)?null:v; save(); };
-  function sleepFromTimes(){ if(!d.bedTime||!d.wokeTime) return; const bm=d.bedTime.split(':'), wm=d.wokeTime.split(':'); let mins=(parseInt(wm[0],10)*60+parseInt(wm[1],10))-(parseInt(bm[0],10)*60+parseInt(bm[1],10)); if(mins<=0) mins+=1440; d.sleep=Math.round(mins/60*100)/100; save(); TAB_RENDER.today(); }
-  sec.querySelector('#f-bed').onchange=e=>{ d.bedTime=e.target.value; save(); sleepFromTimes(); };
-  sec.querySelector('#f-woke').onchange=e=>{ d.wokeTime=e.target.value; save(); sleepFromTimes(); };
-  sec.querySelector('#f-mood').onclick=e=>{ const b=e.target.closest('button'); if(!b)return; d.mood=b.dataset.mood; save(); TAB_RENDER.today(); };
-  sec.querySelector('#f-intent').onchange=e=>{ d.intention=e.target.value; save(); };
-  sec.querySelector('#f-well').onchange=e=>{ d.wentWell=e.target.value; save(); };
-  sec.querySelector('#f-noticed').onchange=e=>{ d.noticed=e.target.value; save(); };
+  <p class="note"><strong>Data quality:</strong> blanks mean no upstream value was supplied. food.brb never invents health data.</p>
+  <h2>Today</h2><div class="grid2">${stat('Calories',t.kcal+' / '+p.kcalTarget+' kcal')}${stat('Protein',t.protein+' / '+p.proteinTarget+' g')}${stat('Fibre',t.fibre+' / '+FIBRE_GOAL+' g')}${stat('Meals logged',d.foods.length,'across breakfast, lunch, dinner and snacks')}</div>
+  <div class="qr"><button class="btn primary" id="dash-log">Log food today</button><button class="btn" id="dash-plan">Choose another date</button></div>
+  <h2>How the week looks</h2>
+  <div class="facts"><div class="fact"><span>Days logged</span><strong>${logged.length} / 7</strong></div><div class="fact"><span>Average calories</span><strong>${logged.length?Math.round(sums.k/logged.length)+' kcal':'—'}</strong></div><div class="fact"><span>Average protein</span><strong>${logged.length?Math.round(sums.p/logged.length)+' g':'—'}</strong></div><div class="fact"><span>Protein target days</span><strong>${logged.filter(x=>totals(state.days[x]).protein>=p.proteinTarget*.9).length}</strong></div></div>
+  ${weekCharts(p)}
+  <h2>Progress and patterns</h2>${healthDashboard(p)}
+  <p class="note">Coverage and paired-day counts are shown so weak data never looks conclusive.</p>`;
+  const q=x=>document.querySelector(x); q('#dash-sync').onclick=startRingSync; q('#dash-log').onclick=()=>openFood(todayKey()); q('#dash-plan').onclick=()=>openFood(selectedFoodDate);
 };
+function openFood(k){ selectedFoodDate=k||todayKey(); foodStage='log'; document.querySelector('[data-tab="food"]').click(); }
 /* ---------- Food ---------- */
-let foodStage='idle', foodTab='staples', pauseChoice='', pick=null, slot=defaultSlot(), trigger='Real hunger', searchResults=[], searchMsg='', dishPhotoFile=null, dishPhotoUrl='', macroScope='day', estServ=1, editId=null, editServ=1, backfillList=null;
+let foodStage='log', foodTab='staples', pauseChoice='', pick=null, slot=defaultSlot(), trigger='Real hunger', searchResults=[], searchMsg='', dishPhotoFile=null, dishPhotoUrl='', macroScope='day', estServ=1, editId=null, editServ=1, backfillList=null;
 function defaultSlot(){ const h=new Date().getHours(); return h<11?'breakfast':h<15?'lunch':h<21?'dinner':'snack'; }
 let dishName='', dishIng='', estMsg='', estReply='';
 let scanLive=false, scanStream=null, scanMsg='', scanTimer=null, scanDetector=null;
@@ -476,7 +438,8 @@ async function lookupBarcode(code){
   }catch(e){ scanMsg='Barcode lookup needs an internet connection. Try again when online.'; TAB_RENDER.food(); }
 }
 TAB_RENDER.food = function(){
-  const k=todayKey(), d=dayOf(k), p=state.profile, t=totals(d);
+  const k=selectedFoodDate, d=dayOf(k), p=state.profile, t=totals(d);
+  foodStage='log';
   const counts={}; let snackTotal=0;
   for(const kk of lastDays(7)){ for(const f of dayOf(kk).foods){ if(f.snack){ counts[f.trigger]=(counts[f.trigger]||0)+1; snackTotal++; } } }
   let pauseHtml='';
@@ -502,7 +465,7 @@ TAB_RENDER.food = function(){
       <div class="grid2"><div class="field"><label class="label">Calories (kcal)</label><input class="input" inputmode="numeric" id="f-ck"></div><div class="field"><label class="label">Protein (g)</label><input class="input" inputmode="decimal" id="f-cp"></div></div>
       <div class="grid2"><div class="field"><label class="label">Fat (g, optional)</label><input class="input" inputmode="decimal" id="f-cf"></div><div class="field"><label class="label">Carbs (g, optional)</label><input class="input" inputmode="decimal" id="f-cc"></div></div>
       <div class="field"><label class="label">Fibre (g, optional)</label><input class="input" inputmode="decimal" id="f-cb"></div>
-      <button class="btn primary" id="f-cadd">Add to today</button>`;
+      <button class="btn primary" id="f-cadd">Add to selected date</button>`;
     else body=`<div class="field"><label class="label">Dish name and portion</label><input class="input" id="f-an" value="${esc(dishName)}" placeholder="e.g. homemade chana masala, 1 medium bowl"></div>
       <div class="field"><label class="label">What is in it? (optional but improves the estimate)</label><input class="input" id="f-ai" value="${esc(dishIng)}" placeholder="e.g. chickpeas, tomato, 1 tsp oil"></div>
       <label class="btn filebtn">${dishPhotoFile?'Change photo':'Take or choose photo'}<input type="file" accept="image/*" id="f-photo"></label>
@@ -526,7 +489,7 @@ TAB_RENDER.food = function(){
       <div class="chips"><button class="chip" data-portion="0.5">Half</button><button class="chip" data-portion="1">Standard</button><button class="chip" data-portion="1.5">Large</button><button class="chip" data-portion="2">Double</button></div>
       <div class="setrow"><button class="btn mini" id="f-qminus" aria-label="Less">-</button><input class="input mini" style="width:96px" inputmode="decimal" id="f-grams" value="${esc(pick.qty||pick.defGrams)}"><button class="btn mini" id="f-qplus" aria-label="More">+</button></div>
       <div class="dim" id="f-preview"></div></div>
-      <button class="btn primary" id="f-addg">Add to today</button></div>`:'';
+      <button class="btn primary" id="f-addg">Add to selected date</button></div>`:'';
     addHtml=`<h2>Add food</h2>
     <div class="chips">
       <button class="chip${foodTab==='staples'?' on':''}" data-ft="staples">Staples</button>
@@ -540,23 +503,12 @@ TAB_RENDER.food = function(){
     ${slot==='snack'?`<div class="field"><span class="label">What triggered it? Noticing, not judging.</span><div class="chips">${TRIGGERS.map(tr=>`<button class="chip${trigger===tr?' on':''}" data-tr="${esc(tr)}">${esc(tr)}</button>`).join('')}</div></div>`:''}`;
   }
   document.getElementById('tab-food').innerHTML=`
-  <h2>The pause</h2>${pauseHtml}${addHtml}
+  <h2>Log food</h2>${dateNav()}${addHtml}
   ${foodStage==='log'?`<h2>Quick add</h2>${quickMealsHtml()}`:''}
-  <h2>Today on the plate</h2>
+  <h2>${selectedFoodDate===todayKey()?'Today':fmtDate(selectedFoodDate)} on the plate</h2>
   <div class="facts"><div class="fact"><span>Calories</span><strong>${t.kcal} / ${p.kcalTarget} kcal</strong></div><div class="fact"><span>Protein</span><strong>${t.protein} / ${p.proteinTarget} g</strong></div><div class="fact"><span>Fat</span><strong>${t.fat} / ${macroGoals(p).fatG} g</strong></div><div class="fact"><span>Carbs</span><strong>${t.carbs} / ${macroGoals(p).carbG} g</strong></div><div class="fact"><span>Fibre</span><strong>${t.fibre} / ${FIBRE_GOAL} g</strong></div></div>
-  <h2>This week's budget</h2>
-  ${weekBudgetHtml(p)}
-  <h2>Dashboard</h2>
-  <p class="note">7, 28 and 90-day views show consistency and useful relationships, not just totals.</p>
-  ${healthDashboard(p)}
-  <h2>Ring health</h2>
-  ${ringDashboard()}
-  <button class="btn" id="f-ring-sync">Sync ring</button>
-  <h2>Daily charts</h2>
-  ${weekCharts(p)}
-  <h2>Macros</h2>
-  ${macrosHtml(p)}
-  ${d.foods.length===0?'<p class="note">Nothing logged yet today.</p>':['breakfast','lunch','dinner','snack',''].filter(sl=>d.foods.some(f=>(f.slot||(f.snack?'snack':''))===sl)).map(sl=>`<h3 class="slothead">${{breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snacks','':'Meals'}[sl]}</h3><div class="list">${d.foods.filter(f=>(f.slot||(f.snack?'snack':''))===sl).map(f=>`<div class="row"><span><strong>${esc(f.name)}</strong>${f.snack&&f.trigger?`<span class="tagchip">${esc(f.trigger)}</span>`:''}<br><span class="dim">${f.kcal} kcal, ${f.protein} g protein${f.fat!=null?', '+f.fat+' g fat':''}${f.carbs!=null?', '+f.carbs+' g carbs':''}${f.fibre!=null?', '+f.fibre+' g fibre':''}</span></span><button class="del" data-fav="${f.id}">Favourite</button><button class="del" data-edit="${f.id}">Edit</button><button class="del" data-del="${f.id}">Remove</button></div>
+  <h2>Meals</h2>
+  ${d.foods.length===0?'<p class="note">Nothing logged yet today.</p>':['breakfast','lunch','dinner','snack',''].filter(sl=>d.foods.some(f=>(f.slot||(f.snack?'snack':''))===sl)).map(sl=>`<h3 class="slothead">${{breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snacks','':'Meals'}[sl]}</h3><div class="list">${d.foods.filter(f=>(f.slot||(f.snack?'snack':''))===sl).map(f=>`<div class="row"><span><strong>${esc(f.name)}</strong>${f.snack&&f.trigger?`<span class="tagchip">${esc(f.trigger)}</span>`:''}<br><span class="dim">${f.kcal} kcal, ${f.protein} g protein${f.fat!=null?', '+f.fat+' g fat':''}${f.carbs!=null?', '+f.carbs+' g carbs':''}${f.fibre!=null?', '+f.fibre+' g fibre':''}</span></span><button class="del" data-fav="${f.id}">Favourite</button><button class="del" data-edit="${f.id}">Edit</button><button class="del" data-move="${f.id}">Move</button><button class="del" data-del="${f.id}">Remove</button></div>
       ${editId===f.id?`<div class="pickbox"><strong>Edit: ${esc(f.name)}</strong>
         <div class="grid2"><div class="field"><label class="label">Calories (kcal)</label><input class="input" inputmode="numeric" id="e-kcal" value="${f.kcal}"></div><div class="field"><label class="label">Protein (g)</label><input class="input" inputmode="decimal" id="e-prot" value="${f.protein}"></div></div>
         <div class="grid2"><div class="field"><label class="label">Fat (g)</label><input class="input" inputmode="decimal" id="e-fat" value="${f.fat!=null?f.fat:''}"></div><div class="field"><label class="label">Carbs (g)</label><input class="input" inputmode="decimal" id="e-carbs" value="${f.carbs!=null?f.carbs:''}"></div></div>
@@ -564,16 +516,12 @@ TAB_RENDER.food = function(){
         <div class="field"><label class="label">Servings (scales all the numbers)</label>
         <div class="setrow"><button class="btn mini" id="e-sminus" aria-label="Less">-</button><input class="input mini" style="width:96px" inputmode="decimal" id="e-serv" value="${editServ}"><button class="btn mini" id="e-splus" aria-label="More">+</button></div></div>
         <div class="qr"><button class="btn primary" id="e-save">Save changes</button><button class="btn" id="e-cancel">Cancel</button></div></div>`:''}`).join('')}</div>`).join('')}
-  ${(()=>{ const hist=lastDays(8).slice(0,-1).reverse().filter(kk=>{ const dd=state.days[kk]; return dd&&dd.foods&&dd.foods.length>0; }).slice(0,7); if(!hist.length) return ''; return `<h2>Repeat a previous day</h2><div class="list">${hist.map(kk=>{ const dd=state.days[kk]; const tt=totals(dd); return `<div class="row"><span><strong>${kk===todayKey(new Date(Date.now()-864e5))?'Yesterday':kk}</strong><br><span class="dim">${dd.foods.length} item${dd.foods.length>1?'s':''}, ${tt.kcal} kcal, ${tt.protein} g protein${tt.fat?', '+tt.fat+' g fat':''}${tt.carbs?', '+tt.carbs+' g carbs':''}${tt.fibre?', '+tt.fibre+' g fibre':''}</span></span><button class="btn mini" data-copyday="${kk}">Copy to today</button></div>`; }).join('')}</div>`; })()}
-  <h2>Snacks this week</h2>
-  ${snackTotal===0?'<p class="note">No snacks logged in the last 7 days.</p>':`<div class="facts">${Object.keys(counts).map(tr=>`<div class="fact"><span>${esc(tr)}</span><strong>${counts[tr]}</strong></div>`).join('')}</div>`}
-  <p class="note">The trigger that shows up most is the one to sit with, not to fight. Awareness first; change follows.</p>
-  <h2>Vegetarian protein anchors</h2>
-  <div class="list">${PROTEIN_GUIDE.map(g=>`<div class="row"><span><strong>${esc(g[0])}</strong></span><span class="dim">${esc(g[1])}</span></div>`).join('')}</div>
-  <p class="note">Build each meal around one of these, then add vegetables and carbs around it. That is how ${p.proteinTarget} g happens without eggs or meat.</p>`;
+  <p class="note">Tap Move to send an item to the next meal slot. Edit changes its nutrition; Remove deletes it.</p>`;
   const sec=document.getElementById('tab-food');
   const q=s=>sec.querySelector(s);
   const qa=s=>sec.querySelectorAll(s);
+  q('#food-date').onchange=e=>{ selectedFoodDate=e.target.value||todayKey(); TAB_RENDER.food(); }; q('#date-prev').onclick=()=>{selectedFoodDate=shiftDate(selectedFoodDate,-1);TAB_RENDER.food();}; q('#date-next').onclick=()=>{selectedFoodDate=shiftDate(selectedFoodDate,1);TAB_RENDER.food();};
+  qa('[data-move]').forEach(b=>b.onclick=()=>{ const f=d.foods.find(x=>x.id===b.dataset.move); if(!f)return; const order=['breakfast','lunch','dinner','snack'],cur=f.slot||(f.snack?'snack':'breakfast'),next=order[(order.indexOf(cur)+1)%order.length]; f.slot=next;f.snack=next==='snack';save();TAB_RENDER.food();toast('Moved to '+next+'.'); });
   if(q('#f-ring-sync')) q('#f-ring-sync').onclick=startRingSync;
   if(q('#f-start')) q('#f-start').onclick=()=>{ foodStage='pause'; TAB_RENDER.food(); };
   qa('[data-pc]').forEach(b=>b.onclick=()=>{ pauseChoice=b.dataset.pc; TAB_RENDER.food(); });
@@ -1116,7 +1064,7 @@ function showSetup(){
   const p=state.profile;
   box.innerHTML=`
   <h1 class="brand" aria-label="food.brb"><span class="food-name"><span class="food-prefix">food.</span><span class="food-brb"><span>b</span><span class="red">r</span><span>b</span></span></span></h1>
-  <p class="tag">Food, movement and awareness. Your data, on your device.</p>
+  <p class="tag">Your food, recovery and progress. Clear at a glance.</p>
   <h2>Begin your practice</h2>
   <p class="note">food.brb keeps everything on this device only. Nothing you enter here is sent anywhere. Set your baseline once; you can change it later in the Data tab.</p>
   <div class="grid2">

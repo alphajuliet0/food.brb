@@ -2,6 +2,7 @@
 
 ## 2026-09-22
 
+- Rebuilt the product around Ajay’s brief: dashboard-first home, simple date-aware food logging for past/present/future days, clear meal slots, and move-entry controls. Removed mindfulness, training and body tabs from the main experience.
 - Connected the private Ultrahuman Ring sync: Access-gated popup, exact-origin postMessage handoff, 7-day on-device import, and honest dashboard cards for sleep, recovery, HRV, resting heart rate and steps.
 - Removed the box around the brb mark and reduced the overall food.brb lockup size following Ajay’s design direction.
 - Added a one-screen review flow for photo and barcode logging, with editable nutrition before save, half/standard/large/double portion presets, recent meals, favourites and copy-previous-day.
