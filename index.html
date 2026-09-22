@@ -942,10 +942,8 @@ TAB_RENDER.data = function(){
     <div class="fact"><span>Start${p.startDate?', '+fmtDate(p.startDate):''}</span><strong>${p.startWeight==null?'not set':p.startWeight+' kg'}</strong></div>
     <div class="fact"><span>Goal</span><strong>${p.goalWeight==null?'not set':p.goalWeight+' kg'}</strong></div>
     <div class="fact"><span>Frame</span><strong>${p.age==null?'not set':p.age+(p.heightCm==null?'':', '+p.heightCm+' cm')}</strong></div>
-    <div class="fact"><span>Diet</span><strong>Vegetarian, eggs allowed</strong></div>
   </div>
   <div class="qr"><button class="btn" id="d-setup">Edit setup</button></div>
-  <h2>Dietary profile</h2><p class="note">Used as context for Gemini dish estimates.</p><label class="check"><input type="checkbox" id="d-eggs"${p.eggs!==false?' checked':''}><span>Vegetarian, eggs allowed</span></label>
   <h2>Ultrahuman Ring</h2>
   <p class="note">Sync the last 7 days through your private Cloudflare email-code gate. Only the daily fields shown in the dashboard are saved on this device. Missing fields remain blank.</p>
   <div class="qr"><button class="btn primary" id="d-ring-sync">Sync ring</button></div>
@@ -991,7 +989,6 @@ TAB_RENDER.data = function(){
   const sec=document.getElementById('tab-data');
   const q=s=>sec.querySelector(s);
   q('#d-ring-sync').onclick=startRingSync; q('#week-prev').onclick=()=>{dashboardWeekOffset--;TAB_RENDER.data();};q('#week-next').onclick=()=>{dashboardWeekOffset++;TAB_RENDER.data();};
-  q('#d-eggs').onchange=e=>{p.eggs=e.target.checked;save();toast('Dietary profile saved.');};
   q('#d-progress-photo').onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;try{const dataUrl=await downscaleImage(f,1000,0.76);state.photos.push({id:uid(),date:q('#d-photo-date').value||todayKey(),pose:q('#d-photo-pose').value,dataUrl});save();TAB_RENDER.data();toast('Progress photo saved on this device.');}catch(x){toast('Could not read that photo.');}};
   sec.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>{state.photos=state.photos.filter(x=>x.id!==b.dataset.pdel);save();TAB_RENDER.data();});
   if(q('#d-photo-compare'))q('#d-photo-compare').onclick=async()=>{if(!p.geminiKey){toast('Add your Gemini key first.');return;}const a=state.photos.find(x=>x.id===q('#d-photo-a').value),b=state.photos.find(x=>x.id===q('#d-photo-b').value);if(!a||!b||a.id===b.id){toast('Choose two different photos.');return;}photoCompareResult='Comparing...';TAB_RENDER.data();try{const parts=[{text:'Compare these two body-progress photos side by side. Be neutral and specific about visible posture, shape and composition changes only. Do not identify the person, estimate exact body fat, diagnose health, or infer anything not visually supported. Account for pose, lighting, camera angle and clothing. First photo: '+a.date+' '+(a.pose||'photo')+'. Second: '+b.date+' '+(b.pose||'photo')+'.'}, {inline_data:{mime_type:'image/jpeg',data:a.dataUrl.split(',')[1]}},{inline_data:{mime_type:'image/jpeg',data:b.dataUrl.split(',')[1]}}];const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+GEMINI_MODEL+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':p.geminiKey},body:JSON.stringify({contents:[{parts}]})});const j=await r.json();if(!r.ok)throw new Error(j&&j.error&&j.error.message||'Comparison failed');photoCompareResult=(j.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim()||'No readable comparison returned.';}catch(x){photoCompareResult='Comparison failed: '+x.message;}TAB_RENDER.data();};
