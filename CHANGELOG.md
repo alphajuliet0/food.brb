@@ -2,6 +2,7 @@
 
 ## 2026-09-22
 
+- Removed the box around the brb mark and reduced the overall food.brb lockup size following Ajay’s design direction.
 - Added a one-screen review flow for photo and barcode logging, with editable nutrition before save, half/standard/large/double portion presets, recent meals, favourites and copy-previous-day.
 - Added a reporting dashboard with 7/28/90-day intake averages, protein/fibre consistency, weight rate, sleep/steps correlations and explicit data-quality coverage markers.
 - Aligned food.brb to the official Big Red Box Brand Identity Guide v1.3 supplied by Ajay.
