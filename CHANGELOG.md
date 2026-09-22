@@ -2,6 +2,8 @@
 
 ## 2026-09-22
 
+- Added user-toggleable dark and light modes with a premium BRB visual system: glowing gradient arcs, animated fills, elevated surfaces, translucent navigation and motion-aware micro-interactions.
+- Fixed Ultrahuman sleep parsing for the partner API nested schema: sleep score, total sleep, time in bed and efficiency now sync and appear in Recovery.
 - Neatened the dashboard: boxed Steps summary without a duplicate steps ring, a separate Health card for HRV/RHR/weight, and explicit Ultrahuman source labels on recovery data.
 - Split the dashboard into clearly labelled Food, Recovery and Steps sections, put units on every total, and replaced the misleading zero-macro ring with an honest empty state.
 - Added a layered BRB daily-progress ring led by calories with protein, fibre and steps, plus desktop hover details across rings, charts and diary rows.
