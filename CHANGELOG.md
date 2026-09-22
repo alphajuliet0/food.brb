@@ -2,6 +2,7 @@
 
 ## 2026-09-22
 
+- Fixed Ultrahuman steps parsing to use the daily `total` instead of the per-sample `avg`, refreshed the dashboard immediately after sync, and clarified today vs 7-day totals/averages. Polished the dashboard into a visual-first BRB layout with progress rings, a 7-day step chart, macro donut, cleaner metric tiles and pill controls.
 - Added weekday/date and week navigation, weekly calorie-bank reporting, daily step rows, weekly/monthly averages, a PT-style monthly archive, an explicit vegetarian-with-eggs profile, transparent target maths, and on-device progress-photo poses with optional Gemini side-by-side comparison. Waist is no longer part of setup or the primary progress view.
 - Reworked Log food into a MyFitnessPal-style diary: meal-first sections, per-meal Add Food actions and subtotals, plus daily total, goal and remaining macros. Food pickers now stay hidden until requested.
 - Rebuilt the product around Ajay’s brief: dashboard-first home, simple date-aware food logging for past/present/future days, clear meal slots, and move-entry controls. Removed mindfulness, training and body tabs from the main experience.

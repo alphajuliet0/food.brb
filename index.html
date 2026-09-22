@@ -95,6 +95,14 @@ a { color:var(--ink); }
 #setup { display:none; position:fixed; inset:0; background:var(--page); z-index:100; overflow-y:auto; padding:18px 16px 90px; }
 #setup.open { display:block; }
 #setup .inner { max-width:640px; margin:0 auto; }
+
+:root{--red:#E5321B;--ink:#0A0A0A;--page:#F7F7F7;--soft:#efedeb}
+.btn{border-radius:999px;padding:11px 17px;box-shadow:none;transition:transform .12s ease,background .12s ease}.btn:active{transform:scale(.97)}.btn.primary{background:var(--ink);color:white;border-color:var(--ink)}
+.metricgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metric{background:#fff;border:1px solid var(--hair);border-radius:14px;padding:14px 10px;min-height:84px}.metric .k{font-size:11px;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em}.metric .n{font-size:22px;font-weight:750;margin-top:8px}.metric .u{font-size:11px;color:var(--ink2)}
+.rings{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0}.ringviz{aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--red) calc(var(--p)*1%),#e5e2df 0);position:relative}.ringviz:before{content:'';position:absolute;inset:9px;border-radius:50%;background:var(--page)}.ringviz span{position:relative;text-align:center;font-weight:750;font-size:18px}.ringviz small{display:block;font-size:10px;color:var(--ink2);font-weight:500}
+.spark{display:flex;align-items:end;height:82px;gap:7px;padding-top:8px}.spark i{flex:1;min-height:3px;background:var(--ink);border-radius:5px 5px 2px 2px;position:relative}.spark i.today{background:var(--red)}.spark i b{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:500;color:var(--ink2)}
+.donutrow{display:flex;align-items:center;gap:20px}.donut{width:132px;aspect-ratio:1;border-radius:50%;position:relative}.donut:after{content:'';position:absolute;inset:22px;background:var(--page);border-radius:50%}.legend{display:grid;gap:8px;font-size:12px}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+@media(max-width:420px){.metricgrid{grid-template-columns:repeat(2,1fr)}.rings{gap:8px}.ringviz:before{inset:7px}.donutrow{gap:12px}}
 </style>
 </head>
 <body>
@@ -231,7 +239,7 @@ window.addEventListener('message',e=>{
     for(const k of ['sleep_score','total_sleep','sleep_efficiency','recovery_score','avg_sleep_hrv','sleep_rhr','steps','active_minutes','temperature_deviation','vo2_max','movement_index','metabolic_score','spo2']) if(r[k]!=null&&(['number','string','boolean'].includes(typeof r[k]))){out[k]=r[k];fields++;}
     dayOf(r.date).ring=out; days++;
   }
-  ringSyncWindow=null; save(); if(document.getElementById('tab-food').classList.contains('active')) TAB_RENDER.food(); if(document.getElementById('tab-data').classList.contains('active')) TAB_RENDER.data(); toast('Ring synced: '+days+' days, '+fields+' supplied values.');
+  ringSyncWindow=null; save(); if(document.getElementById('tab-today').classList.contains('on')) TAB_RENDER.today(); if(document.getElementById('tab-food').classList.contains('on')) TAB_RENDER.food(); if(document.getElementById('tab-data').classList.contains('on')) TAB_RENDER.data(); toast('Ring synced: '+days+' days. Dashboard refreshed.');
 });
 function totals(d){ let k=0,p=0,fa=0,c=0,fb=0; for(const f of d.foods){k+=f.kcal;p+=f.protein;fa+=f.fat||0;c+=f.carbs||0;fb+=f.fibre||0;} return {kcal:Math.round(k),protein:Math.round(p*10)/10,fat:Math.round(fa*10)/10,carbs:Math.round(c*10)/10,fibre:Math.round(fb*10)/10}; }
 function macroGoals(p){ const fatG=Math.round(p.kcalTarget*0.30/9); const carbG=Math.round((p.kcalTarget-p.proteinTarget*4-fatG*9)/4); return {proteinG:p.proteinTarget, fatG, carbG}; }
@@ -375,25 +383,27 @@ document.getElementById('tabs').addEventListener('click', e=>{
   TAB_RENDER[b.dataset.tab](); window.scrollTo(0,0);
 });
 /* ---------- Today ---------- */
+function visualDashboard(p,d,t){
+  const keys=lastDays(7),rs=reportRows(keys),stepDays=rs.filter(x=>x.stepLogged),stepTotal=stepDays.reduce((a,x)=>a+x.steps,0),stepAvg=stepDays.length?Math.round(stepTotal/stepDays.length):null,ring=d.ring||{},g=macroGoals(p),macroTotal=Math.max(1,t.protein*4+t.carbs*4+t.fat*9),pp=t.protein*4/macroTotal*100,cp=t.carbs*4/macroTotal*100;
+  const maxSteps=Math.max(p.stepsTarget,...rs.map(x=>x.steps||0),1),bars=rs.map(x=>`<i class="${x.k===todayKey()?'today':''}" style="height:${Math.max(3,Math.round((x.steps||0)/maxSteps*64))}px"><b>${fmtDate(x.k,true).slice(0,2)}</b></i>`).join('');
+  const ringv=(label,val,target,unit)=>`<div class="ringviz" style="--p:${val==null?0:Math.min(100,Math.round(val/target*100))}"><span>${val==null?'—':Math.round(val)}<small>${label}${unit?' · '+unit:''}</small></span></div>`;
+  return `<div class="rings">${ringv('Recovery',ring.recovery_score,100,'today')}${ringv('Sleep',ring.sleep_score,100,'today')}${ringv('Steps',ring.steps,p.stepsTarget,'today')}</div>
+  <div class="metricgrid"><div class="metric"><div class="k">Today steps</div><div class="n">${ring.steps==null?'—':Math.round(ring.steps).toLocaleString()}</div></div><div class="metric"><div class="k">7-day total</div><div class="n">${stepDays.length?Math.round(stepTotal).toLocaleString():'—'}</div><div class="u">${stepDays.length}/7 days</div></div><div class="metric"><div class="k">7-day average</div><div class="n">${stepAvg==null?'—':stepAvg.toLocaleString()}</div></div><div class="metric"><div class="k">HRV today</div><div class="n">${metricText(ring.avg_sleep_hrv)}</div><div class="u">ms</div></div><div class="metric"><div class="k">RHR today</div><div class="n">${metricText(ring.sleep_rhr)}</div><div class="u">bpm</div></div><div class="metric"><div class="k">Weight</div><div class="n">${state.weights.length?state.weights.slice().sort((a,b)=>a.date<b.date?1:-1)[0].kg:'—'}</div><div class="u">kg</div></div></div>
+  <div class="card"><strong>Steps · last 7 days</strong><div class="spark">${bars}</div></div>
+  <div class="card"><strong>Today’s macros</strong><div class="donutrow"><div class="donut" style="background:conic-gradient(#6f7fbf 0 ${cp}%,#E5321B ${cp}% ${cp+pp}%,#d9a441 ${cp+pp}% 100%)"></div><div class="legend"><span><i class="dot" style="background:#6f7fbf"></i>Carbs ${t.carbs}g</span><span><i class="dot" style="background:#E5321B"></i>Protein ${t.protein}g</span><span><i class="dot" style="background:#d9a441"></i>Fat ${t.fat}g</span><span>Fibre ${t.fibre}g</span></div></div></div>`;
+}
 TAB_RENDER.today = function(){
   const p=state.profile, k=todayKey(), d=dayOf(k), t=totals(d), ring=d.ring||{};
   const week=lastDays(7), logged=week.filter(x=>state.days[x]&&state.days[x].foods&&state.days[x].foods.length), sums=logged.reduce((a,x)=>{const z=totals(state.days[x]);a.k+=z.kcal;a.p+=z.protein;a.f+=z.fibre||0;return a;},{k:0,p:0,f:0});
   const weights=[...state.weights].sort((a,b)=>a.date<b.date?-1:1), lw=weights.length?weights[weights.length-1]:null;
   const stat=(l,v,h)=>`<div class="stat"><div class="l">${l}</div><div class="v">${v}</div>${h?`<div class="tiny">${h}</div>`:''}</div>`;
   document.getElementById('tab-today').innerHTML=`
-  <div class="setrow"><div><h2 style="margin-bottom:2px">Your dashboard</h2><p class="note" style="margin:0">Today and the last 7 days</p></div><button class="btn" id="dash-sync">Sync ring</button></div>
-  <div class="grid2">
-    ${stat('Recovery',metricText(ring.recovery_score),'Ultrahuman')}${stat('Sleep',metricText(ring.sleep_score),'score')}
-    ${stat('HRV',metricText(ring.avg_sleep_hrv,' ms'),'sleep average')}${stat('Resting HR',metricText(ring.sleep_rhr,' bpm'),'during sleep')}
-    ${stat('Steps',ring.steps==null?'—':Math.round(ring.steps).toLocaleString(),ring.steps==null?'not supplied':'goal '+p.stepsTarget.toLocaleString())}${stat('Weight',lw?lw.kg+' kg':'—',lw?'last logged '+fmtDate(lw.date):'no weigh-in yet')}
-  </div>
-  <p class="note"><strong>Data quality:</strong> blanks mean no upstream value was supplied. food.brb never invents health data.</p>
+  <div class="setrow"><div><h2 style="margin-bottom:2px">Dashboard</h2><p class="note" style="margin:0">${fmtDate(k,true)}</p></div><button class="btn primary" id="dash-sync">↻ Sync ring</button></div>
+  ${visualDashboard(p,d,t)}
   <h2>Today</h2><div class="grid2">${stat('Calories',t.kcal+' / '+p.kcalTarget+' kcal')}${stat('Protein',t.protein+' / '+p.proteinTarget+' g')}${stat('Fibre',t.fibre+' / '+FIBRE_GOAL+' g')}${stat('Meals logged',d.foods.length,'across breakfast, lunch, dinner and snacks')}</div>
   <div class="qr"><button class="btn primary" id="dash-log">Log food today</button><button class="btn" id="dash-plan">Choose another date</button></div>
   <h2>Week summary</h2>${weekSummary()}
-  <h2>Monthly archive</h2>${monthlyArchive()}
-  <h2>Progress and patterns</h2>${healthDashboard(p)}
-  <p class="note">Coverage and paired-day counts are shown so weak data never looks conclusive.</p>`;
+`;
   const q=x=>document.querySelector(x); q('#dash-sync').onclick=startRingSync; q('#dash-log').onclick=()=>openFood(todayKey()); q('#dash-plan').onclick=()=>openFood(selectedFoodDate); q('#week-prev').onclick=()=>{dashboardWeekOffset--;TAB_RENDER.today();};q('#week-next').onclick=()=>{dashboardWeekOffset++;TAB_RENDER.today();};
 };
 function openFood(k){ selectedFoodDate=k||todayKey(); foodStage='log'; document.querySelector('[data-tab="food"]').click(); }
