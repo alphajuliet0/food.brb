@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-09-23
+- Week view batch: icon-only round chevron buttons replace the text 'Week' pills that wrapped on phones, a small Today chip appears only when browsing a different week and jumps back in one tap, and every day row now carries a quiet logging-completeness dot - red for no main meals, amber for 1 of 3, amber-green for 2 of 3 (where a deliberate breakfast-skip lands), green for all 3; snacks excluded, imported summary days count as logged, future days stay neutral.
 - Renamed the per-meal Move meal to tomorrow action to a discreet one-line Copy (same copy-to-tomorrow behavior) and pulled the meal macro totals onto the same footer row, right-aligned, instead of wrapping underneath.
 - Quieted the per-meal Log food button: smaller, lighter-weight, muted text on a transparent pill so it reads as a secondary action next to the compact rows, still thumb-tappable.
 - Log food type tune: meal rows drop to a smaller, regular-weight font (no more semibold) with a quieter, smaller kcal/protein column, per Ajay's follow-up.
