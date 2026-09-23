@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2026-09-23
+- Photo estimate resilience: transient Gemini errors (high demand / 429 / 5xx) now retry automatically with backoff up to three attempts before falling back or failing, and the failure message is one clean line with a Guess again route instead of raw provider text (detail goes to the console).
+- Log food mobile pass: meal entries are compact one-line rows (name, kcal, protein; full macros in the tap-edit panel and long-press title), smaller meal headings and chips that fit one row on an iPhone, tighter card padding, and the clunky four-line instruction block at the bottom is now a single tiny hint.
 - Fixed barcode scanning on iPhone: Safari has no BarcodeDetector API, so the camera scan never opened. The app now loads a JS decoder (Quagga2) on demand as a fallback; Android/desktop Chrome keep the native scanner, and typed-number entry still works everywhere.
 - One-tap camera flow: tapping the barcode icon starts the camera scan immediately, and tapping the dish-photo icon opens the iPhone photo sheet straight away (Take Photo or Photo Library), matching the expected capture-first flow.
 
