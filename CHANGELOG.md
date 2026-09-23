@@ -1,10 +1,57 @@
 # Changelog
 
 ## 2026-09-23
+- Mobile polish follow-up: meal macro line no longer wraps under the action row, Move meal to tomorrow is a quiet muted action instead of red, the Connect sync button keeps one line on narrow screens, and the sticky tab bar clears the menu button on phones.
 - Photo estimate resilience: transient Gemini errors (high demand / 429 / 5xx) now retry automatically with backoff up to three attempts before falling back or failing, and the failure message is one clean line with a Guess again route instead of raw provider text (detail goes to the console).
 - Log food mobile pass: meal entries are compact one-line rows (name, kcal, protein; full macros in the tap-edit panel and long-press title), smaller meal headings and chips that fit one row on an iPhone, tighter card padding, and the clunky four-line instruction block at the bottom is now a single tiny hint.
 - Fixed barcode scanning on iPhone: Safari has no BarcodeDetector API, so the camera scan never opened. The app now loads a JS decoder (Quagga2) on demand as a fallback; Android/desktop Chrome keep the native scanner, and typed-number entry still works everywhere.
 - One-tap camera flow: tapping the barcode icon starts the camera scan immediately, and tapping the dish-photo icon opens the iPhone photo sheet straight away (Take Photo or Photo Library), matching the expected capture-first flow.
+
+- Rebuilt dish-photo estimates with an automatic fallback: Gemini is tried first with live model discovery, then OpenRouter vision models (free/cheapest first, discovered at call time). Settings holds a separate device-only OpenRouter key with a link to openrouter.ai/keys, and a failure says plainly what happened on each provider.
+- Design sweep: Apple Fitness-style rings on light neutral tracks with no heavy track or glow, tighter meal rows, no always-visible Sync ring control on Today, and a Fitness integrations section in Settings led by Ultrahuman Ring and private cloud sync, replacing the old Start/Goal/Frame card.
+- Reworked Log food into a compact panel: one type-to-find field (searches as you type), camera and barcode icons, smart per-meal suggestions with a permanent dismiss X, meal chips and a small Done chip. The per-meal action now says Log food.
+- Added MyFitnessPal-style swipe gestures on diary items: swipe left to reveal Delete, swipe right to reveal Copy tomorrow; actions only fire on tap. Desktop keeps Edit, Move, Copy and Remove buttons.
+- Added pull-to-refresh: pull down from the top of any screen on a phone to re-check for app updates and run cloud sync, with a Refresh app data button in Settings as the desktop equivalent. Ring sync stays a deliberate tap in Fitness integrations because it uses an Access-gated popup.
+- Loading states (AI estimate, food search, barcode lookup, sync, pull-to-refresh) now use a quiet Classic-style spinner chosen from loading.dev.
+
+## 2026-09-22
+
+- Tightened dashboard stats: removed repeated step units where the card label already provides context, and reduced the size/weight of large numbers for a calmer mobile layout.
+- Added user-toggleable dark and light modes with a premium BRB visual system: glowing gradient arcs, animated fills, elevated surfaces, translucent navigation and motion-aware micro-interactions.
+- Fixed Ultrahuman sleep parsing for the partner API nested schema: sleep score, total sleep, time in bed and efficiency now sync and appear in Recovery.
+- Neatened the dashboard: boxed Steps summary without a duplicate steps ring, a separate Health card for HRV/RHR/weight, and explicit Ultrahuman source labels on recovery data.
+- Split the dashboard into clearly labelled Food, Recovery and Steps sections, put units on every total, and replaced the misleading zero-macro ring with an honest empty state.
+- Added a layered BRB daily-progress ring led by calories with protein, fibre and steps, plus desktop hover details across rings, charts and diary rows.
+- Added private cross-device sync through Cloudflare with a one-time email-code device connection, automatic open/change sync, conflict retry/merge, and explicit device-only progress-photo handling.
+- Replaced generic Staples with frequency/recency-based per-meal suggestions and moved the Add flow inline inside the selected meal, while keeping search, barcode, custom and dish-photo overrides.
+- Polished meal cards with a compact single-line + Add control and removed empty-meal macro noise.
+- Added a self-serve PT tracker XLSX/CSV importer with dry-run preview, anomaly and duplicate counts, field-safe merge, provenance, and historical daily totals that feed monthly archives without inventing meal entries or overwriting Ring/diary data.
+- Removed the unnecessary visible Dietary profile controls; vegetarian-with-eggs remains silent context for AI dish estimates.
+- Fixed Ultrahuman steps parsing to use the daily `total` instead of the per-sample `avg`, refreshed the dashboard immediately after sync, and clarified today vs 7-day totals/averages. Polished the dashboard into a visual-first BRB layout with progress rings, a 7-day step chart, macro donut, cleaner metric tiles and pill controls.
+- Added weekday/date and week navigation, weekly calorie-bank reporting, daily step rows, weekly/monthly averages, a PT-style monthly archive, an explicit vegetarian-with-eggs profile, transparent target maths, and on-device progress-photo poses with optional Gemini side-by-side comparison. Waist is no longer part of setup or the primary progress view.
+- Reworked Log food into a MyFitnessPal-style diary: meal-first sections, per-meal Add Food actions and subtotals, plus daily total, goal and remaining macros. Food pickers now stay hidden until requested.
+- Rebuilt the product around Ajay’s brief: dashboard-first home, simple date-aware food logging for past/present/future days, clear meal slots, and move-entry controls. Removed mindfulness, training and body tabs from the main experience.
+- Connected the private Ultrahuman Ring sync: Access-gated popup, exact-origin postMessage handoff, 7-day on-device import, and honest dashboard cards for sleep, recovery, HRV, resting heart rate and steps.
+- Removed the box around the brb mark and reduced the overall food.brb lockup size following Ajay’s design direction.
+- Added a one-screen review flow for photo and barcode logging, with editable nutrition before save, half/standard/large/double portion presets, recent meals, favourites and copy-previous-day.
+- Added a reporting dashboard with 7/28/90-day intake averages, protein/fibre consistency, weight rate, sleep/steps correlations and explicit data-quality coverage markers.
+- Aligned food.brb to the official Big Red Box Brand Identity Guide v1.3 supplied by Ajay.
+- Embedded the official Nasalization logo font and Inter web font directly in the app so the brand typography works offline.
+- Reworked the food.brb wordmark so the lowercase brb mark uses Nasalization, keeps the r red and has protected clear space inside a restrained lockup.
+- Standardised the web palette and UI typography to the official tokens: web red `#E5321B`, ink `#0A0A0A`, off white `#F7F7F7`, white, greys and square controls.
+- Recreated the food.brb lockup from the official font and colour rules without hotlinking any assets.
+- Bumped the PWA cache so installed copies receive the branding update.
+
+## 2026-09-21
+
+- Copied the Sadhana app into Ajay's separate `alphajuliet0/food.brb` repository. Sandeep gave written permission to copy, host and modify it; his source repository records this in `LICENSE`.
+- Rebranded the app as `food.brb` using the Big Red Box black, red and off-white palette, with a new wordmark treatment and app icon.
+- Changed onboarding to ask for date of birth and calculate age automatically.
+- Replaced separate height fields with one flexible field that accepts metric or imperial input, such as `178cm`, `1.78m` or `5'10"`, and stores centimetres consistently.
+- Kept and rebranded the existing charts for nutrition, weight and progress.
+- Added health-data CSV import for dated weight (`weight_kg` or `weight_lb`), waist (`waist_in`), steps and sleep (`sleep_h`). Added in-app notes on preparing Apple Health data as CSV.
+- Pulled in Sandeep's latest Open Food Facts search fix: retry across two endpoints with backoff and clearer connection or service error messages.
+- Updated the PWA manifest, offline service worker cache and export filenames for `food.brb`.
 
 - Rebuilt dish-photo estimates with an automatic fallback: Gemini is tried first with live model discovery, then OpenRouter vision models (free/cheapest first, discovered at call time). Settings holds a separate device-only OpenRouter key with a link to openrouter.ai/keys, and a failure says plainly what happened on each provider.
 - Design sweep: Apple Fitness-style rings on light neutral tracks with no heavy track or glow, tighter meal rows, no always-visible Sync ring control on Today, and a Fitness integrations section in Settings led by Ultrahuman Ring and private cloud sync, replacing the old Start/Goal/Frame card.
