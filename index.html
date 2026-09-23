@@ -521,16 +521,31 @@ let foodStage='log', foodAdding=false, pauseChoice='', pick=null, slot=defaultSl
 let logMode='list', searchQuery='', searchDebounce=null, searchFromTyping=false, searchBusy=false, estBusy=false, scanBusy=false;
 function defaultSlot(){ const h=new Date().getHours(); return h<11?'breakfast':h<15?'lunch':h<21?'dinner':'snack'; }
 let dishName='', dishIng='', estMsg='', estReply='';
-let scanLive=false, scanStream=null, scanMsg='', scanTimer=null, scanDetector=null;
+let scanLive=false, scanStream=null, scanMsg='', scanTimer=null, scanDetector=null, scanEngine='', scanQuaggaHandler=null;
+function loadQuagga(){ if(window.Quagga) return Promise.resolve(); if(loadQuagga._p) return loadQuagga._p; loadQuagga._p=new Promise(function(res,rej){ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js'; s.onload=function(){ window.Quagga?res():rej(new Error('init')); }; s.onerror=function(){ rej(new Error('load')); }; document.head.appendChild(s); }); return loadQuagga._p; }
 async function startScan(){
   scanMsg=''; scanBusy=false;
-  if(!('BarcodeDetector' in window)){ scanMsg='Live scanning is not available in this browser. Type the barcode number below instead.'; TAB_RENDER.food(); return; }
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ scanMsg='The camera is not available here. Type the barcode number below instead.'; TAB_RENDER.food(); return; }
+  if(!('BarcodeDetector' in window)){
+    scanMsg='Loading the scanner...'; scanBusy=true; TAB_RENDER.food();
+    try{ await loadQuagga(); }catch(e){ scanBusy=false; scanMsg='The scanner could not load (it needs internet the first time). Type the barcode number below instead.'; TAB_RENDER.food(); return; }
+    scanBusy=false; scanLive=true; scanEngine='quagga'; TAB_RENDER.food();
+    const box=document.getElementById('f-cam'); if(!box){ stopScan(); return; }
+    try{
+      Quagga.init({inputStream:{type:'LiveStream',target:box,constraints:{facingMode:'environment'}},locator:{patchSize:'medium',halfSample:true},numOfWorkers:0,frequency:5,decoder:{readers:['ean_reader','ean_8_reader','upc_reader','upc_e_reader','code_128_reader']},locate:true},function(err){
+        if(err){ stopScan(); scanMsg='Camera permission was not given, so live scanning cannot start. Type the barcode number below instead.'; TAB_RENDER.food(); return; }
+        Quagga.start();
+      });
+      scanQuaggaHandler=function(data){ if(!scanLive) return; const code=data&&data.codeResult&&data.codeResult.code; if(code){ stopScan(); lookupBarcode(code); } };
+      Quagga.onDetected(scanQuaggaHandler);
+    }catch(e){ stopScan(); scanMsg='Live scanning could not start here. Type the barcode number below instead.'; TAB_RENDER.food(); }
+    return;
+  }
   try{ scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false}); }
   catch(e){ scanMsg='Camera permission was not given, so live scanning cannot start. Type the barcode number below instead.'; TAB_RENDER.food(); return; }
   try{ scanDetector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf']}); }
   catch(e){ stopScan(); scanMsg='Live scanning is not available in this browser. Type the barcode number below instead.'; TAB_RENDER.food(); return; }
-  scanLive=true; TAB_RENDER.food();
+  scanLive=true; scanEngine='native'; TAB_RENDER.food();
   const v=document.getElementById('f-cam'); if(!v){ stopScan(); return; }
   v.srcObject=scanStream; try{ await v.play(); }catch(e){}
   scanTimer=setInterval(async()=>{
@@ -541,7 +556,7 @@ async function startScan(){
     }catch(e){}
   },350);
 }
-function stopScan(){ scanLive=false; if(scanTimer){ clearInterval(scanTimer); scanTimer=null; } if(scanStream){ scanStream.getTracks().forEach(t=>{ try{t.stop();}catch(e){} }); scanStream=null; } }
+function stopScan(){ scanLive=false; if(scanEngine==='quagga'&&window.Quagga){ try{ if(scanQuaggaHandler) Quagga.offDetected(scanQuaggaHandler); Quagga.stop(); }catch(e){} } scanEngine=''; scanQuaggaHandler=null; if(scanTimer){ clearInterval(scanTimer); scanTimer=null; } if(scanStream){ scanStream.getTracks().forEach(t=>{ try{t.stop();}catch(e){} }); scanStream=null; } }
 async function lookupBarcode(code){
   code=String(code||'').replace(/[^0-9]/g,''); if(!code){ toast('Enter the barcode number first.'); return; }
   scanMsg='Looking up '+code+'...'; scanBusy=true; TAB_RENDER.food();
@@ -576,7 +591,7 @@ TAB_RENDER.food = function(){
     const slotChips=[['breakfast','Breakfast'],['lunch','Lunch'],['dinner','Dinner'],['snack','Snack']].map(sl=>`<button class="chip${slot===sl[0]?' on':''}" data-slot="${sl[0]}">${sl[1]}</button>`).join('');
     let body='';
     if(logMode==='scan') body=`<p class="note">Point the camera at the barcode on the packet, or type the number below. Nutrition comes from Open Food Facts and needs internet.</p>
-      ${scanLive?`<video id="f-cam" autoplay playsinline muted style="width:100%;border-radius:8px;background:#000;min-height:200px"></video><div class="qr"><button class="btn" id="f-scanstop">Cancel scan</button></div>`:`<div class="qr"><button class="btn primary" id="f-scan">Start camera scan</button></div>`}
+      ${scanLive?`${scanEngine==='quagga'?`<div id="f-cam" style="position:relative;width:100%;border-radius:8px;overflow:hidden;background:#000;min-height:200px"></div>`:`<video id="f-cam" autoplay playsinline muted style="width:100%;border-radius:8px;background:#000;min-height:200px"></video>`}<div class="qr"><button class="btn" id="f-scanstop">Cancel scan</button></div>`:`<div class="qr"><button class="btn primary" id="f-scan">Start camera scan</button></div>`}
       <div class="searchrow"><input class="input" inputmode="numeric" id="f-bc" placeholder="Barcode number, e.g. 3017620422003"><button class="btn" id="f-bclookup">Look up</button></div>
       ${scanMsg?`<p class="note">${scanBusy?LOADER:''}${esc(scanMsg)}</p>`:''}
       <div class="qr"><button class="chip" data-logmode="list">Back to suggestions</button></div>`;
@@ -633,8 +648,8 @@ TAB_RENDER.food = function(){
   qa('[data-addmeal]').forEach(b=>b.onclick=()=>{slot=b.dataset.addmeal;foodAdding=true;pick=null;logMode='list';searchQuery='';searchResults=[];searchMsg='';TAB_RENDER.food();setTimeout(()=>{const el=document.getElementById('f-done');if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'center'});},0);});
   if(q('#f-done')) q('#f-done').onclick=()=>{foodAdding=false;pick=null;stopScan();if(dishPhotoUrl)URL.revokeObjectURL(dishPhotoUrl);dishPhotoFile=null;dishPhotoUrl='';estMsg='';estReply='';estBusy=false;logMode='list';searchQuery='';searchResults=[];searchMsg='';TAB_RENDER.food();};
   qa('[data-logmode]').forEach(b=>b.onclick=()=>{const m=b.dataset.logmode;if(m!=='scan')stopScan();logMode=m;TAB_RENDER.food();});
-  if(q('#f-cam-open')) q('#f-cam-open').onclick=()=>{logMode='photo';TAB_RENDER.food();};
-  if(q('#f-scan-open')) q('#f-scan-open').onclick=()=>{logMode='scan';TAB_RENDER.food();};
+  if(q('#f-cam-open')) q('#f-cam-open').onclick=()=>{logMode='photo';TAB_RENDER.food();const pi=q('#f-photo');if(pi&&!dishPhotoFile)pi.click();};
+  if(q('#f-scan-open')) q('#f-scan-open').onclick=()=>{logMode='scan';startScan();};
   if(q('#f-photo-clear')) q('#f-photo-clear').onclick=()=>{if(dishPhotoUrl)URL.revokeObjectURL(dishPhotoUrl);dishPhotoFile=null;dishPhotoUrl='';estMsg='';estBusy=false;TAB_RENDER.food();};
   q('#food-date').onchange=e=>{ selectedFoodDate=e.target.value||todayKey(); TAB_RENDER.food(); }; q('#date-prev').onclick=()=>{selectedFoodDate=shiftDate(selectedFoodDate,-1);TAB_RENDER.food();}; q('#date-next').onclick=()=>{selectedFoodDate=shiftDate(selectedFoodDate,1);TAB_RENDER.food();};
   qa('[data-move]').forEach(b=>b.onclick=()=>{const f=d.foods.find(x=>x.id===b.dataset.move);if(!f)return;editId=f.id;editServ=1;TAB_RENDER.food();});
