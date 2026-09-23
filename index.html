@@ -58,6 +58,8 @@ textarea.input { min-height:72px; resize:vertical; }
 .chip.on { border-color:var(--teal); color:var(--ink); background:var(--sand); }
 .list { display:flex; flex-direction:column; margin:8px 0; }
 .row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid var(--hair); }
+.diaryrow{padding:7px 0;gap:8px}.diaryrow .drname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.diaryrow strong{font-size:12.5px;font-weight:550}.diaryrow .drmacros{font-size:11px;white-space:nowrap;flex:0 0 auto}
+@media(max-width:420px){#tab-food .card{padding:12px}.chips{gap:6px}.chips .chip{padding:8px 10px;font-size:12px}.diaryhead{font-size:12px}}
 .rowc { flex-direction:column; align-items:flex-start; gap:2px; }
 .rowbtn { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%; text-align:left; padding:10px 6px; border:none; border-bottom:1px solid var(--hair); background:none; font-size:15px; color:var(--ink); cursor:pointer; min-height:44px; font-family:inherit; }
 .del { border:none; background:none; color:var(--red); font-size:13px; cursor:pointer; padding:8px 4px; min-height:44px; font-family:inherit; }
@@ -633,14 +635,14 @@ TAB_RENDER.food = function(){
     <div class="field"><label class="label">Meal</label><select class="input" id="e-slot">${[['breakfast','Breakfast'],['lunch','Lunch'],['dinner','Dinner'],['snack','Snacks']].map(x=>`<option value="${x[0]}" ${((f.slot||(f.snack?'snack':'breakfast'))===x[0])?'selected':''}>${x[1]}</option>`).join('')}</select></div><div class="qr"><button class="btn primary" id="e-save">Save changes</button><button class="btn" id="e-tomorrow">Move to tomorrow</button><button class="btn" id="e-cancel">Cancel</button></div></div>`:''; }
   const mealNames={breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snacks'};
   const diary=['breakfast','lunch','dinner','snack'].map(sl=>{ const fs=d.foods.filter(f=>(f.slot||(f.snack?'snack':'breakfast'))===sl), mt=fs.reduce((a,f)=>{a.k+=+f.kcal||0;a.p+=+f.protein||0;a.c+=+f.carbs||0;a.f+=+f.fat||0;return a;},{k:0,p:0,c:0,f:0}); return `<div class="card"><div class="setrow"><h3 class="diaryhead" style="margin:0">${mealNames[sl]}</h3><strong>${Math.round(mt.k)} kcal</strong></div>
-    ${fs.length?`<div class="list">${fs.map(f=>`<div class="swipeitem" data-swipe="${f.id}"><div class="swipeunder"><button class="swipeact copy" data-copy="${f.id}">Copy tomorrow</button><button class="swipeact delete" data-swdel="${f.id}">Delete</button></div><div class="swipefront" data-front="${f.id}"><div class="row" title="${esc(f.name)} · ${f.kcal} kcal · protein ${f.protein} g${f.carbs!=null?' · carbs '+f.carbs+' g':''}${f.fat!=null?' · fat '+f.fat+' g':''}"><span><strong>${esc(f.name)}</strong><br><span class="dim">${f.kcal} kcal · P ${f.protein} g${f.carbs!=null?' · C '+f.carbs+' g':''}${f.fat!=null?' · F '+f.fat+' g':''}</span></span><span class="rowactions"><button class="del" data-edit="${f.id}">Edit</button><button class="del" data-move="${f.id}">Move</button><button class="del" data-copy="${f.id}">Copy</button><button class="del" data-del="${f.id}">Remove</button></span></div></div></div>${editPanel(f)}`).join('')}</div>`:'<p class="note">Nothing logged.</p>'}
+    ${fs.length?`<div class="list">${fs.map(f=>`<div class="swipeitem" data-swipe="${f.id}"><div class="swipeunder"><button class="swipeact copy" data-copy="${f.id}">Copy tomorrow</button><button class="swipeact delete" data-swdel="${f.id}">Delete</button></div><div class="swipefront" data-front="${f.id}"><div class="row diaryrow" title="${esc(f.name)} · ${f.kcal} kcal · protein ${f.protein} g${f.carbs!=null?' · carbs '+f.carbs+' g':''}${f.fat!=null?' · fat '+f.fat+' g':''}"><span class="drname"><strong>${esc(f.name)}</strong></span><span class="dim drmacros">${f.kcal} kcal · P ${f.protein} g</span><span class="rowactions"><button class="del" data-edit="${f.id}">Edit</button><button class="del" data-move="${f.id}">Move</button><button class="del" data-copy="${f.id}">Copy</button><button class="del" data-del="${f.id}">Remove</button></span></div></div></div>${editPanel(f)}`).join('')}</div>`:'<p class="note">Nothing logged.</p>'}
     <div class="setrow"><button class="btn mini mealadd" data-addmeal="${sl}" aria-label="Log food to ${mealNames[sl]}">＋ <span>Log food</span></button>${fs.length?`<button class="del" data-mealtomorrow="${sl}">Move meal to tomorrow</button><span class="tiny">P ${Math.round(mt.p)} g · C ${Math.round(mt.c)} g · F ${Math.round(mt.f)} g</span>`:''}</div>${foodAdding&&slot===sl?addHtml:''}</div>`; }).join('');
   document.getElementById('tab-food').innerHTML=`
   <h2>Food diary</h2><div class="syncbar"><span class="syncdot ${syncState}" data-syncdot></span><span data-syncload>${syncState==='busy'?LOADER:''}</span><span class="tiny" data-synctext>${esc(syncText)}</span>${localStorage.getItem(SYNC_TOKEN_KEY)?`<button class="del" id="cloud-sync-now">Sync now</button>`:`<button class="btn mini" id="cloud-connect">Connect private sync</button>`}</div>${dateNav()}
   <h2>Daily summary</h2>
   <div class="card summarywrap"><table class="summarytable" aria-label="Daily nutrition summary"><thead><tr><th scope="col"></th><th scope="col">Calories<span>kcal</span></th><th scope="col">Protein<span>g</span></th><th scope="col">Carbs<span>g</span></th><th scope="col">Fat<span>g</span></th><th scope="col">Fibre<span>g</span></th></tr></thead><tbody><tr><th scope="row">Total</th><td>${t.kcal}</td><td>${t.protein}</td><td>${t.carbs}</td><td>${t.fat}</td><td>${t.fibre}</td></tr><tr><th scope="row">Goal</th><td>${p.kcalTarget}</td><td>${p.proteinTarget}</td><td>${goals.carbG}</td><td>${goals.fatG}</td><td>${FIBRE_GOAL}</td></tr><tr><th scope="row">Remaining</th><td>${remaining.kcal}</td><td>${remaining.protein}</td><td>${remaining.carbs}</td><td>${remaining.fat}</td><td>${remaining.fibre}</td></tr></tbody></table></div>
   <h2>Meals</h2>${diary}
-  <p class="note">Tap Log food inside a meal to add. On a touchscreen, swipe an item left to delete it or right to copy it to tomorrow, then tap the button that appears. On a computer, use the Edit, Move, Copy and Remove buttons.</p>`;
+  <p class="tiny" style="text-align:center;margin:10px 0 0;opacity:.75">Swipe an item left or right for actions. Tap an item to edit.</p>`;
   const sec=document.getElementById('tab-food');
   const q=s=>sec.querySelector(s);
   const qa=s=>sec.querySelectorAll(s);
@@ -705,7 +707,7 @@ TAB_RENDER.food = function(){
     let dataUrl='';
     try{ dataUrl=await downscaleImage(dishPhotoFile,1024,0.8); }
     catch(pe){ estMsg='Could not read that photo. Remove it and choose a different photo.'; estBusy=false; TAB_RENDER.food(); return; }
-    const failures=[];
+    const failures=[]; let transient=false;
     if(geminiKey){
       estMsg='Estimating with Gemini...'; TAB_RENDER.food();
       try{
@@ -714,7 +716,13 @@ TAB_RENDER.food = function(){
         try{const lm=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(geminiKey)),lj=await lm.json();if(lm.ok)models=(lj.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')&&/gemini/i.test(m.name)).map(m=>m.name.replace(/^models\//,''));}catch(x){}
         const preferred=['gemini-2.5-flash-lite','gemini-2.0-flash','gemini-2.5-pro','gemini-flash-latest','gemini-pro-latest'];models=[...preferred,...models].filter((v,i,a)=>a.indexOf(v)===i);
         let j=null,lastError='';
-        for(const model of models){const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':geminiKey},body:JSON.stringify({contents:[{parts:reqParts}]})});j=await r.json().catch(()=>null);if(r.ok)break;const em=(j&&j.error&&j.error.message)||('HTTP '+r.status);lastError=em;if(!(/no longer available|not found|not supported|deprecated/i.test(em)&&/model/i.test(em)))break;j=null;}
+        for(let attempt=0;attempt<3;attempt++){
+          if(attempt){ estMsg='The AI is busy - trying again...'; TAB_RENDER.food(); await new Promise(rr=>setTimeout(rr,attempt*2500)); }
+          transient=false;
+          for(const model of models){const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':geminiKey},body:JSON.stringify({contents:[{parts:reqParts}]})});j=await r.json().catch(()=>null);if(r.ok)break;const em=(j&&j.error&&j.error.message)||('HTTP '+r.status);lastError=em;if(/high demand|overloaded|rate.?limit|resource.?exhaust|quota|temporar|try again|HTTP 429|HTTP 5\d\d/i.test(em)){transient=true;j=null;break;}if(!(/no longer available|not found|not supported|deprecated/i.test(em)&&/model/i.test(em)))break;j=null;}
+          if(j&&j.candidates)break;
+          if(!transient)break;
+        }
         if(j&&j.candidates){ estReply=((j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[]).map(pp=>pp.text||'').join('').trim(); }
         if(!estReply) failures.push('Gemini failed: '+(lastError||'no readable estimate returned'));
       }catch(e){ failures.push('Gemini failed: could not be reached'); }
@@ -741,7 +749,7 @@ TAB_RENDER.food = function(){
       }catch(e){ lastError='could not be reached'; }
       if(!estReply) failures.push('OpenRouter failed: '+lastError);
     } else if(!estReply) failures.push('OpenRouter skipped: no key saved on this device');
-    if(!estReply){ estMsg='The estimate failed. '+failures.join('. ')+'. Check your keys in Settings, then try again.'; estBusy=false; TAB_RENDER.food(); return; }
+    if(!estReply){ console.warn('dish estimate failures',failures); estMsg=transient?'The AI is busy right now. Give it half a minute and tap Guess again.':('The estimate did not work this time. Tap Guess again to try once more.'+(orKey?'':' Adding a backup OpenRouter key in Settings gives a second route.')); estBusy=false; TAB_RENDER.food(); return; }
     const mn=estReply.match(/name\s*=\s*([^,\n]+)/i),mk=estReply.match(/calories\s*=\s*(\d+)/i),mp=estReply.match(/protein\s*=\s*(\d+(?:\.\d+)?)/i),mf=estReply.match(/fat\s*=\s*(\d+(?:\.\d+)?)/i),mc=estReply.match(/carb(?:ohydrate)?s?\s*=\s*(\d+(?:\.\d+)?)/i),mb=estReply.match(/fib(?:er|re)\s*=\s*(\d+(?:\.\d+)?)/i);
     if(!mk){estMsg='The AI could not return usable numbers. Add a little detail and tap Guess again.';estBusy=false;TAB_RENDER.food();return;}
     estBusy=false;
