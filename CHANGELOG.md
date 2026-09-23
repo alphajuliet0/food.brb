@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-09-23
+- Renamed the per-meal Move meal to tomorrow action to a discreet one-line Copy (same copy-to-tomorrow behavior) and pulled the meal macro totals onto the same footer row, right-aligned, instead of wrapping underneath.
 - Quieted the per-meal Log food button: smaller, lighter-weight, muted text on a transparent pill so it reads as a secondary action next to the compact rows, still thumb-tappable.
 - Log food type tune: meal rows drop to a smaller, regular-weight font (no more semibold) with a quieter, smaller kcal/protein column, per Ajay's follow-up.
 - Mobile polish follow-up: meal macro line no longer wraps under the action row, Move meal to tomorrow is a quiet muted action instead of red, the Connect sync button keeps one line on narrow screens, and the sticky tab bar clears the menu button on phones.
