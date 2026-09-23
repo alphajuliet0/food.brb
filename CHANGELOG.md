@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2026-09-23
+- Fixed barcode scanning on iPhone: Safari has no BarcodeDetector API, so the camera scan never opened. The app now loads a JS decoder (Quagga2) on demand as a fallback; Android/desktop Chrome keep the native scanner, and typed-number entry still works everywhere.
+- One-tap camera flow: tapping the barcode icon starts the camera scan immediately, and tapping the dish-photo icon opens the iPhone photo sheet straight away (Take Photo or Photo Library), matching the expected capture-first flow.
 
 - Rebuilt dish-photo estimates with an automatic fallback: Gemini is tried first with live model discovery, then OpenRouter vision models (free/cheapest first, discovered at call time). Settings holds a separate device-only OpenRouter key with a link to openrouter.ai/keys, and a failure says plainly what happened on each provider.
 - Design sweep: Apple Fitness-style rings on light neutral tracks with no heavy track or glow, tighter meal rows, no always-visible Sync ring control on Today, and a Fitness integrations section in Settings led by Ultrahuman Ring and private cloud sync, replacing the old Start/Goal/Frame card.
