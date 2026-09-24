@@ -580,17 +580,25 @@ function bindActivityRings(){
   let selected=null;const def=center.innerHTML;const show=r=>{center.innerHTML=r?'<strong>'+esc(r.dataset.value)+'</strong><small>'+esc(r.dataset.unit)+'</small>':def;};
   rings.forEach(r=>{r.onclick=()=>{rings.forEach(x=>x.classList.toggle('selected',x===r));selected=r;show(r);};r.onmouseenter=()=>show(r);r.onmouseleave=()=>show(selected);r.onfocus=()=>show(r);r.onblur=()=>show(selected);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();r.click();}};});
 }
+function streaks(){
+  const days=state.days, has=k=>{const d=days[k];return !!(d&&((d.foods&&d.foods.length)||d.historicalSummary));};
+  const dk=off=>{const x=new Date();x.setHours(12,0,0,0);x.setDate(x.getDate()-off);return todayKey(x);};
+  let cur=0; for(let i=has(dk(0))?0:1;i<400;i++){ if(has(dk(i))) cur++; else break; }
+  let best=0,run=0; for(let i=0;i<400;i++){ if(has(dk(i))){run++; if(run>best)best=run;} else run=0; }
+  return {cur,best};
+}
 function todayStrip(tk){
   const wk=weekKeys(0),rs=reportRows(wk);
   return '<div class="wkstrip">'+rs.map((x,i)=>{const m=mealDot(x,tk);return `<div class="wcell${x.k===tk?' now':''}"><span class="wl">${'MTWTFSS'[i]}</span><span class="cdot${m.f?' future':''}" style="--c:${m.c}" title="${m.t}"></span></div>`;}).join('')+'</div>';
 }
 TAB_RENDER.today = function(){
   const p=state.profile, k=todayKey(), d=dayOf(k), t=totals(d), ring=d.ring||{};
+  const stk=streaks();
   const week=lastDays(7), logged=week.filter(x=>state.days[x]&&state.days[x].foods&&state.days[x].foods.length), sums=logged.reduce((a,x)=>{const z=totals(state.days[x]);a.k+=z.kcal;a.p+=z.protein;a.f+=z.fibre||0;return a;},{k:0,p:0,f:0});
   const weights=[...state.weights].sort((a,b)=>a.date<b.date?-1:1), lw=weights.length?weights[weights.length-1]:null;
   const stat=(l,v,h)=>`<div class="stat"><div class="l">${l}</div><div class="v">${v}</div>${h?`<div class="tiny">${h}</div>`:''}</div>`;
   document.getElementById('tab-today').innerHTML=`
-  <div class="screencap">${fullCap(k)}</div><h1 class="screentitle">Today</h1>
+  <div class="screencap">${fullCap(k)}${stk.cur?` · ${stk.cur}-day streak`:''}${stk.best>stk.cur?` · best ${stk.best}`:''}</div><h1 class="screentitle">Today</h1>
   ${todayStrip(k)}
   ${visualDashboard(p,d,t)}
   <div class="card insights"><div class="insightshead"><h2>Insights</h2><button class="del" id="insights-week">View full history</button></div><div class="insightgrid"><div class="insight"><span>7-day calories</span><strong>${logged.length?Math.round(sums.k/logged.length).toLocaleString():'—'}</strong></div><div class="insight"><span>Avg protein</span><strong>${logged.length?Math.round(sums.p/logged.length)+' g':'—'}</strong></div><div class="insight"><span>Avg fibre</span><strong>${logged.length?Math.round(sums.f/logged.length)+' g':'—'}</strong></div></div><p class="insightsnote">${logged.length}/7 food days logged · missing days excluded</p></div>
