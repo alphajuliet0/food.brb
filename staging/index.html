@@ -587,9 +587,14 @@ function streaks(){
   let best=0,run=0; for(let i=0;i<400;i++){ if(has(dk(i))){run++; if(run>best)best=run;} else run=0; }
   return {cur,best};
 }
+function kcalDot(x,tk,target){
+  if(x.k>tk) return {f:1,c:'transparent',t:'Nothing to log yet'};
+  if(!x.logged) return {c:'var(--ink3)',t:'Nothing logged'};
+  return x.t.kcal<=target?{c:'var(--dot-green)',t:x.t.kcal+' kcal - under budget'}:{c:'var(--dot-amber)',t:x.t.kcal+' kcal - over budget'};
+}
 function todayStrip(tk){
-  const wk=weekKeys(0),rs=reportRows(wk);
-  return '<div class="wkstrip">'+rs.map((x,i)=>{const m=mealDot(x,tk);return `<div class="wcell${x.k===tk?' now':''}"><span class="wl">${'MTWTFSS'[i]}</span><span class="cdot${m.f?' future':''}" style="--c:${m.c}" title="${m.t}"></span></div>`;}).join('')+'</div>';
+  const wk=weekKeys(0),rs=reportRows(wk),target=state.profile.kcalTarget;
+  return '<div class="wkstrip">'+rs.map((x,i)=>{const m=kcalDot(x,tk,target);return `<div class="wcell${x.k===tk?' now':''}"><span class="wl">${'MTWTFSS'[i]}</span><span class="cdot${m.f?' future':''}" style="--c:${m.c}" title="${m.t}"></span></div>`;}).join('')+'</div>';
 }
 TAB_RENDER.today = function(){
   const p=state.profile, k=todayKey(), d=dayOf(k), t=totals(d), ring=d.ring||{};
