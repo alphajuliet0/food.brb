@@ -123,6 +123,26 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 .sheetbtn.danger.arm{background:var(--kcal);color:#fff}
 .dayrow{display:flex;justify-content:space-between;align-items:center;width:100%;padding:13px 4px;font-size:15px;font-weight:600;border-bottom:1px solid var(--hair)}
 .dayrow span{color:var(--dim);font-size:12px;font-weight:500}
+.scanov{position:fixed;inset:0;z-index:50;background:#000;display:none;flex-direction:column}
+.scanov.on{display:flex}
+.scanhead{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;color:#fff}
+.scanhead b{font-size:16px}
+.scanhead button{color:#fff;font-size:14px;background:rgba(255,255,255,.15);border-radius:999px;padding:8px 16px}
+.scanbox{flex:1;position:relative;overflow:hidden}
+.scanbox video{width:100%;height:100%;object-fit:cover}
+.scanbox canvas{display:none}
+.scanmsg{padding:16px 20px calc(20px + env(safe-area-inset-bottom));color:#ccc;font-size:13px;text-align:center;background:#000}
+.scanman{display:flex;gap:8px;padding:0 20px 14px;background:#000}
+.scanman input{flex:1;background:#222;border:0;border-radius:12px;padding:11px 14px;font-size:15px;color:#fff;outline:0}
+.scanman button{background:var(--kcal);color:#fff;border-radius:12px;padding:0 18px;font-weight:700}
+.scanline{position:absolute;left:12%;right:12%;top:50%;height:2px;background:var(--kcal);opacity:.8;box-shadow:0 0 12px var(--kcal)}
+.draftrow{background:var(--surface2);border-radius:14px;padding:12px;margin-bottom:10px}
+.draftrow .dr-name{width:100%;background:none;border:0;outline:0;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:8px}
+.draftrow .dr-nums{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:6px}
+.draftrow .dr-nums input{width:100%;background:var(--surface);border:0;border-radius:8px;padding:8px 10px;font-size:13px;color:var(--ink);outline:0;text-align:center}
+.draftrow .dr-nums label{display:block;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--dim);text-align:center;margin-bottom:3px}
+.estnote{font-size:12px;color:var(--amber);margin-bottom:12px}
+
 
 </style>
 </head>
@@ -155,6 +175,12 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 </div></div>
 <div class="toast" id="toast"></div>
 <div class="variantnote" id="variantnote"></div>
+<div class="scanov" id="scanov">
+  <div class="scanhead"><b>Scan barcode</b><button id="scanclose">Cancel</button></div>
+  <div class="scanbox" id="scanbox"><div class="scanline"></div></div>
+  <div class="scanmsg" id="scanmsg">Point at the barcode.</div>
+  <div class="scanman"><input id="scanmanin" inputmode="numeric" placeholder="Or type the barcode number"><button id="scanmanbtn">Look up</button></div>
+</div>
 <div class="sheetbg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 <script src="data.js"></script>
@@ -348,10 +374,12 @@ function addSheet(){
     +'<div class="fld"><label>Protein g</label><input id="af-p" inputmode="decimal" placeholder="0"></div>'
     +'<div class="fld"><label>Carbs g</label><input id="af-c" inputmode="decimal" placeholder="0"></div>'
     +'<div class="fld"><label>Fat g</label><input id="af-f" inputmode="decimal" placeholder="0"></div></div>'
+    +'<button class="sheetbtn ghost" id="af-scan" style="margin-bottom:2px">&#9638; Scan barcode</button>'
     +'<button class="sheetbtn primary" id="af-save">Add to '+(sel===TODAY?'today':fmtDay(sel))+'</button>'
     +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
   let meal=def;
   sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
+  sheetEl.querySelector('#af-scan').onclick=()=>{closeSheet();startScan();};
   sheetEl.querySelector('#af-save').onclick=()=>{
     const name=sheetEl.querySelector('#af-name').value.trim();
     const kcal=num(sheetEl.querySelector('#af-kcal').value);
@@ -390,11 +418,135 @@ function attachMealHandlers(){
     dayPickSheet(day=>{mealPickSheet('Copy to '+fmtDay(day),'Which meal?',f.slot||(f.snack?'snack':'breakfast'),slot=>copyFood(src,id,day,slot));});
   });
 }
+/* ---------- barcode scanning (Quagga2 + Open Food Facts, ported) ---------- */
+let scanLive=false, scanHandler=null;
+function loadQuagga(){
+  if(window.Quagga)return Promise.resolve();
+  if(loadQuagga._p)return loadQuagga._p;
+  loadQuagga._p=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js';
+    s.onload=()=>window.Quagga?res():rej(new Error('init'));
+    s.onerror=()=>rej(new Error('load'));
+    document.head.appendChild(s);
+  });
+  return loadQuagga._p;
+}
+function parseServing(s){if(!s)return 0;const m=String(s).match(/(\d+(?:\.\d+)?)\s*(?:g|ml)\b/i);return m?parseFloat(m[1]):0;}
+async function startScan(){
+  const ov=document.getElementById('scanov'),box=document.getElementById('scanbox'),msg=document.getElementById('scanmsg');
+  ov.classList.add('on');msg.textContent='Loading scanner...';
+  try{await loadQuagga();}catch(e){msg.textContent='Scanner could not load (needs internet the first time). Type the barcode below.';return;}
+  try{
+    Quagga.init({inputStream:{type:'LiveStream',target:box,constraints:{facingMode:'environment'}},locator:{patchSize:'medium',halfSample:true},numOfWorkers:0,frequency:5,decoder:{readers:['ean_reader','ean_8_reader','upc_reader','upc_e_reader','code_128_reader']},locate:true},err=>{
+      if(err){msg.textContent='Camera permission was not given. Type the barcode below.';return;}
+      scanLive=true;Quagga.start();msg.textContent='Point at the barcode.';
+    });
+    scanHandler=data=>{
+      if(!scanLive)return;
+      const code=data&&data.codeResult&&data.codeResult.code;
+      if(code){stopScan();lookupBarcode(code);}
+    };
+    Quagga.onDetected(scanHandler);
+  }catch(e){msg.textContent='Camera could not start. Type the barcode below.';}
+}
+function stopScan(){
+  scanLive=false;
+  if(scanHandler&&window.Quagga){try{Quagga.offDetected(scanHandler);}catch(e){}}
+  scanHandler=null;
+  if(window.Quagga){try{Quagga.stop();}catch(e){}}
+  document.getElementById('scanov').classList.remove('on');
+}
+document.getElementById('scanclose').onclick=stopScan;
+document.getElementById('scanmanbtn').onclick=()=>{const v=document.getElementById('scanmanin').value.trim();if(v){stopScan();lookupBarcode(v);}};
+document.getElementById('scanmanin').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.value.trim();if(v){stopScan();lookupBarcode(v);}}});
+async function lookupBarcode(code){
+  code=String(code||'').replace(/[^0-9]/g,'');
+  if(!code){toast('Enter the barcode number first');return;}
+  toast('Looking up '+code+'...');
+  try{
+    const r=await fetch('https://world.openfoodfacts.org/api/v2/product/'+code+'.json?fields=product_name,brands,nutriments,serving_size',{headers:{Accept:'application/json'}});
+    if(!r.ok)throw new Error('http');
+    const j=await r.json(),prod=j&&j.product,n=prod&&prod.nutriments||{};
+    const kcal=Number(n['energy-kcal_100g']);
+    let name=String(prod&&prod.product_name||'').trim();
+    const brand=String(prod&&prod.brands||'').trim();
+    if(j&&j.status===1&&name&&isFinite(kcal)&&kcal>0){
+      if(brand&&name.toLowerCase().indexOf(brand.toLowerCase())<0)name=brand+' '+name;
+      const sg=parseServing(prod.serving_size);
+      const g=sg||100;
+      const sc=v=>isFinite(Number(v))?Math.round(Number(v)*g/100):0;
+      addSheet();
+      sheetEl.querySelector('#af-name').value=name;
+      sheetEl.querySelector('#af-kcal').value=sc(n['energy-kcal_100g']);
+      sheetEl.querySelector('#af-p').value=sc(n['proteins_100g']);
+      sheetEl.querySelector('#af-c').value=sc(n['carbohydrates_100g']);
+      sheetEl.querySelector('#af-f').value=sc(n['fat_100g']);
+      toast('Found: '+name+(sg?' ('+prod.serving_size+')':' (per 100g)'));
+    }else{
+      addSheet();
+      toast('No data for '+code+' - type it in');
+    }
+  }catch(e){addSheet();toast('Lookup failed - type it in');}
+}
+/* ---------- sentence logging (Gemini rail) ---------- */
+function geminiKey(){return (localStorage.getItem('foodBrbGeminiKey')||'').trim();}
+async function estimateSentence(text){
+  const prompt='You estimate nutrition for a food diary. Split this into individual foods. Reply with ONLY a JSON array, no markdown: [{"name":"plain item name with portion","kcal":number,"protein":number,"carbs":number,"fat":number,"fibre":number}]. Use typical portions when unclear. Vegetarian context. Sentence: '+text;
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',{
+    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':geminiKey()},
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json'}})
+  });
+  if(!r.ok)throw new Error('gemini '+r.status);
+  const j=await r.json();
+  const t=j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0]&&j.candidates[0].content.parts[0].text||'';
+  const arr=JSON.parse(t.replace(/```json|```/g,'').trim());
+  return arr.filter(x=>x&&x.name&&isFinite(Number(x.kcal))).map(x=>({name:String(x.name),kcal:Math.round(Number(x.kcal))||0,protein:Math.round(Number(x.protein)*10)/10||0,carbs:Math.round(Number(x.carbs)*10)/10||0,fat:Math.round(Number(x.fat)*10)/10||0,fibre:Math.round(Number(x.fibre)*10)/10||0}));
+}
+function draftSheet(items){
+  const hr=new Date().getHours();
+  const def=hr<11?'breakfast':hr<15?'lunch':hr<21?'dinner':'snack';
+  openSheet('<h3>Log meal</h3><div class="estnote">AI estimates - check and edit anything before logging.</div>'
+    +items.map((f,i)=>'<div class="draftrow"><input class="dr-name" data-i="'+i+'" data-f="name" value="'+esc(f.name)+'">'
+      +'<div class="dr-nums">'
+      +'<div><label>kcal</label><input inputmode="numeric" data-i="'+i+'" data-f="kcal" value="'+f.kcal+'"></div>'
+      +'<div><label>P</label><input inputmode="decimal" data-i="'+i+'" data-f="protein" value="'+f.protein+'"></div>'
+      +'<div><label>C</label><input inputmode="decimal" data-i="'+i+'" data-f="carbs" value="'+f.carbs+'"></div>'
+      +'<div><label>F</label><input inputmode="decimal" data-i="'+i+'" data-f="fat" value="'+f.fat+'"></div>'
+      +'</div></div>').join('')
+    +'<div class="fld"><label>Meal</label><div class="mchiprow" style="margin-bottom:0">'+SLOTCH.map(([v,l])=>'<button class="mchip'+(v===def?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')+'</div></div>'
+    +'<button class="sheetbtn primary" id="df-log">Log to '+(sel===TODAY?'today':fmtDay(sel))+'</button>'
+    +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
+  let meal=def;
+  sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
+  sheetEl.querySelector('#df-log').onclick=()=>{
+    sheetEl.querySelectorAll('.draftrow input').forEach(inp=>{
+      const it=items[+inp.dataset.i],f=inp.dataset.f;
+      it[f]=f==='name'?inp.value.trim():num(inp.value);
+    });
+    const good=items.filter(it=>it.name&&it.kcal);
+    if(!good.length){toast('Nothing to log');return;}
+    for(const it of good)foodsOf(sel).push({id:uid(),name:it.name,kcal:it.kcal,protein:it.protein,carbs:it.carbs,fat:it.fat,fibre:it.fibre,slot:meal,snack:meal==='snack',source:'estimate'});
+    save();closeSheet();render();toast('Logged '+good.length+' item'+(good.length>1?'s':''));
+  };
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+}
 /* ---------- log bar ---------- */
 document.getElementById('plusbtn').onclick=addSheet;
 document.getElementById('micbtn').onclick=()=>toast('Voice logging comes after sentence logging');
-document.getElementById('loginput').addEventListener('keydown',e=>{
-  if(e.key==='Enter'){const v=e.target.value.trim();if(!v)return;addSheet();sheetEl.querySelector('#af-name').value=v;e.target.value='';}
+const loginput=document.getElementById('loginput');
+loginput.addEventListener('keydown',async e=>{
+  if(e.key!=='Enter')return;
+  const v=e.target.value.trim();if(!v)return;
+  e.target.value='';
+  if(!geminiKey()){addSheet();sheetEl.querySelector('#af-name').value=v;return;}
+  loginput.placeholder='Estimating...';loginput.disabled=true;
+  try{
+    const items=await estimateSentence(v);
+    if(items.length)draftSheet(items);
+    else{addSheet();sheetEl.querySelector('#af-name').value=v;}
+  }catch(err){toast('Estimate failed - quick add instead');addSheet();sheetEl.querySelector('#af-name').value=v;}
+  loginput.placeholder='What did you eat?';loginput.disabled=false;
 });
 /* ---------- service worker ---------- */
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
