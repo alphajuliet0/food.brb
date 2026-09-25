@@ -286,7 +286,7 @@ function render(){
       if(!f.id){f.id=uid();dirty=true;}
       const mac=[f.protein?'P '+Math.round(f.protein)+'g':'',f.carbs?'C '+Math.round(f.carbs)+'g':'',f.fat?'F '+Math.round(f.fat)+'g':''].filter(Boolean).join(' · ');
       html+='<div class="mealwrap"><div class="swipebg right">&#8594; copy to today</div><div class="swipebg left">copy to day &#8592;</div>'
-        +'<div class="mealcard" data-id="'+f.id+'"><div class="thumb">'+icon+'</div><div class="minfo"><div class="mname2">'+esc(f.name||'')+'</div><div class="mmacros">'+label+(mac?' · '+mac:'')+'</div></div>'
+        +'<div class="mealcard" data-id="'+f.id+'"><div class="thumb">'+icon+'</div><div class="minfo"><div class="mname2">'+esc(f.name||'')+'</div><div class="mmacros">'+(mac||'&nbsp;')+'</div></div>'
         +'<div class="mkcal">'+(f.kcal||0).toLocaleString()+' <span>cal</span></div><button class="copybtn" data-copy="'+f.id+'" aria-label="Copy to another day">&#10697;</button></div></div>';
     }
   }
