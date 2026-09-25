@@ -142,6 +142,11 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 .draftrow .dr-nums input{width:100%;background:var(--surface);border:0;border-radius:8px;padding:8px 10px;font-size:13px;color:var(--ink);outline:0;text-align:center}
 .draftrow .dr-nums label{display:block;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--dim);text-align:center;margin-bottom:3px}
 .estnote{font-size:12px;color:var(--amber);margin-bottom:12px}
+.portrow{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.portrow input{width:90px;background:var(--surface2);border:0;border-radius:12px;padding:11px 12px;font-size:16px;font-weight:700;color:var(--ink);outline:0;text-align:center}
+.portpreview{background:var(--surface2);border-radius:12px;padding:12px 14px;font-size:13px;margin-bottom:6px}
+.portpreview b{font-size:16px}
+.portpreview span{color:var(--dim)}
 
 
 </style>
@@ -474,20 +479,45 @@ async function lookupBarcode(code){
     if(j&&j.status===1&&name&&isFinite(kcal)&&kcal>0){
       if(brand&&name.toLowerCase().indexOf(brand.toLowerCase())<0)name=brand+' '+name;
       const sg=parseServing(prod.serving_size);
-      const g=sg||100;
-      const sc=v=>isFinite(Number(v))?Math.round(Number(v)*g/100):0;
-      addSheet();
-      sheetEl.querySelector('#af-name').value=name;
-      sheetEl.querySelector('#af-kcal').value=sc(n['energy-kcal_100g']);
-      sheetEl.querySelector('#af-p').value=sc(n['proteins_100g']);
-      sheetEl.querySelector('#af-c').value=sc(n['carbohydrates_100g']);
-      sheetEl.querySelector('#af-f').value=sc(n['fat_100g']);
-      toast('Found: '+name+(sg?' ('+prod.serving_size+')':' (per 100g)'));
+      portionSheet({name:name,kcal100:kcal,p100:Number(n['proteins_100g'])||0,c100:Number(n['carbohydrates_100g'])||0,f100:Number(n['fat_100g'])||0,fi100:Number(n['fiber_100g'])||0,serveGrams:sg||0,serveLabel:sg?prod.serving_size:''});
     }else{
       addSheet();
       toast('No data for '+code+' - type it in');
     }
   }catch(e){addSheet();toast('Lookup failed - type it in');}
+}
+
+/* ---------- portion sheet: scan result, amount always visible + editable ---------- */
+function portionSheet(p){
+  const hr=new Date().getHours();
+  const def=hr<11?'breakfast':hr<15?'lunch':hr<21?'dinner':'snack';
+  const modes=[['g','grams']];
+  if(p.serveGrams)modes.push(['s','serving ('+esc(p.serveLabel)+')']);
+  openSheet('<h3>'+esc(p.name)+'</h3><div class="sub">Pack data is per 100 g'+(p.serveGrams?' · serving = '+esc(p.serveLabel):' · no serving size on record')+' - set how much you had.</div>'
+    +'<div class="fld"><label>Amount</label><div class="portrow"><input id="pt-qty" inputmode="decimal" value="'+(p.serveGrams?'1':'100')+'"><div class="mchiprow" style="margin-bottom:0" id="pt-modes">'
+    +modes.map(([v,l],i)=>'<button class="mchip'+(i===(p.serveGrams?1:0)?' sel':'')+'" data-mode="'+v+'">'+l+'</button>').join('')+'</div></div></div>'
+    +'<div class="portpreview" id="pt-prev"></div>'
+    +'<div class="fld"><label>Meal</label><div class="mchiprow" style="margin-bottom:0">'+SLOTCH.map(([v,l])=>'<button class="mchip'+(v===def?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')+'</div></div>'
+    +'<button class="sheetbtn primary" id="pt-save">Add to '+(sel===TODAY?'today':fmtDay(sel))+'</button>'
+    +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
+  let mode=p.serveGrams?'s':'g', meal=def;
+  const qty=sheetEl.querySelector('#pt-qty');
+  function grams(){const q=parseFloat(qty.value)||0;return (mode==='s'&&p.serveGrams)?q*p.serveGrams:q;}
+  function preview(){
+    const g=grams();
+    sheetEl.querySelector('#pt-prev').innerHTML='<b>'+Math.round(p.kcal100*g/100)+' kcal</b> <span>· P '+Math.round(p.p100*g/100)+'g · C '+Math.round(p.c100*g/100)+'g · F '+Math.round(p.f100*g/100)+'g · Fibre '+Math.round(p.fi100*g/100)+'g ('+Math.round(g)+'g)</span>';
+  }
+  qty.addEventListener('input',preview);
+  sheetEl.querySelectorAll('#pt-modes [data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;sheetEl.querySelectorAll('#pt-modes [data-mode]').forEach(x=>x.classList.toggle('sel',x===b));preview();});
+  sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
+  sheetEl.querySelector('#pt-save').onclick=()=>{
+    const g=grams();
+    if(g<=0){toast('Amount needed');return;}
+    foodsOf(sel).push({id:uid(),name:p.name,kcal:Math.round(p.kcal100*g/100),protein:Math.round(p.p100*g/1000)*10,carbs:Math.round(p.c100*g/1000)*10,fat:Math.round(p.f100*g/1000)*10,fibre:Math.round(p.fi100*g/1000)*10,slot:meal,snack:meal==='snack',source:'barcode'});
+    save();closeSheet();render();toast('Added');
+  };
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+  preview();
 }
 /* ---------- sentence logging (Gemini rail) ---------- */
 function geminiKey(){return (localStorage.getItem('foodBrbGeminiKey')||'').trim();}
