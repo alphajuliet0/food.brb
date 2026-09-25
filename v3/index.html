@@ -8,6 +8,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
 <style>
+@font-face{font-family:Inter;src:url(inter.woff2) format("woff2");font-weight:100 900;font-display:swap}
 :root{
   --kcal:#E5321B; --kcal-hi:#ff725f; --protein:#6f7fbf; --protein-hi:#aab6ff; --fibre:#d9a441; --fibre-hi:#ffd06b; --steps:#85818a;
   --green:#3f9d6b; --amber:#d9a441; --grey:#5c5860;
@@ -19,7 +20,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{font-size:16px}
-body{background:var(--page);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;min-height:100vh;padding-bottom:110px;font-variant-numeric:tabular-nums}
+body{background:var(--page);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;min-height:100vh;padding-bottom:110px;font-variant-numeric:tabular-nums}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 input{font:inherit}
 .top{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 4px}
@@ -31,10 +32,10 @@ input{font:inherit}
 .dateline{padding:6px 20px 0;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim)}
 .dateline strong{color:var(--ink);font-weight:600}
 .titlerow{display:flex;align-items:center;gap:10px;padding:2px 20px 10px}
-h1.today{font-size:30px;font-weight:800;letter-spacing:-.5px}
-.navchev{width:30px;height:30px;border-radius:50%;background:var(--surface2);color:var(--dim);font-size:15px;display:flex;align-items:center;justify-content:center}
+h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.navchev{flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:var(--surface2);color:var(--dim);font-size:15px;display:flex;align-items:center;justify-content:center}
 .navchev:disabled{opacity:.3}
-.backchip{background:var(--surface2);border-radius:999px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--protein-hi);letter-spacing:.4px}
+.backchip{flex:0 0 auto;background:var(--surface2);border-radius:999px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--protein-hi);letter-spacing:.4px}
 [data-theme=light] .backchip{color:var(--protein)}
 .weekstrip{display:flex;justify-content:space-between;padding:2px 20px 14px}
 .daycol{display:flex;flex-direction:column;align-items:center;gap:6px;width:34px;border-radius:12px;padding:4px 0}
