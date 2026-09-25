@@ -94,6 +94,36 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--surface2);color:var(--ink);padding:10px 18px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1}
 .variantnote{position:fixed;top:8px;right:10px;font-size:10px;color:var(--dim);opacity:.6}
+.mealwrap{position:relative;border-radius:18px;overflow:hidden}
+.swipebg{position:absolute;inset:0;display:flex;align-items:center;font-size:12px;font-weight:700;padding:0 18px;border-radius:18px}
+.swipebg.right{background:var(--kcal);color:#fff;justify-content:flex-start}
+.swipebg.left{background:var(--protein);color:#fff;justify-content:flex-end}
+.mealcard{position:relative;transition:transform .18s ease;touch-action:pan-y}
+.copybtn{display:none;width:32px;height:32px;border-radius:50%;background:var(--surface2);color:var(--dim);font-size:14px;align-items:center;justify-content:center;flex:0 0 auto}
+@media(hover:hover){.mealcard:hover .copybtn{display:flex}}
+.sheetbg{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+.sheetbg.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--surface);border-radius:22px 22px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.8,.2,1);max-height:84vh;overflow-y:auto}
+.sheet.on{transform:translateY(0)}
+.sheet h3{font-size:17px;font-weight:800;margin-bottom:4px}
+.sheet .sub{font-size:12px;color:var(--dim);margin-bottom:14px}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.fld input{width:100%;background:var(--surface2);border:0;border-radius:12px;padding:11px 14px;font-size:15px;color:var(--ink);outline:0}
+.fld input:focus{box-shadow:0 0 0 2px var(--protein)}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid3 .fld{margin-bottom:0}
+.mchiprow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.mchip{background:var(--surface2);border-radius:999px;padding:9px 16px;font-size:13px;font-weight:600;color:var(--dim)}
+.mchip.sel{background:var(--kcal);color:#fff}
+.sheetbtn{display:block;width:100%;padding:14px;border-radius:14px;font-size:15px;font-weight:700;text-align:center;margin-top:10px}
+.sheetbtn.primary{background:var(--kcal);color:#fff}
+.sheetbtn.ghost{background:var(--surface2);color:var(--dim)}
+.sheetbtn.danger{background:transparent;color:var(--kcal)}
+.sheetbtn.danger.arm{background:var(--kcal);color:#fff}
+.dayrow{display:flex;justify-content:space-between;align-items:center;width:100%;padding:13px 4px;font-size:15px;font-weight:600;border-bottom:1px solid var(--hair)}
+.dayrow span{color:var(--dim);font-size:12px;font-weight:500}
+
 </style>
 </head>
 <body>
@@ -125,6 +155,8 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 </div></div>
 <div class="toast" id="toast"></div>
 <div class="variantnote" id="variantnote"></div>
+<div class="sheetbg" id="sheetbg"></div>
+<div class="sheet" id="sheet"></div>
 <script src="data.js"></script>
 <script>
 'use strict';
@@ -156,6 +188,7 @@ document.getElementById('nextday').onclick=()=>{if(sel<TODAY){sel=FOODBRB.shiftK
 document.getElementById('backtoday').onclick=()=>{sel=TODAY;render();};
 /* ---------- render ---------- */
 function render(){
+  let dirty=false;
   const D=state.days[sel]||null, T=FOODBRB.totals(D), isToday=sel===TODAY;
   const wk=weekOf(sel);
   const wkUsed=wk.reduce((a,k)=>{const dd=state.days[k];return a+(FOODBRB.logged(dd)?FOODBRB.totals(dd).kcal:0);},0);
@@ -214,20 +247,155 @@ function render(){
   let html='';
   for(const [sl,icon,label] of SLOTS){
     const items=em[sl];if(!items||!items.length)continue;
-    const k=items.reduce((a,f)=>a+(f.kcal||0),0),p=items.reduce((a,f)=>a+(f.protein||0),0),c=items.reduce((a,f)=>a+(f.carbs||0),0),fa=items.reduce((a,f)=>a+(f.fat||0),0);
-    const names=items.map(f=>(f.name||'').split(',')[0]).join(' · ');
-    html+='<div class="mealcard"><div class="thumb">'+icon+'</div><div class="minfo"><div class="mname2">'+names+'</div><div class="mmacros">'+label+' · P '+Math.round(p)+'g · C '+Math.round(c)+'g · F '+Math.round(fa)+'g</div></div><div class="mkcal">'+k.toLocaleString()+' <span>cal</span></div></div>';
+    for(const f of items){
+      if(!f.id){f.id=uid();dirty=true;}
+      const mac=[f.protein?'P '+Math.round(f.protein)+'g':'',f.carbs?'C '+Math.round(f.carbs)+'g':'',f.fat?'F '+Math.round(f.fat)+'g':''].filter(Boolean).join(' · ');
+      html+='<div class="mealwrap"><div class="swipebg right">&#8594; copy to today</div><div class="swipebg left">copy to day &#8592;</div>'
+        +'<div class="mealcard" data-id="'+f.id+'"><div class="thumb">'+icon+'</div><div class="minfo"><div class="mname2">'+esc(f.name||'')+'</div><div class="mmacros">'+label+(mac?' · '+mac:'')+'</div></div>'
+        +'<div class="mkcal">'+(f.kcal||0).toLocaleString()+' <span>cal</span></div><button class="copybtn" data-copy="'+f.id+'" aria-label="Copy to another day">&#10697;</button></div></div>';
+    }
   }
-  meals.innerHTML=html||'<div class="emptylog">Nothing logged '+(isToday?'yet today':'on this day')+'.'+(isToday?'<br>Your meals will appear here.':'')+'</div>';
+  meals.innerHTML=html||'<div class="emptylog">Nothing logged '+(isToday?'yet today':'on this day')+'.'+(isToday?'<br>Tap + to add your first meal.':'')+'</div>';
   document.getElementById('mealcount').textContent=foods.length?foods.length+' items · '+T.kcal.toLocaleString()+' kcal':'';
+  attachMealHandlers();
+  if(dirty)save();
 }
 render();
-/* ---------- stubs + toast ---------- */
+/* ---------- toast ---------- */
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('on'),1800);}
-document.getElementById('plusbtn').onclick=()=>toast('Logging core lands in session 3');
+/* ---------- write layer ---------- */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function uid(){return 'm'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function save(){localStorage.setItem('sadhana-v1',JSON.stringify(state));}
+function foodsOf(k){const d=state.days[k]=state.days[k]||{};d.foods=d.foods||[];return d.foods;}
+function findFood(k,id){return foodsOf(k).find(f=>f.id===id);}
+const SLOTCH=[['breakfast','Breakfast'],['lunch','Lunch'],['dinner','Dinner'],['snack','Snacks']];
+/* ---------- sheet ---------- */
+const sheetbg=document.getElementById('sheetbg'), sheetEl=document.getElementById('sheet');
+function openSheet(html){sheetEl.innerHTML=html;sheetbg.classList.add('on');sheetEl.classList.add('on');}
+function closeSheet(){sheetbg.classList.remove('on');sheetEl.classList.remove('on');}
+sheetbg.onclick=closeSheet;
+function mealPickSheet(title,sub,def,onpick){
+  openSheet('<h3>'+title+'</h3><div class="sub">'+sub+'</div><div class="mchiprow">'
+    +SLOTCH.map(([v,l])=>'<button class="mchip'+(v===def?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')
+    +'</div><button class="sheetbtn ghost" id="shcancel">Cancel</button>');
+  sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{closeSheet();onpick(b.dataset.meal);});
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+}
+function dayPickSheet(onpick){
+  const rows=[];
+  for(let i=0;i<7;i++){
+    const k=FOODBRB.shiftKey(TODAY,-i);
+    rows.push('<button class="dayrow" data-day="'+k+'">'+(i===0?'Today':i===1?'Yesterday':fmtDay(k))+'<span>'+fmtDay(k)+'</span></button>');
+  }
+  openSheet('<h3>Copy to which day?</h3><div class="sub">Pick the day, then the meal.</div>'+rows.join('')+'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
+  sheetEl.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{onpick(b.dataset.day);});
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+}
+function copyFood(fromDay,id,toDay,slot){
+  const f=findFood(fromDay,id);if(!f)return;
+  const c={id:uid(),name:f.name,kcal:f.kcal||0,protein:f.protein||0,carbs:f.carbs||0,fat:f.fat||0,fibre:f.fibre||0,slot:slot,snack:slot==='snack',source:'copy'};
+  foodsOf(toDay).push(c);save();
+  if(toDay===sel||fromDay===sel)render();
+  toast('Copied to '+(toDay===TODAY?'today':fmtDay(toDay)));
+}
+function num(v){const n=parseFloat(v);return isNaN(n)?0:n;}
+/* ---------- edit sheet ---------- */
+function editSheet(dayKey,id){
+  const f=findFood(dayKey,id);if(!f)return;
+  const cur=f.slot||(f.snack?'snack':'breakfast');
+  openSheet('<h3>Edit food</h3><div class="sub">'+esc(fmtDay(dayKey))+'</div>'
+    +'<div class="fld"><label>Name</label><input id="ef-name" value="'+esc(f.name||'')+'"></div>'
+    +'<div class="fld"><label>Meal</label><div class="mchiprow" style="margin-bottom:0">'+SLOTCH.map(([v,l])=>'<button class="mchip'+(v===cur?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')+'</div></div>'
+    +'<div class="fld"><label>Calories</label><input id="ef-kcal" inputmode="numeric" value="'+(f.kcal||0)+'"></div>'
+    +'<div class="grid3">'
+    +'<div class="fld"><label>Protein g</label><input id="ef-p" inputmode="decimal" value="'+(f.protein||0)+'"></div>'
+    +'<div class="fld"><label>Carbs g</label><input id="ef-c" inputmode="decimal" value="'+(f.carbs||0)+'"></div>'
+    +'<div class="fld"><label>Fat g</label><input id="ef-f" inputmode="decimal" value="'+(f.fat||0)+'"></div></div>'
+    +'<div class="fld" style="margin-top:12px"><label>Fibre g</label><input id="ef-fi" inputmode="decimal" value="'+(f.fibre||0)+'"></div>'
+    +'<button class="sheetbtn primary" id="ef-save">Save</button>'
+    +'<button class="sheetbtn danger" id="ef-del">Delete</button>'
+    +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
+  let meal=cur;
+  sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
+  sheetEl.querySelector('#ef-save').onclick=()=>{
+    const name=sheetEl.querySelector('#ef-name').value.trim();
+    if(!name){toast('Name needed');return;}
+    f.name=name;f.kcal=num(sheetEl.querySelector('#ef-kcal').value);
+    f.protein=num(sheetEl.querySelector('#ef-p').value);f.carbs=num(sheetEl.querySelector('#ef-c').value);
+    f.fat=num(sheetEl.querySelector('#ef-f').value);f.fibre=num(sheetEl.querySelector('#ef-fi').value);
+    f.slot=meal;f.snack=meal==='snack';
+    save();closeSheet();render();toast('Saved');
+  };
+  const del=sheetEl.querySelector('#ef-del');
+  del.onclick=()=>{
+    if(!del.classList.contains('arm')){del.classList.add('arm');del.textContent='Tap again to delete';return;}
+    const arr=foodsOf(dayKey),i=arr.findIndex(x=>x.id===id);
+    if(i>=0)arr.splice(i,1);
+    save();closeSheet();render();toast('Deleted');
+  };
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+}
+/* ---------- quick add ---------- */
+function addSheet(){
+  const hr=new Date().getHours();
+  const def=hr<11?'breakfast':hr<15?'lunch':hr<21?'dinner':'snack';
+  openSheet('<h3>Add food</h3><div class="sub">Quick add - estimates come with sentence logging.</div>'
+    +'<div class="fld"><label>Name</label><input id="af-name" placeholder="e.g. Masala eggs" autocomplete="off"></div>'
+    +'<div class="fld"><label>Meal</label><div class="mchiprow" style="margin-bottom:0">'+SLOTCH.map(([v,l])=>'<button class="mchip'+(v===def?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')+'</div></div>'
+    +'<div class="fld"><label>Calories</label><input id="af-kcal" inputmode="numeric" placeholder="0"></div>'
+    +'<div class="grid3">'
+    +'<div class="fld"><label>Protein g</label><input id="af-p" inputmode="decimal" placeholder="0"></div>'
+    +'<div class="fld"><label>Carbs g</label><input id="af-c" inputmode="decimal" placeholder="0"></div>'
+    +'<div class="fld"><label>Fat g</label><input id="af-f" inputmode="decimal" placeholder="0"></div></div>'
+    +'<button class="sheetbtn primary" id="af-save">Add to '+(sel===TODAY?'today':fmtDay(sel))+'</button>'
+    +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
+  let meal=def;
+  sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
+  sheetEl.querySelector('#af-save').onclick=()=>{
+    const name=sheetEl.querySelector('#af-name').value.trim();
+    const kcal=num(sheetEl.querySelector('#af-kcal').value);
+    if(!name||!kcal){toast('Name + calories needed');return;}
+    foodsOf(sel).push({id:uid(),name:name,kcal:kcal,protein:num(sheetEl.querySelector('#af-p').value),carbs:num(sheetEl.querySelector('#af-c').value),fat:num(sheetEl.querySelector('#af-f').value),fibre:0,slot:meal,snack:meal==='snack',source:'manual'});
+    save();closeSheet();render();toast('Added');
+  };
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+  setTimeout(()=>sheetEl.querySelector('#af-name').focus(),300);
+}
+/* ---------- meal row handlers: tap edit, swipe copy, hover copy ---------- */
+function attachMealHandlers(){
+  document.querySelectorAll('.mealcard').forEach(card=>{
+    const id=card.dataset.id;
+    card.addEventListener('click',e=>{if(card._swiped){card._swiped=false;return;}editSheet(sel,id);});
+    card.addEventListener('touchstart',e=>{const t=e.touches[0];card._x=t.clientX;card._y=t.clientY;card._dx=0;card._horiz=null;},{passive:true});
+    card.addEventListener('touchmove',e=>{
+      const t=e.touches[0],dx=t.clientX-card._x,dy=t.clientY-card._y;
+      if(card._horiz===null&&(Math.abs(dx)>8||Math.abs(dy)>8))card._horiz=Math.abs(dx)>Math.abs(dy);
+      if(card._horiz){card._dx=dx;card.style.transition='none';card.style.transform='translateX('+dx+'px)';}
+    },{passive:true});
+    card.addEventListener('touchend',()=>{
+      card.style.transition='';card.style.transform='';
+      const dx=card._dx||0;card._dx=0;
+      if(!card._horiz)return;
+      if(Math.abs(dx)>24)card._swiped=true;
+      const ff=findFood(sel,id);if(!ff){card._horiz=null;return;}
+      if(dx>64){mealPickSheet('Copy to today','Which meal?',ff.slot||(ff.snack?'snack':'breakfast'),slot=>copyFood(sel,id,TODAY,slot));}
+      else if(dx<-64){const src=sel;dayPickSheet(day=>{const f=findFood(src,id);mealPickSheet('Copy to '+fmtDay(day),'Which meal?',f.slot||(f.snack?'snack':'breakfast'),slot=>copyFood(src,id,day,slot));});}
+      card._horiz=null;
+    });
+  });
+  document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    const id=b.dataset.copy,src=sel,f=findFood(src,id);
+    dayPickSheet(day=>{mealPickSheet('Copy to '+fmtDay(day),'Which meal?',f.slot||(f.snack?'snack':'breakfast'),slot=>copyFood(src,id,day,slot));});
+  });
+}
+/* ---------- log bar ---------- */
+document.getElementById('plusbtn').onclick=addSheet;
 document.getElementById('micbtn').onclick=()=>toast('Voice logging comes after sentence logging');
-document.getElementById('loginput').addEventListener('keydown',e=>{if(e.key==='Enter'){toast('Sentence logging lands in session 3');e.target.value='';}});
-document.querySelectorAll('.qchip').forEach(b=>b.onclick=()=>toast('Saved foods + recents land in session 3'));
+document.getElementById('loginput').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){const v=e.target.value.trim();if(!v)return;addSheet();sheetEl.querySelector('#af-name').value=v;e.target.value='';}
+});
 /* ---------- service worker ---------- */
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
