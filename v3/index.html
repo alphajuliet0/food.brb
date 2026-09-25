@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cap">
+<meta name="theme-color" content="#131114">
+<title>food.brb</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<style>
+:root{
+  --kcal:#E5321B; --kcal-hi:#ff725f; --protein:#6f7fbf; --protein-hi:#aab6ff; --fibre:#d9a441; --fibre-hi:#ffd06b; --steps:#85818a;
+  --green:#3f9d6b; --amber:#d9a441; --grey:#5c5860;
+  --page:#131114; --surface:#1d1a1e; --surface2:#262228; --ink:#f2eef2; --dim:#9a939e; --hair:#332e35;
+}
+[data-theme=light]{
+  --page:#f4f1f5; --surface:#ffffff; --surface2:#efeaf1; --ink:#221e24; --dim:#6f6873; --hair:#e2dce4;
+  --steps:#6f6873;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{background:var(--page);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;min-height:100vh;padding-bottom:110px;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{font:inherit}
+.top{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 4px}
+.brand{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.brand .b1{color:var(--ink)} .brand .r{color:var(--kcal)} .brand .b2{color:var(--protein)}
+.topbtns{display:flex;gap:8px;align-items:center}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--dim)}
+.iconbtn{width:34px;height:34px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--dim)}
+.dateline{padding:6px 20px 0;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim)}
+.dateline strong{color:var(--ink);font-weight:600}
+h1.today{font-size:30px;font-weight:800;letter-spacing:-.5px;padding:2px 20px 10px}
+.weekstrip{display:flex;justify-content:space-between;padding:2px 20px 14px}
+.daycol{display:flex;flex-direction:column;align-items:center;gap:6px;width:34px}
+.daycol .dow{font-size:11px;color:var(--dim);font-weight:600}
+.daycol.sel .dow{color:var(--ink)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--c,#3a353c)}
+.dot.hollow{background:transparent;border:1.5px solid var(--grey);width:6px;height:6px}
+.hero{margin:0 16px;background:var(--surface);border-radius:22px;padding:20px 18px 16px;box-shadow:0 8px 30px rgba(0,0,0,.18)}
+.herorow{display:flex;align-items:center;gap:20px}
+.ringwrap{position:relative;width:138px;height:138px;flex:0 0 auto}
+.ringwrap svg{transform:rotate(-90deg)}
+.ringtrack{fill:none;stroke:var(--surface2);stroke-width:7}
+.ringarc{fill:none;stroke:var(--kcal);stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1)}
+.ringarc.bank{stroke:var(--protein);stroke-width:4;opacity:.9}
+.ringcenter{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.ringcenter .big{font-size:30px;font-weight:800;letter-spacing:-.5px;line-height:1}
+.ringcenter .big.over{color:var(--kcal)}
+.ringcenter .lbl{font-size:11px;color:var(--dim);letter-spacing:.8px;text-transform:uppercase;margin-top:4px}
+.ringcenter .bankin{font-size:11px;color:var(--protein);margin-top:6px;font-weight:600}
+.tick{position:absolute;width:3px;height:10px;background:var(--protein);border-radius:2px;left:50%;top:-2px;transform-origin:50% 71px}
+.macros{flex:1;min-width:0;display:flex;flex-direction:column;gap:13px}
+.mrow .mtop{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:4px}
+.mrow .mname{color:var(--dim);font-weight:600}
+.mrow .mval{font-weight:700}
+.mrow .mval .goal{color:var(--dim);font-weight:500;font-size:12px}
+.mrow .mval.over{color:var(--kcal)}
+.mbar{height:4px;border-radius:2px;background:var(--surface2);overflow:hidden}
+.mbar i{display:block;height:100%;border-radius:2px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.bankhair{height:3px;border-radius:2px;background:var(--surface2);overflow:hidden;margin-top:10px}
+.bankhair i{display:block;height:100%;background:var(--protein);border-radius:2px}
+.bankhairlbl{font-size:10px;color:var(--dim);margin-top:4px;text-align:right}
+.bankrow{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--hair);font-size:13px}
+.bankrow .bl{color:var(--dim);font-weight:600}
+.bankrow .bv{font-weight:700}
+.bankrow .bv strong{color:var(--protein)}
+.mealshead{display:flex;justify-content:space-between;align-items:baseline;padding:22px 20px 8px}
+.mealshead h2{font-size:17px;font-weight:800}
+.mealshead span{font-size:12px;color:var(--dim)}
+.meals{margin:0 16px;display:flex;flex-direction:column;gap:10px}
+.mealcard{background:var(--surface);border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:14px}
+.mealcard .thumb{width:40px;height:40px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:17px;flex:0 0 auto}
+.mealcard .minfo{flex:1;min-width:0}
+.mealcard .mname2{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mealcard .mmacros{font-size:12px;color:var(--dim);margin-top:2px}
+.mealcard .mkcal{font-weight:800;font-size:15px;white-space:nowrap}
+.mealcard .mkcal span{font-size:11px;color:var(--dim);font-weight:500}
+.quickchips{display:flex;gap:8px;padding:16px 20px 4px}
+.qchip{background:var(--surface2);border-radius:999px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--dim);display:flex;align-items:center;gap:6px}
+.emptylog{padding:26px 20px;text-align:center;color:var(--dim);font-size:13px}
+.logbar{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--page) 28%)}
+.logbarinner{display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;padding:8px 8px 8px 18px;box-shadow:0 10px 34px rgba(0,0,0,.3)}
+.logbarinner input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--ink);font-size:15px}
+.logbarinner input::placeholder{color:var(--dim)}
+.roundbtn{width:38px;height:38px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--dim);flex:0 0 auto}
+.roundbtn.primary{background:var(--kcal);color:#fff;font-size:20px;font-weight:600}
+.dockspace{height:8px}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--surface2);color:var(--ink);padding:10px 18px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1}
+.variantnote{position:fixed;top:8px;right:10px;font-size:10px;color:var(--dim);opacity:.6}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand"><span class="b1">food.b</span><span class="r">r</span><span class="b2">b</span></div>
+  <div class="topbtns"><button class="iconbtn" id="themebtn" aria-label="Toggle theme">◐</button><div class="avatar" id="avatar">A</div></div>
+</div>
+<div class="dateline" id="dateline"></div>
+<h1 class="today">Today</h1>
+<div class="weekstrip" id="weekstrip"></div>
+<div class="hero">
+  <div class="herorow">
+    <div class="ringwrap" id="ringwrap">
+      <svg width="138" height="138" viewBox="0 0 138 138" id="ringsvg"></svg>
+      <div class="ringcenter" id="ringcenter"></div>
+    </div>
+    <div class="macros" id="macros"></div>
+  </div>
+  <div id="bankextra"></div>
+  <div class="bankrow" id="bankrow"></div>
+</div>
+<div class="mealshead"><h2>Meals</h2><span id="mealcount"></span></div>
+<div class="meals" id="meals"></div>
+<div class="quickchips"><button class="qchip">⊞ Saved foods</button><button class="qchip">↻ Recents</button></div>
+<div class="logbar"><div class="logbarinner">
+  <input id="loginput" placeholder="What did you eat?" autocomplete="off">
+  <button class="roundbtn" id="micbtn" aria-label="Voice log">◉</button>
+  <button class="roundbtn primary" id="plusbtn" aria-label="Add food">＋</button>
+</div></div>
+<div class="toast" id="toast"></div>
+<div class="variantnote" id="variantnote"></div>
+<script src="data.js"></script>
+<script>
+'use strict';
+/* ---------- data via data.js module ---------- */
+const state=FOODBRB.loadState()||{profile:{},days:{}};
+const P=FOODBRB.profile(state), FIBRE_GOAL=P.fibreTarget||30;
+const TK=FOODBRB.todayKey(), WK=FOODBRB.weekKeys();
+const totals=FOODBRB.totals, stepsOf=FOODBRB.stepsOf;
+/* ---------- derived ---------- */
+const D=state.days[TK]||null, T=totals(D);
+const BK=FOODBRB.bank(state); const weekUsed=BK.used, weekBudget=BK.budget, bank=BK.left;
+const kcalLeft=P.kcalTarget-T.kcal, over=kcalLeft<0;
+const ring=stepsOf(D);
+/* ---------- theme ---------- */
+const root=document.documentElement;
+root.setAttribute('data-theme',localStorage.getItem('foodBrbTheme')||'dark');
+document.getElementById('themebtn').onclick=()=>{const n=root.getAttribute('data-theme')==='dark'?'light':'dark';root.setAttribute('data-theme',n);localStorage.setItem('foodBrbTheme',n);};
+/* ---------- header ---------- */
+const DNOW=new Date();
+const DOWS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const st=FOODBRB.streak(state);
+document.getElementById('dateline').innerHTML=DOWS[DNOW.getDay()]+' '+DNOW.getDate()+' '+MONS[DNOW.getMonth()]+(st>0?' · <strong>'+st+'-day streak</strong>':'');
+document.getElementById('avatar').textContent=((P.name||'A').trim()[0]||'A').toUpperCase();
+/* ---------- week strip with outcome dots ---------- */
+{
+  const ws=document.getElementById('weekstrip');
+  ws.innerHTML=WK.map((k,i)=>{
+    const dd=state.days[k], logged=!!(dd&&dd.foods&&dd.foods.length);
+    let cls='dot',c='';
+    if(k>TK){cls+=' hollow';}
+    else if(!logged){c='var(--grey)';}
+    else{const t=totals(dd);c=t.kcal>P.kcalTarget?'var(--amber)':'var(--green)';}
+    const dow='MTWTFSS'[i];
+    return '<div class="daycol'+(k===TK?' sel':'')+'"><span class="dow">'+dow+'</span><span class="'+cls+'" style="--c:'+c+'"></span></div>';
+  }).join('');
+}
+/* ---------- ring hero (variants) ---------- */
+const VARIANT=(location.hash.match(/ring=([abc])/)||[])[1]||'a';
+document.getElementById('variantnote').textContent='ring '+VARIANT.toUpperCase()+' · #ring=a|b|c';
+const R=61,CIRC=2*Math.PI*R;
+function arc(cls,frac,cx,cy,r){const f=Math.max(0,Math.min(1,frac));return '<circle class="'+cls+'" cx="'+cx+'" cy="'+cy+'" r="'+r+'" stroke-dasharray="'+(2*Math.PI*r)+'" stroke-dashoffset="'+((1-f)*2*Math.PI*r)+'"/>';}
+{
+  const svg=document.getElementById('ringsvg'), ctr=document.getElementById('ringcenter'), bex=document.getElementById('bankextra');
+  const dayFrac=T.kcal/P.kcalTarget, bankFrac=weekUsed/weekBudget;
+  const bigCls=over?'big over':'big', bigTxt=over?Math.abs(kcalLeft).toLocaleString():kcalLeft.toLocaleString(), bigLbl=over?'kcal over':'kcal left';
+  if(VARIANT==='a'){
+    svg.innerHTML='<circle class="ringtrack" cx="69" cy="69" r="'+R+'"/>'+arc('ringarc',dayFrac,69,69,R)+arc('ringarc bank',bankFrac,69,69,R-9);
+    ctr.innerHTML='<div class="'+bigCls+'">'+bigTxt+'</div><div class="lbl">'+bigLbl+'</div>';
+  }else if(VARIANT==='b'){
+    svg.innerHTML='<circle class="ringtrack" cx="69" cy="69" r="'+R+'"/>'+arc('ringarc',dayFrac,69,69,R);
+    ctr.innerHTML='<div class="'+bigCls+'">'+bigTxt+'</div><div class="lbl">'+bigLbl+'</div>';
+    bex.innerHTML='<div class="bankhair"><i style="width:'+Math.min(100,bankFrac*100)+'%"></i></div><div class="bankhairlbl">week so far · '+Math.round(bankFrac*100)+'%</div>';
+  }else{
+    svg.innerHTML='<circle class="ringtrack" cx="69" cy="69" r="'+R+'"/>'+arc('ringarc',dayFrac,69,69,R);
+    ctr.innerHTML='<div class="'+bigCls+'">'+bigTxt+'</div><div class="lbl">'+bigLbl+'</div><div class="bankin">'+bank.toLocaleString()+' in bank</div>';
+  }
+}
+/* ---------- macro rows ---------- */
+{
+  const row=(name,val,goal,unit,color,overTxt)=>{
+    const ov=val>goal;
+    const valHtml=ov?'<span class="mval over">'+Math.round(val-goal)+unit+' over</span>':'<span class="mval">'+Math.round(val).toLocaleString()+'<span class="goal"> / '+goal.toLocaleString()+unit+'</span></span>';
+    return '<div class="mrow"><div class="mtop"><span class="mname">'+name+'</span>'+valHtml+'</div><div class="mbar"><i style="width:'+Math.min(100,val/goal*100)+'%;background:'+color+'"></i></div></div>';
+  };
+  document.getElementById('macros').innerHTML=
+    row('Calories',T.kcal,P.kcalTarget,'',over?'var(--kcal)':'var(--kcal)')+
+    row('Protein',T.protein,P.proteinTarget,'g','var(--protein)')+
+    row('Fibre',T.fibre,FIBRE_GOAL,'g','var(--fibre)')+
+    row('Steps',ring||0,P.stepsTarget,'','var(--steps)');
+}
+/* ---------- bank row ---------- */
+document.getElementById('bankrow').innerHTML='<span class="bl">This week</span><span class="bv">'+weekUsed.toLocaleString()+' / '+weekBudget.toLocaleString()+' kcal · <strong>'+bank.toLocaleString()+' in bank</strong></span>';
+/* ---------- meals list ---------- */
+{
+  const meals=document.getElementById('meals');
+  const foods=(D&&D.foods)||[];
+  const SLOTS=[['breakfast','🍳','Breakfast'],['lunch','🥗','Lunch'],['dinner','🍽','Dinner'],['snack','🍎','Snacks']];
+  const em={};
+  for(const f of foods){const sl=f.slot||(f.snack?'snack':'breakfast');(em[sl]=em[sl]||[]).push(f);}
+  let html='';
+  for(const [sl,icon,label] of SLOTS){
+    const items=em[sl];if(!items||!items.length)continue;
+    const k=items.reduce((a,f)=>a+(f.kcal||0),0),p=items.reduce((a,f)=>a+(f.protein||0),0),c=items.reduce((a,f)=>a+(f.carbs||0),0),fa=items.reduce((a,f)=>a+(f.fat||0),0);
+    const names=items.map(f=>(f.name||'').split(',')[0]).join(' · ');
+    html+='<div class="mealcard"><div class="thumb">'+icon+'</div><div class="minfo"><div class="mname2">'+names+'</div><div class="mmacros">'+label+' · P '+Math.round(p)+'g · C '+Math.round(c)+'g · F '+Math.round(fa)+'g</div></div><div class="mkcal">'+k.toLocaleString()+' <span>cal</span></div></div>';
+  }
+  meals.innerHTML=html||'<div class="emptylog">Nothing logged yet today.<br>Your meals will appear here.</div>';
+  document.getElementById('mealcount').textContent=foods.length?foods.length+' items · '+T.kcal.toLocaleString()+' kcal':'';
+}
+/* ---------- stubs + toast ---------- */
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('on'),1800);}
+document.getElementById('plusbtn').onclick=()=>toast('Logging core lands in session 3');
+document.getElementById('micbtn').onclick=()=>toast('Voice logging comes after sentence logging');
+document.getElementById('loginput').addEventListener('keydown',e=>{if(e.key==='Enter'){toast('Sentence logging lands in session 3');e.target.value='';}});
+document.querySelectorAll('.qchip').forEach(b=>b.onclick=()=>toast('Saved foods + recents land in session 3'));
+/* ---------- service worker ---------- */
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
