@@ -167,7 +167,7 @@ function arc(cls,frac,cx,cy,r){const f=Math.max(0,Math.min(1,frac));return '<cir
   const dayFrac=T.kcal/P.kcalTarget, bankFrac=weekUsed/weekBudget;
   const bigCls=over?'big over':'big', bigTxt=over?Math.abs(kcalLeft).toLocaleString():kcalLeft.toLocaleString(), bigLbl=over?'kcal over':'kcal left';
   if(VARIANT==='a'){
-    svg.innerHTML='<circle class="ringtrack" cx="69" cy="69" r="'+R+'"/>'+arc('ringarc',dayFrac,69,69,R)+arc('ringarc bank',bankFrac,69,69,R-9);
+    svg.innerHTML='<circle class="ringtrack" cx="69" cy="69" r="'+(R-9)+'"/>'+arc('ringarc bank',bankFrac,69,69,R)+arc('ringarc',dayFrac,69,69,R-9);
     ctr.innerHTML='<div class="'+bigCls+'">'+bigTxt+'</div><div class="lbl">'+bigLbl+'</div>';
   }else if(VARIANT==='b'){
     svg.innerHTML='<circle class="ringtrack" cx="69" cy="69" r="'+R+'"/>'+arc('ringarc',dayFrac,69,69,R);
