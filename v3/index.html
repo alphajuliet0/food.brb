@@ -225,6 +225,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 <script src="data.js"></script>
 <script>
 'use strict';
+window.__errs=[];window.addEventListener('error',e=>{__errs.push((e.message||'?')+' @'+e.lineno+':'+e.colno);});
 /* ---------- data via data.js module ---------- */
 let state=FOODBRB.loadState()||{profile:{},days:{}};
 const P=FOODBRB.profile(state), FIBRE_GOAL=P.fibreTarget||30;
