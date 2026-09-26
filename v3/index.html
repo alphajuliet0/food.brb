@@ -960,6 +960,7 @@ function onbOpts(el,opts,key){
     el.querySelectorAll('.onbopt').forEach(x=>x.classList.toggle('sel',x===b));
     el.querySelector('#onb-next').disabled=false;
   });
+  el.querySelector('#onb-next').onclick=()=>{ONB.step++;renderOnb();};
 }
 function renderOnb(){
   const a=ONB.a, el=document.getElementById('onb');
