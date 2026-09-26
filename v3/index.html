@@ -21,6 +21,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{font-size:16px}
+html,body{overscroll-behavior-y:none}
 body{background:var(--page);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;min-height:100vh;padding-bottom:190px;font-variant-numeric:tabular-nums}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 input{font:inherit}
@@ -125,6 +126,16 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .logbar{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));padding:10px 14px;background:linear-gradient(transparent,var(--page) 28%)}
 .chiprow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 4px 8px}
 .chiprow:empty{display:none}
+.suggest{position:absolute;left:10px;right:10px;bottom:calc(100% + 8px);background:var(--surface);border:1px solid var(--surface2);border-radius:16px;box-shadow:0 12px 32px rgba(0,0,0,.45);overflow:hidden;display:none;max-height:46vh;overflow-y:auto}
+.suggest.on{display:block}
+.suggrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 14px;font-size:13px;border-bottom:1px solid var(--surface2);width:100%;text-align:left;color:var(--ink);background:none;border-left:0;border-right:0;border-top:0;border-radius:0}
+.suggrow:last-child{border-bottom:0}
+.suggrow .sm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.suggrow .sk{color:var(--dim);font-size:12px;flex-shrink:0}
+#ptr{position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;margin-left:-19px;width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--surface2);display:grid;place-items:center;opacity:0;z-index:60;pointer-events:none;transition:opacity .15s}
+.ptrring{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--surface2);border-top-color:var(--kcal)}
+#ptr.spin .ptrring{animation:ptrspin .7s linear infinite}
+@keyframes ptrspin{to{transform:rotate(360deg)}}
 .logchip{background:var(--surface);border:1px solid var(--surface2);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;font-family:inherit;box-shadow:0 6px 18px rgba(0,0,0,.25);max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .logchip:active{transform:scale(.96)}
 .logbarinner{display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;padding:8px 8px 8px 18px;box-shadow:0 10px 34px rgba(0,0,0,.3)}
@@ -263,6 +274,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
   <div class="brand">form.<svg aria-label="brb" viewBox="0 0 1726 757" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" transform="translate(-76 757) scale(1 -1)" d="M76 757V226C76 74 143 0 270 0H416C556 0 644 86 644 264C644 442 556 528 416 528H182V757ZM405 426C497 426 537 378 537 264C537 150 497 103 405 103H301C215 103 182 141 182 231V426Z"/><path fill="#e5321b" transform="translate(619 757) scale(1 -1)" d="M218 528C114 528 75 480 75 374V0H181V358C181 404 202 426 249 426H435V528Z"/><path fill="currentColor" transform="translate(1082 757) scale(1 -1)" d="M76 757V226C76 74 143 0 270 0H416C556 0 644 86 644 264C644 442 556 528 416 528H182V757ZM405 426C497 426 537 378 537 264C537 150 497 103 405 103H301C215 103 182 141 182 231V426Z"/></svg></div>
   <div class="topbtns"><button class="miniring" id="stepsring" aria-label="Steps today"><svg class="ring" viewBox="0 0 34 34"><circle class="mr-track" cx="17" cy="17" r="14"/><circle class="mr-arc" id="mrarc" cx="17" cy="17" r="14" stroke-dasharray="87.96" stroke-dashoffset="87.96"/></svg><svg class="mr-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4.5" r="1.6"/><path d="M12.5 8l-2.8 4.6 2.3 2.2.8 5.2"/><path d="M12.5 8l2.6 2.8 2.4 1.2"/><path d="M9.7 12.6 7 15.3"/></svg></button><button class="iconbtn" id="themebtn" aria-label="Toggle theme">◐</button><button class="avatar" id="avatar" aria-label="You: sync, targets and ring">A</button></div>
 </div>
+<div id="ptr"><div class="ptrring"></div></div>
 <div id="view-food">
 <div class="dateline" id="dateline"></div>
 <div class="titlerow"><button class="navchev" id="prevday" aria-label="Previous day">&lsaquo;</button><h1 class="today" id="daytitle">Today</h1><button class="navchev" id="nextday" aria-label="Next day" disabled>&rsaquo;</button><button class="backchip" id="backtoday" style="display:none">Back to today</button></div>
@@ -288,7 +300,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
   <h2>Train</h2>
   <p>Workout logging is on its way. This tab is the next build.</p>
 </div></div>
-<div class="logbar"><div class="chiprow" id="chiprow"></div><div class="logbarinner">
+<div class="logbar"><div class="suggest" id="suggest"></div><div class="chiprow" id="chiprow"></div><div class="logbarinner">
   <input id="loginput" placeholder="What did you eat?" autocomplete="off">
   <label class="roundbtn" for="camfile" aria-label="Photo log" style="display:grid;place-items:center;cursor:pointer;margin:0">&#128247;</label><input type="file" id="camfile" accept="image/*" style="display:none"><input type="file" id="labfile" accept="image/*" capture="environment" style="display:none">
   <button class="roundbtn" id="micbtn" aria-label="Voice log">◉</button>
@@ -574,20 +586,70 @@ function prevSheet(){
   const all=historyFoods();
   openSheet('<h3>Previous items</h3><div class="sub">Everything you have logged before, newest first.</div>'
     +'<div class="fld"><input id="pv-q" placeholder="Search - e.g. chai" autocomplete="off"></div>'
-    +'<div id="pv-list"></div>'
+    +'<div id="pv-list"></div><div id="pv-db"></div>'
     +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
   const list=sheetEl.querySelector('#pv-list');
   const draw=q=>{
     const ql=(q||'').trim().toLowerCase();
     const hits=(ql?all.filter(f=>f.name.toLowerCase().indexOf(ql)>=0):all).slice(0,40);
-    list.innerHTML=hits.length?hits.map((f,i)=>'<div class="yrow tappable pvrow" data-i="'+i+'"><span class="yl" style="color:var(--ink)">'+esc(f.name)+'</span><span class="yv">'+f.kcal+' kcal</span></div>').join(''):'<div class="sub" style="padding:12px 0">No matches yet - quick add it instead.</div>';
+    list.innerHTML=hits.length?hits.map((f,i)=>'<div class="yrow tappable pvrow" data-i="'+i+'"><span class="yl" style="color:var(--ink)">'+esc(f.name)+'</span><span class="yv">'+f.kcal+' kcal</span></div>').join(''):'<div class="sub" style="padding:12px 0">No personal matches yet - quick add it instead.</div>';
     list.querySelectorAll('.pvrow').forEach(b=>b.onclick=()=>{const f=hits[+b.dataset.i];closeSheet();addSheet(f);});
+    const dbbox=sheetEl.querySelector('#pv-db');
+    if(ql.length>=2){loadFoodDB().then(()=>{
+      const seen={};hits.forEach(f=>seen[f.name.toLowerCase()]=1);
+      const dh=dbMatches(ql,seen).slice(0,8);
+      dbbox.innerHTML=dh.length?'<div class="sub" style="margin-top:14px">Common foods - per 100 g (USDA)</div>'+dh.map((f,i)=>'<div class="yrow tappable dbrow" data-i="'+i+'"><span class="yl" style="color:var(--ink)">'+esc(f.name)+'</span><span class="yv">'+f.kcal+' kcal</span></div>').join(''):'';
+      dbbox.querySelectorAll('.dbrow').forEach(b=>b.onclick=()=>{const f=dh[+b.dataset.i];closeSheet();addSheet(f);});
+    });}else dbbox.innerHTML='';
   };
   sheetEl.querySelector('#pv-q').addEventListener('input',e=>draw(e.target.value));
   sheetEl.querySelector('#shcancel').onclick=closeSheet;
   draw('');
   setTimeout(()=>{const q=sheetEl.querySelector('#pv-q');if(q)q.focus();},300);
 }
+/* ---------- built-in food database (USDA FDC SR Legacy, per 100 g) + typeahead ---------- */
+let fooddbLoading=null;
+function loadFoodDB(){
+  if(window.FOODDB)return Promise.resolve();
+  if(fooddbLoading)return fooddbLoading;
+  fooddbLoading=new Promise(res=>{
+    const s=document.createElement('script');s.src='foods-db.js';
+    s.onload=()=>res();s.onerror=()=>{window.FOODDB=[];res();};
+    document.head.appendChild(s);
+  });
+  return fooddbLoading;
+}
+function dbMatches(ql,exclude){
+  if(!window.FOODDB||!ql||ql.length<2)return [];
+  const out=[];
+  for(const a of window.FOODDB){
+    const nl=a[0].toLowerCase();const i=nl.indexOf(ql);
+    if(i<0)continue;
+    const key=a[0].toLowerCase();if(exclude&&exclude[key])continue;
+    out.push({name:a[0]+', 100 g',kcal:a[1],protein:a[2],carbs:a[3],fat:a[4],fibre:a[5],score:(i===0?0:2)+nl.length/500});
+  }
+  out.sort((a,b)=>a.score-b.score);
+  return out;
+}
+function drawSuggest(){
+  const box=document.getElementById('suggest');if(!box)return;
+  const ql=loginput.value.trim().toLowerCase();
+  if(ql.length<2){box.classList.remove('on');box.innerHTML='';return;}
+  const hist=historyFoods().filter(f=>f.name.toLowerCase().indexOf(ql)>=0);
+  hist.sort((a,b)=>a.name.toLowerCase().indexOf(ql)-b.name.toLowerCase().indexOf(ql));
+  const seen={};hist.forEach(f=>seen[f.name.toLowerCase()]=1);
+  const db=dbMatches(ql,seen);
+  const rows=hist.slice(0,4).map(f=>({f,hist:true})).concat(db.slice(0,6).map(f=>({f,hist:false}))).slice(0,6);
+  if(!rows.length){box.classList.remove('on');box.innerHTML='';return;}
+  box.innerHTML=rows.map((s,i)=>'<button class="suggrow" data-i="'+i+'"><span class="sm">'+(s.hist?'↻ ':'')+esc(s.f.name)+'</span><span class="sk">'+s.f.kcal+' kcal</span></button>').join('');
+  box.classList.add('on');
+  box.querySelectorAll('.suggrow').forEach(b=>b.onclick=()=>{
+    const s=rows[+b.dataset.i].f;
+    box.classList.remove('on');box.innerHTML='';loginput.value='';
+    draftSheet([{name:s.name,kcal:s.kcal,protein:s.protein,carbs:s.carbs,fat:s.fat,fibre:s.fibre}]);
+  });
+}
+function hideSuggest(){const box=document.getElementById('suggest');if(box){box.classList.remove('on');box.innerHTML='';}}
 /* ---------- quick add ---------- */
 function addSheet(pre){
   const hr=new Date().getHours();
@@ -1008,6 +1070,11 @@ loginput.addEventListener('keydown',async e=>{
   }catch(err){toast('Estimate failed - quick add instead');addSheet();sheetEl.querySelector('#af-name').value=v;}
   loginput.placeholder='What did you eat?';loginput.disabled=false;
 });
+let suggTimer=null;
+loginput.addEventListener('input',()=>{clearTimeout(suggTimer);suggTimer=setTimeout(()=>loadFoodDB().then(drawSuggest),120);});
+loginput.addEventListener('focus',()=>{if(loginput.value.trim().length>=2)loadFoodDB().then(drawSuggest);});
+loginput.addEventListener('blur',()=>setTimeout(hideSuggest,200));
+loginput.addEventListener('keydown',e=>{if(e.key==='Escape')hideSuggest();});
 /* one-time: purge QA seed entries (est-* ids) */
 {let purged=false;for(const k of Object.keys(state.days||{})){const fs=state.days[k]&&state.days[k].foods;if(fs){const n=fs.filter(f=>!(f.id&&String(f.id).indexOf('est-')===0));if(n.length!==fs.length){state.days[k].foods=n;purged=true;}}}if(purged)save();}
 /* ---------- You sheet ---------- */
@@ -1300,6 +1367,34 @@ document.getElementById('stepsring').onclick=()=>{activitySheet();};
 if(!(state.profile&&state.profile.kcalTarget)) showOnboarding(false);
 else if(location.hash==='#onboarding') showOnboarding(true);
 /* ---------- service worker ---------- */
+/* ---------- pull to refresh (sync + reload to newest build) ---------- */
+let ptrY=null, ptrPull=0, ptrBusy=false;
+window.addEventListener('touchstart',e=>{
+  if(ptrBusy)return;
+  if(window.scrollY<=2&&!sheetEl.classList.contains('on')&&!document.getElementById('onb').classList.contains('on'))ptrY=e.touches[0].clientY;else ptrY=null;
+},{passive:true});
+window.addEventListener('touchmove',e=>{
+  if(ptrY===null)return;
+  const dy=e.touches[0].clientY-ptrY;
+  if(dy>0&&window.scrollY<=2){
+    ptrPull=Math.min(dy,150);
+    const p=document.getElementById('ptr');
+    p.style.opacity=Math.min(1,ptrPull/70);
+    p.style.transform='translateY('+(ptrPull*0.45)+'px)';
+  }else{ptrPull=0;document.getElementById('ptr').style.opacity='0';}
+},{passive:true});
+window.addEventListener('touchend',()=>{
+  if(ptrY===null)return;
+  const p=document.getElementById('ptr');
+  if(ptrPull>70){ptrBusy=true;p.classList.add('spin');p.style.opacity='1';p.style.transform='translateY(40px)';doRefresh();}
+  else{p.style.opacity='0';p.style.transform='';}
+  ptrY=null;ptrPull=0;
+});
+async function doRefresh(){
+  try{await cloudSync();}catch(e){}
+  try{const r=await navigator.serviceWorker.getRegistration();if(r)await r.update();}catch(e){}
+  setTimeout(()=>location.reload(),400);
+}
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
