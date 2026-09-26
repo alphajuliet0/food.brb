@@ -339,7 +339,7 @@ function weekOf(k){const d=new Date(k+'T12:00:00');d.setDate(d.getDate()-((d.get
 const root=document.documentElement;
 root.setAttribute('data-theme',localStorage.getItem('foodBrbTheme')||'dark');
 function toggleTheme(){const n=root.getAttribute('data-theme')==='dark'?'light':'dark';root.setAttribute('data-theme',n);localStorage.setItem('foodBrbTheme',n);}
-document.getElementById('avatar').textContent=((P.name||'A').trim()[0]||'A').toUpperCase();
+document.getElementById('avatar').textContent=((P.name||'You').trim()[0]||'Y').toUpperCase();
 {
   const d=new Date(), st=FOODBRB.streak(state);
   document.getElementById('dateline').innerHTML=DOWS[d.getDay()]+' '+d.getDate()+' '+MONS[d.getMonth()]+(st>0?' · <strong>'+st+'-day streak</strong>':'');
@@ -1148,7 +1148,7 @@ function youSheet(){
   const dev=deviceOf(),dInfo=DEVICES[dev]||DEVICES.ultrahuman;
   const row=(l,v)=>'<div class="yrow"><span class="yl">'+l+'</span><span class="yv">'+v+'</span></div>';
   openSheet('<h3>You</h3>'
-    +'<div class="yhead"><div class="yava">'+esc((P.name||'A').trim()[0].toUpperCase())+'</div><div><b>'+esc(P.name||'Ajay')+'</b><div class="sub">'+FOODBRB.streak(state)+'-day streak</div></div></div>'
+    +'<div class="yhead"><div class="yava">'+esc((P.name||'You').trim()[0].toUpperCase())+'</div><div><b>'+esc(P.name||'You')+'</b><div class="sub">'+FOODBRB.streak(state)+'-day streak</div></div></div>'
     +row('Cloud sync','<span class="syncdot '+syncState+'"></span> '+esc(syncText))
     +(tok?'<button class="sheetbtn ghost" id="y-syncnow">Sync now</button>':'<button class="sheetbtn primary" id="y-connect">Connect private sync</button>')
     +'<div class="yrow tappable" data-t="kcalTarget" data-l="Calories"><span class="yl">Calories</span><span class="yv">'+P.kcalTarget.toLocaleString()+' kcal</span></div>'
@@ -1266,7 +1266,7 @@ function computePlan(a){
 }
 function showOnboarding(preview){
   ONB.preview=!!preview; ONB.step=-1;
-  ONB.a={sex:null,dob:'',hUnit:'cm',cm:'',ft:'',in:'',wUnit:'kg',kg:'',st:'',lb:'',day:null,goal:null,tUnit:'kg',tKg:'',tSt:'',tLb:'',noTarget:false,device:null};
+  ONB.a={name:'',sex:null,dob:'',hUnit:'cm',cm:'',ft:'',in:'',wUnit:'kg',kg:'',st:'',lb:'',day:null,goal:null,tUnit:'kg',tKg:'',tSt:'',tLb:'',noTarget:false,device:null};
   document.getElementById('onb').classList.add('on');
   renderOnb();
 }
@@ -1305,9 +1305,10 @@ function renderOnb(){
   el.innerHTML='<div class="onbtop"><div class="onbprog"><i style="width:4%"></i></div></div>'
       +'<div class="onbq">Welcome to form.brb</div>'
       +'<div class="onbnote" style="margin-bottom:20px">New here, or back on a new device?</div>'
+      +'<div class="onbfld"><label>First name</label><input id="onb-name" autocomplete="given-name" placeholder="Your first name" value="'+esc(a.name||'')+'"></div>'
       +'<button class="onbnext" id="onb-new">I\'m new - build my plan</button>'
       +'<button class="sheetbtn ghost" id="onb-restore" style="margin-top:10px">I already use form.brb - restore from cloud</button>';
-    el.querySelector('#onb-new').onclick=()=>{ONB.step=0;renderOnb();};
+    el.querySelector('#onb-new').onclick=()=>{ONB.a.name=(el.querySelector('#onb-name').value||'').trim();ONB.step=0;renderOnb();};
     el.querySelector('#onb-restore').onclick=startOnbRestore;
     return;
   }
@@ -1410,6 +1411,7 @@ function finishOnboarding(plan){
   document.getElementById('onb').classList.remove('on');
   if(ONB.preview){toast('Preview only - nothing saved');return;}
   state.profile=Object.assign({},state.profile,{
+    name:(ONB.a.name||'').trim(),
     kcalTarget:plan.daily,proteinTarget:plan.protein,fibreTarget:plan.fibre,stepsTarget:plan.steps,
     sex:ONB.a.sex,dob:ONB.a.dob,heightCm:Math.round(plan.cm*10)/10,weightKg:Math.round(plan.kg*10)/10,
     activity:ONB.a.day,goal:ONB.a.goal,targetKg:plan.tKg,device:ONB.a.device||'none',onboarded:true});
