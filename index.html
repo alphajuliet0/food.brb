@@ -477,6 +477,7 @@ async function cloudSync(){const token=localStorage.getItem(SYNC_TOKEN_KEY);if(!
   if(w.status===409){j=await w.json();state=mergeCloud(state,j.state);w=await fetch(FOOD_SYNC_API_ORIGIN+'/data',{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json','If-Match':String(j.rev)},body:JSON.stringify({state:cloudSafe()})});}
   if(!w.ok)throw Error('Sync could not save');
   j=await w.json();localStorage.setItem(SYNC_REV_KEY,String(j.rev));localStorage.setItem(FOODBRB.STORE,JSON.stringify(state));
+  P=FOODBRB.profile(state);FIBRE_GOAL=P.fibreTarget||30;
   const t=new Date();syncStatus('ok','Synced '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0'));
   render();
   if(window.__onbRestore){const f=window.__onbRestore;window.__onbRestore=null;f(true);}
