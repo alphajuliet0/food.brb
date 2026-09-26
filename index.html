@@ -339,7 +339,6 @@ function weekOf(k){const d=new Date(k+'T12:00:00');d.setDate(d.getDate()-((d.get
 const root=document.documentElement;
 root.setAttribute('data-theme',localStorage.getItem('foodBrbTheme')||'dark');
 function toggleTheme(){const n=root.getAttribute('data-theme')==='dark'?'light':'dark';root.setAttribute('data-theme',n);localStorage.setItem('foodBrbTheme',n);}
-document.getElementById('avatar').textContent=((P.name||'You').trim()[0]||'Y').toUpperCase();
 {
   const d=new Date(), st=FOODBRB.streak(state);
   document.getElementById('dateline').innerHTML=DOWS[d.getDay()]+' '+d.getDate()+' '+MONS[d.getMonth()]+(st>0?' · <strong>'+st+'-day streak</strong>':'');
@@ -351,6 +350,7 @@ document.getElementById('backtoday').onclick=()=>{sel=TODAY;render();};
 /* ---------- render ---------- */
 let selRing='cal';
 function render(){
+  document.getElementById('avatar').textContent=((P.name||'You').trim()[0]||'Y').toUpperCase();
   renderMiniRing();
   renderChips();
   let dirty=false;
