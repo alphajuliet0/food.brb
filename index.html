@@ -944,6 +944,7 @@ function renderChips(){
   const row=document.getElementById('chiprow'); if(!row)return;
   row.innerHTML='';
   if(sel!==TODAY)return;
+  if(!(foodsOf(sel)||[]).length)return;
   predictChips().forEach(f=>{
     const b=document.createElement('button');b.className='logchip';b.textContent=f.name;
     b.onclick=()=>draftSheet([{name:f.name,kcal:f.kcal,protein:f.protein,carbs:f.carbs,fat:f.fat,fibre:f.fibre}]);
