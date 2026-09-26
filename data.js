@@ -25,7 +25,7 @@ window.FOODBRB = (function(){
   function stepsOf(day){ return day&&day.ring&&day.ring.steps!=null?day.ring.steps:(day&&day.steps)||null; }
   function logged(day){ return !!(day&&day.foods&&day.foods.length); }
 
-  function profile(state){ return Object.assign({kcalTarget:1400,proteinTarget:90,stepsTarget:8000,fibreTarget:30,name:'Ajay'},(state&&state.profile)||{}); }
+  function profile(state){ return Object.assign({kcalTarget:1400,proteinTarget:90,stepsTarget:8000,fibreTarget:30},(state&&state.profile)||{}); }
 
   /* weekly bank: budget = daily target x 7; used = logged kcal this week; bank = remainder */
   function bank(state, offset){
