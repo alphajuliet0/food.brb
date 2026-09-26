@@ -277,7 +277,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 <div class="mealshead"><h2>Meals</h2><span id="mealcount"></span></div>
 <div class="meals" id="meals"></div>
 <div id="activity"></div>
-<div class="quickchips"><button class="qchip">⊞ Saved foods</button><button class="qchip">↻ Recents</button></div>
+<div class="quickchips"><button class="qchip" id="prevchip">↻ Previous items</button></div>
 </div>
 <div class="tabbar">
   <button class="tab sel" data-tab="food" aria-label="Food"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Z"/><path d="M21 15v7"/></svg>Food</button>
@@ -556,8 +556,39 @@ function editSheet(dayKey,id){
   };
   sheetEl.querySelector('#shcancel').onclick=closeSheet;
 }
+/* ---------- previous items (history search) ---------- */
+function historyFoods(){
+  const seen={}, out=[];
+  Object.keys(state.days||{}).sort().reverse().forEach(k=>{
+    (foodsOf(k)||[]).forEach(f=>{
+      if(!f||!f.name)return;
+      const key=f.name.trim().toLowerCase(); if(!key||seen[key])return;
+      seen[key]=1;
+      out.push({name:f.name.trim(),kcal:f.kcal||0,protein:f.protein||0,carbs:f.carbs||0,fat:f.fat||0,fibre:f.fibre||0,slot:f.slot||(f.snack?'snack':'breakfast')});
+    });
+  });
+  return out;
+}
+function prevSheet(){
+  const all=historyFoods();
+  openSheet('<h3>Previous items</h3><div class="sub">Everything you have logged before, newest first.</div>'
+    +'<div class="fld"><input id="pv-q" placeholder="Search - e.g. chai" autocomplete="off"></div>'
+    +'<div id="pv-list"></div>'
+    +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
+  const list=sheetEl.querySelector('#pv-list');
+  const draw=q=>{
+    const ql=(q||'').trim().toLowerCase();
+    const hits=(ql?all.filter(f=>f.name.toLowerCase().indexOf(ql)>=0):all).slice(0,40);
+    list.innerHTML=hits.length?hits.map((f,i)=>'<div class="yrow tappable pvrow" data-i="'+i+'"><span class="yl" style="color:var(--ink)">'+esc(f.name)+'</span><span class="yv">'+f.kcal+' kcal</span></div>').join(''):'<div class="sub" style="padding:12px 0">No matches yet - quick add it instead.</div>';
+    list.querySelectorAll('.pvrow').forEach(b=>b.onclick=()=>{const f=hits[+b.dataset.i];closeSheet();addSheet(f);});
+  };
+  sheetEl.querySelector('#pv-q').addEventListener('input',e=>draw(e.target.value));
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+  draw('');
+  setTimeout(()=>{const q=sheetEl.querySelector('#pv-q');if(q)q.focus();},300);
+}
 /* ---------- quick add ---------- */
-function addSheet(){
+function addSheet(pre){
   const hr=new Date().getHours();
   const def=hr<11?'breakfast':hr<15?'lunch':hr<21?'dinner':'snack';
   openSheet('<h3>Add food</h3><div class="sub">Quick add - estimates come with sentence logging.</div>'
@@ -572,7 +603,14 @@ function addSheet(){
     +'<button class="sheetbtn ghost" id="af-label" style="margin-bottom:2px">&#9644; Scan nutrition label</button>'
     +'<button class="sheetbtn primary" id="af-save">Add to '+(sel===TODAY?'today':fmtDay(sel))+'</button>'
     +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
-  let meal=def;
+  let meal=def, preFibre=0;
+  if(pre){meal=pre.slot||def;preFibre=pre.fibre||0;
+    sheetEl.querySelector('#af-name').value=pre.name;
+    sheetEl.querySelector('#af-kcal').value=pre.kcal||'';
+    sheetEl.querySelector('#af-p').value=pre.protein||'';
+    sheetEl.querySelector('#af-c').value=pre.carbs||'';
+    sheetEl.querySelector('#af-f').value=pre.fat||'';
+    sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x.dataset.meal===meal));}
   sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
   sheetEl.querySelector('#af-scan').onclick=()=>{closeSheet();startScan();};
   sheetEl.querySelector('#af-label').onclick=()=>{closeSheet();document.getElementById('labfile').click();};
@@ -580,7 +618,7 @@ function addSheet(){
     const name=sheetEl.querySelector('#af-name').value.trim();
     const kcal=num(sheetEl.querySelector('#af-kcal').value);
     if(!name||!kcal){toast('Name + calories needed');return;}
-    foodsOf(sel).push({id:uid(),name:name,kcal:kcal,protein:num(sheetEl.querySelector('#af-p').value),carbs:num(sheetEl.querySelector('#af-c').value),fat:num(sheetEl.querySelector('#af-f').value),fibre:0,slot:meal,snack:meal==='snack',source:'manual'});
+    foodsOf(sel).push({id:uid(),name:name,kcal:kcal,protein:num(sheetEl.querySelector('#af-p').value),carbs:num(sheetEl.querySelector('#af-c').value),fat:num(sheetEl.querySelector('#af-f').value),fibre:preFibre,slot:meal,snack:meal==='snack',source:'manual'});
     save();closeSheet();render();toast('Added');
   };
   sheetEl.querySelector('#shcancel').onclick=closeSheet;
@@ -952,7 +990,8 @@ function renderChips(){
   });
 }
 /* ---------- log bar ---------- */
-document.getElementById('plusbtn').onclick=addSheet;
+document.getElementById('plusbtn').onclick=()=>addSheet();
+document.getElementById('prevchip').onclick=prevSheet;
 document.getElementById('micbtn').onclick=()=>toast('Voice logging comes after sentence logging');
 const loginput=document.getElementById('loginput');
 loginput.addEventListener('keydown',async e=>{
