@@ -1171,7 +1171,7 @@ function youSheet(){
   const ys=sheetEl.querySelector('#y-steps');if(ys)ys.onclick=stepsSheet;
   sheetEl.querySelector('#y-aikey').onclick=aiKeySheet;
   const yt=sheetEl.querySelector('#y-theme');if(yt)yt.onclick=()=>{toggleTheme();youSheet();};
-  sheetEl.querySelectorAll('.yrow.tappable').forEach(r=>r.onclick=()=>targetEdit(r.dataset.t,r.dataset.l));
+  sheetEl.querySelectorAll('.yrow.tappable[data-t]').forEach(r=>r.onclick=()=>targetEdit(r.dataset.t,r.dataset.l));
   sheetEl.querySelector('#y-setup').onclick=()=>{closeSheet();showOnboarding(false);};
   sheetEl.querySelector('#shcancel').onclick=closeSheet;
 }
