@@ -93,7 +93,6 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 .roundbtn.primary{background:var(--kcal);color:#fff;font-size:20px;font-weight:600}
 .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--surface2);color:var(--ink);padding:10px 18px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1}
-.variantnote{position:fixed;top:8px;right:10px;font-size:10px;color:var(--dim);opacity:.6}
 .mealhead{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:baseline;background:var(--page);padding:12px 4px 6px;font-size:12px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--dim)}
 .mealhead span{font-weight:600;letter-spacing:0;text-transform:none}
 .mealwrap{position:relative;border-radius:18px;overflow:hidden}
@@ -181,7 +180,6 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
   <button class="roundbtn primary" id="plusbtn" aria-label="Add food">＋</button>
 </div></div>
 <div class="toast" id="toast"></div>
-<div class="variantnote" id="variantnote"></div>
 <div class="scanov" id="scanov">
   <div class="scanhead"><b>Scan barcode</b><button id="scanclose">Cancel</button></div>
   <div class="scanbox" id="scanbox"><div class="scanline"></div></div>
@@ -210,7 +208,6 @@ const root=document.documentElement;
 root.setAttribute('data-theme',localStorage.getItem('foodBrbTheme')||'dark');
 document.getElementById('themebtn').onclick=()=>{const n=root.getAttribute('data-theme')==='dark'?'light':'dark';root.setAttribute('data-theme',n);localStorage.setItem('foodBrbTheme',n);};
 document.getElementById('avatar').textContent=((P.name||'A').trim()[0]||'A').toUpperCase();
-document.getElementById('variantnote').textContent='ring '+VARIANT.toUpperCase()+' · #ring=a|b|c';
 {
   const d=new Date(), st=FOODBRB.streak(state);
   document.getElementById('dateline').innerHTML=DOWS[d.getDay()]+' '+d.getDate()+' '+MONS[d.getMonth()]+(st>0?' · <strong>'+st+'-day streak</strong>':'');
