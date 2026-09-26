@@ -969,13 +969,22 @@ function downscaleImage(file,maxDim,qual){return new Promise((res,rej)=>{
     img.onerror=()=>rej(new Error('img'));img.src=String(reader.result);};
   reader.onerror=()=>rej(new Error('read'));reader.readAsDataURL(file);});}
 const PHOTO_PROMPT='You estimate nutrition from a meal photo for a food diary. Identify each food visible and its portion. Vegetarian context; eggs allowed. If a portion is unclear, use a typical restaurant portion.';
+async function groqFetch(body){
+  const opt={method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey()},body:JSON.stringify(body)};
+  let r=await fetch('https://api.groq.com/openai/v1/chat/completions',opt);
+  if(r.status===429){await new Promise(res=>setTimeout(res,3000));r=await fetch('https://api.groq.com/openai/v1/chat/completions',opt);}
+  if(!r.ok){
+    let em='groq '+r.status;
+    try{const m=((await r.json()).error||{}).message||'';
+      if(r.status===429)em=/day/i.test(m)?'AI daily limit reached - resets tomorrow':'AI busy - try again in a minute';
+      else if(r.status===401||r.status===403)em='AI key rejected - re-save it in You, Photo logging';
+    }catch(e){}
+    throw new Error(em);
+  }
+  return r.json();
+}
 async function estimatePhotoGroq(dataUrl){
-  const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-    method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey()},
-    body:JSON.stringify({model:'qwen/qwen3.8-27b',temperature:0.2,max_completion_tokens:2000,reasoning_effort:'none',response_format:{type:'json_object'},messages:[{role:'user',content:[{type:'text',text:PHOTO_PROMPT+' Reply with ONLY JSON, no markdown: {"items":[{"name":"plain item name with portion","kcal":number,"protein":number,"carbs":number,"fat":number,"fibre":number}]}.'},{type:'image_url',image_url:{url:dataUrl}}]}]})
-  });
-  if(!r.ok)throw new Error('groq '+r.status);
-  const j=await r.json();
+  const j=await groqFetch({model:'qwen/qwen3.8-27b',temperature:0.2,max_completion_tokens:2000,reasoning_effort:'none',response_format:{type:'json_object'},messages:[{role:'user',content:[{type:'text',text:PHOTO_PROMPT+' Reply with ONLY JSON, no markdown: {"items":[{"name":"plain item name with portion","kcal":number,"protein":number,"carbs":number,"fat":number,"fibre":number}]}.'},{type:'image_url',image_url:{url:dataUrl}}]}]});
   const t=j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||'';
   return normItems(parseItemsJson(t));
 }
@@ -992,12 +1001,7 @@ async function estimatePhotoGemini(dataUrl){
 function estimatePhoto(dataUrl){return groqKey()?estimatePhotoGroq(dataUrl):estimatePhotoGemini(dataUrl);}
 const LABEL_PROMPT='You read a nutrition label photo for a food diary. Extract the product name and nutrition values. Prefer the per-serving column; if only per-100g values exist, use those. State the basis in the name, e.g. "Product name (1 serving 30g)" or "Product name (per 100g)". If a value is missing from the label use 0.';
 async function estimateLabelGroq(dataUrl){
-  const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-    method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey()},
-    body:JSON.stringify({model:'qwen/qwen3.8-27b',temperature:0.1,max_completion_tokens:1000,reasoning_effort:'none',response_format:{type:'json_object'},messages:[{role:'user',content:[{type:'text',text:LABEL_PROMPT+' Reply with ONLY JSON, no markdown: {"items":[{"name":"product name (basis)","kcal":number,"protein":number,"carbs":number,"fat":number,"fibre":number}]}.'},{type:'image_url',image_url:{url:dataUrl}}]}]})
-  });
-  if(!r.ok)throw new Error('groq '+r.status);
-  const j=await r.json();
+  const j=await groqFetch({model:'qwen/qwen3.8-27b',temperature:0.1,max_completion_tokens:1000,reasoning_effort:'none',response_format:{type:'json_object'},messages:[{role:'user',content:[{type:'text',text:LABEL_PROMPT+' Reply with ONLY JSON, no markdown: {"items":[{"name":"product name (basis)","kcal":number,"protein":number,"carbs":number,"fat":number,"fibre":number}]}.'},{type:'image_url',image_url:{url:dataUrl}}]}]});
   const t=j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||'';
   return normItems(parseItemsJson(t));
 }
