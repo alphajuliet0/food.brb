@@ -56,6 +56,43 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 .ringcenter .big.over{color:var(--kcal)}
 .ringcenter .lbl{font-size:11px;color:var(--dim);letter-spacing:.8px;text-transform:uppercase;margin-top:4px}
 .ringcenter .bankin{font-size:11px;color:var(--protein);margin-top:6px;font-weight:600}
+.stack{width:148px;height:148px;position:relative;flex:0 0 auto}
+.stack .aring{position:absolute;border-radius:50%;background:conic-gradient(from -90deg,var(--hi),var(--c) calc(var(--fill)*1%),var(--surface2) 0);cursor:pointer;transition:transform .15s}
+.stack .aring.sel{transform:scale(1.045)}
+.aring.cal{inset:0;--c:var(--kcal);--hi:var(--kcal-hi)}
+.aring.pro{inset:13px;--c:var(--protein);--hi:var(--protein-hi)}
+.aring.fib{inset:26px;--c:var(--fibre);--hi:var(--fibre-hi)}
+.aring.stp{inset:39px;--c:#45424b;--hi:var(--steps)}
+.stack .score{position:absolute;inset:52px;border-radius:50%;background:var(--surface)}
+.stack .scenter{position:absolute;inset:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.scenter .big{font-size:21px;font-weight:800;letter-spacing:-.5px;line-height:1}
+.scenter .big.over{color:var(--kcal)}
+.scenter .lbl{font-size:9px;color:var(--dim);letter-spacing:.5px;text-transform:uppercase;margin-top:3px}
+.legend{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.lline{padding:6px 10px;border-left:3px solid var(--c);background:var(--surface2);border-radius:0 10px 10px 0;cursor:pointer}
+.lline b{display:block;font-size:13px}
+.lline span{color:var(--dim);font-size:11px}
+.actcard{margin:16px 16px 0;background:var(--surface);border-radius:18px;padding:16px 16px 18px}
+.actcard h2{margin:0 0 10px;font-size:15px}
+.actgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.act{background:var(--surface2);border-radius:12px;padding:9px 10px}
+.act .k{font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:var(--dim)}
+.act .n{font-size:15px;font-weight:700;margin-top:3px}
+.sparkwrap{padding-bottom:18px;margin-top:14px}
+.spark{display:flex;align-items:flex-end;gap:6px;height:56px}
+.spark i{flex:1;background:var(--surface2);border-radius:4px 4px 0 0;position:relative;min-height:3px}
+.spark i.today{background:linear-gradient(var(--kcal-hi),var(--kcal))}
+.spark b{position:absolute;top:calc(100% + 4px);left:0;right:0;text-align:center;font-size:9px;color:var(--dim);font-weight:600}
+.syncdot{width:8px;height:8px;border-radius:50%;background:var(--grey);display:inline-block;vertical-align:baseline}
+.syncdot.ok{background:var(--green)}.syncdot.busy{background:var(--amber)}.syncdot.err{background:var(--kcal)}
+.yhead{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.yava{width:46px;height:46px;border-radius:14px;background:linear-gradient(145deg,#E5321B,#961d10);color:#fff;display:grid;place-items:center;font-size:18px;font-weight:800}
+.yrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--surface2)}
+.yrow .yl{font-size:13px;color:var(--dim)}
+.yrow .yv{font-size:13px;font-weight:600;text-align:right}
+.ynote{font-size:11px;color:var(--dim);margin-top:12px;line-height:1.5}
+button.avatar{cursor:pointer;border:0;font:inherit}
+
 .macros{flex:1;min-width:0;display:flex;flex-direction:column;gap:13px}
 .mrow .mtop{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:4px}
 .mrow .mname{color:var(--dim);font-weight:600}
@@ -93,7 +130,6 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 .roundbtn.primary{background:var(--kcal);color:#fff;font-size:20px;font-weight:600}
 .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--surface2);color:var(--ink);padding:10px 18px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1}
-.variantnote{position:fixed;top:8px;right:10px;font-size:10px;color:var(--dim);opacity:.6}
 .mealhead{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:baseline;background:var(--page);padding:12px 4px 6px;font-size:12px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--dim)}
 .mealhead span{font-weight:600;letter-spacing:0;text-transform:none}
 .mealwrap{position:relative;border-radius:18px;overflow:hidden}
@@ -156,24 +192,21 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 <body>
 <div class="top">
   <div class="brand">food.<svg aria-label="brb" viewBox="0 0 1726 757" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" transform="translate(-76 757) scale(1 -1)" d="M76 757V226C76 74 143 0 270 0H416C556 0 644 86 644 264C644 442 556 528 416 528H182V757ZM405 426C497 426 537 378 537 264C537 150 497 103 405 103H301C215 103 182 141 182 231V426Z"/><path fill="#e5321b" transform="translate(619 757) scale(1 -1)" d="M218 528C114 528 75 480 75 374V0H181V358C181 404 202 426 249 426H435V528Z"/><path fill="currentColor" transform="translate(1082 757) scale(1 -1)" d="M76 757V226C76 74 143 0 270 0H416C556 0 644 86 644 264C644 442 556 528 416 528H182V757ZM405 426C497 426 537 378 537 264C537 150 497 103 405 103H301C215 103 182 141 182 231V426Z"/></svg></div>
-  <div class="topbtns"><button class="iconbtn" id="themebtn" aria-label="Toggle theme">◐</button><div class="avatar" id="avatar">A</div></div>
+  <div class="topbtns"><button class="iconbtn" id="themebtn" aria-label="Toggle theme">◐</button><button class="avatar" id="avatar" aria-label="You: sync, targets and ring">A</button></div>
 </div>
 <div class="dateline" id="dateline"></div>
 <div class="titlerow"><button class="navchev" id="prevday" aria-label="Previous day">&lsaquo;</button><h1 class="today" id="daytitle">Today</h1><button class="navchev" id="nextday" aria-label="Next day" disabled>&rsaquo;</button><button class="backchip" id="backtoday" style="display:none">Back to today</button></div>
 <div class="weekstrip" id="weekstrip"></div>
 <div class="hero">
   <div class="herorow">
-    <div class="ringwrap" id="ringwrap">
-      <svg width="138" height="138" viewBox="0 0 138 138" id="ringsvg"></svg>
-      <div class="ringcenter" id="ringcenter"></div>
-    </div>
-    <div class="macros" id="macros"></div>
+    <div class="stack" id="stack"></div>
+    <div class="legend" id="legend"></div>
   </div>
-  <div id="bankextra"></div>
   <div class="bankrow" id="bankrow"></div>
 </div>
 <div class="mealshead"><h2>Meals</h2><span id="mealcount"></span></div>
 <div class="meals" id="meals"></div>
+<div id="activity"></div>
 <div class="quickchips"><button class="qchip">⊞ Saved foods</button><button class="qchip">↻ Recents</button></div>
 <div class="logbar"><div class="logbarinner">
   <input id="loginput" placeholder="What did you eat?" autocomplete="off">
@@ -181,7 +214,6 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
   <button class="roundbtn primary" id="plusbtn" aria-label="Add food">＋</button>
 </div></div>
 <div class="toast" id="toast"></div>
-<div class="variantnote" id="variantnote"></div>
 <div class="scanov" id="scanov">
   <div class="scanhead"><b>Scan barcode</b><button id="scanclose">Cancel</button></div>
   <div class="scanbox" id="scanbox"><div class="scanline"></div></div>
@@ -194,7 +226,7 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 <script>
 'use strict';
 /* ---------- data via data.js module ---------- */
-const state=FOODBRB.loadState()||{profile:{},days:{}};
+let state=FOODBRB.loadState()||{profile:{},days:{}};
 const P=FOODBRB.profile(state), FIBRE_GOAL=P.fibreTarget||30;
 const TODAY=FOODBRB.todayKey();
 let sel=TODAY; /* selected day key */
@@ -210,7 +242,6 @@ const root=document.documentElement;
 root.setAttribute('data-theme',localStorage.getItem('foodBrbTheme')||'dark');
 document.getElementById('themebtn').onclick=()=>{const n=root.getAttribute('data-theme')==='dark'?'light':'dark';root.setAttribute('data-theme',n);localStorage.setItem('foodBrbTheme',n);};
 document.getElementById('avatar').textContent=((P.name||'A').trim()[0]||'A').toUpperCase();
-document.getElementById('variantnote').textContent='ring '+VARIANT.toUpperCase()+' · #ring=a|b|c';
 {
   const d=new Date(), st=FOODBRB.streak(state);
   document.getElementById('dateline').innerHTML=DOWS[d.getDay()]+' '+d.getDate()+' '+MONS[d.getMonth()]+(st>0?' · <strong>'+st+'-day streak</strong>':'');
@@ -242,33 +273,32 @@ function render(){
     return '<button class="daycol'+(k===sel?' sel':'')+'" data-day="'+k+'"><span class="dow">'+'MTWTFSS'[i]+'</span><span class="'+cls+'" style="--c:'+c+'"></span></button>';
   }).join('');
   document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{sel=b.dataset.day;render();});
-  /* ring */
-  const svg=document.getElementById('ringsvg'), ctr=document.getElementById('ringcenter'), bex=document.getElementById('bankextra');
-  const dayFrac=T.kcal/P.kcalTarget, bankFrac=wkUsed/wkBudget;
+  /* activity rings */
   const bigCls=over?'big over':'big', bigTxt=over?Math.abs(kcalLeft).toLocaleString():Math.max(0,kcalLeft).toLocaleString(), bigLbl=over?'kcal over':'kcal left';
-  if(VARIANT==='a'){
-    svg.innerHTML='<circle class="ringtrack" cx="69" cy="69" r="'+(R-9)+'"/>'+arc('ringarc bank',bankFrac,69,69,R)+arc('ringarc',dayFrac,69,69,R-9);
-    ctr.innerHTML='<div class="'+bigCls+'">'+bigTxt+'</div><div class="lbl">'+bigLbl+'</div>';
-  }else if(VARIANT==='b'){
-    svg.innerHTML='<circle class="ringtrack" cx="69" cy="69" r="'+R+'"/>'+arc('ringarc',dayFrac,69,69,R);
-    ctr.innerHTML='<div class="'+bigCls+'">'+bigTxt+'</div><div class="lbl">'+bigLbl+'</div>';
-    bex.innerHTML='<div class="bankhair"><i style="width:'+Math.min(100,bankFrac*100)+'%"></i></div><div class="bankhairlbl">week so far · '+Math.round(bankFrac*100)+'%</div>';
-  }else{
-    svg.innerHTML='<circle class="ringtrack" cx="69" cy="69" r="'+R+'"/>'+arc('ringarc',dayFrac,69,69,R);
-    ctr.innerHTML='<div class="'+bigCls+'">'+bigTxt+'</div><div class="lbl">'+bigLbl+'</div><div class="bankin">'+bankLeft.toLocaleString()+' in bank</div>';
-  }
-  if(VARIANT!=='b')bex.innerHTML='';
-  /* macros */
-  const row=(name,val,goal,unit,color,overBad)=>{
-    const ov=val>goal;
-    const valHtml=(ov&&overBad)?'<span class="mval over">'+Math.round(val-goal)+unit+' over</span>':'<span class="mval">'+Math.round(val).toLocaleString()+'<span class="goal"> / '+goal.toLocaleString()+unit+'</span></span>';
-    return '<div class="mrow"><div class="mtop"><span class="mname">'+name+'</span>'+valHtml+'</div><div class="mbar"><i style="width:'+Math.min(100,val/goal*100)+'%;background:'+color+'"></i></div></div>';
+  const FRACT=v=>Math.max(0,Math.min(100,Math.round(v*100)));
+  const rings=[
+    ['cal','calories',T.kcal/P.kcalTarget],
+    ['pro','protein',T.protein/P.proteinTarget],
+    ['fib','fibre',T.fibre/FIBRE_GOAL],
+    ['stp','steps',(ringSteps||0)/P.stepsTarget]
+  ];
+  const centers={
+    cal:'<div class="'+bigCls+'">'+bigTxt+'</div><div class="lbl">'+bigLbl+'</div>',
+    pro:'<div class="big">'+Math.round(T.protein*10)/10+'</div><div class="lbl">of '+P.proteinTarget+'g protein</div>',
+    fib:'<div class="big">'+Math.round(T.fibre*10)/10+'</div><div class="lbl">of '+FIBRE_GOAL+'g fibre</div>',
+    stp:'<div class="big">'+(ringSteps==null?'\u2014':Math.round(ringSteps).toLocaleString())+'</div><div class="lbl">of '+P.stepsTarget.toLocaleString()+' steps</div>'
   };
-  document.getElementById('macros').innerHTML=
-    row('Calories',T.kcal,P.kcalTarget,'','var(--kcal)',true)+
-    row('Protein',T.protein,P.proteinTarget,'g','var(--protein)')+
-    row('Fibre',T.fibre,FIBRE_GOAL,'g','var(--fibre)')+
-    row('Steps',ringSteps||0,P.stepsTarget,'','var(--steps)');
+  const stack=document.getElementById('stack');
+  stack.innerHTML=rings.map(([cls,,f])=>'<i class="aring '+cls+(selRing===cls?' sel':'')+'" data-ring="'+cls+'" style="--fill:'+FRACT(f)+'"></i>').join('')
+    +'<i class="score"></i><div class="scenter">'+centers[selRing]+'</div>';
+  stack.querySelectorAll('[data-ring]').forEach(el=>el.onclick=()=>{selRing=el.dataset.ring;render();});
+  document.getElementById('legend').innerHTML=[
+    ['cal','var(--kcal)',Math.round(T.kcal).toLocaleString()+' / '+P.kcalTarget.toLocaleString(),'Calories \u00b7 '+FRACT(T.kcal/P.kcalTarget)+'%'],
+    ['pro','var(--protein)',(Math.round(T.protein*10)/10)+' / '+P.proteinTarget+' g','Protein \u00b7 '+FRACT(T.protein/P.proteinTarget)+'%'],
+    ['fib','var(--fibre)',(Math.round(T.fibre*10)/10)+' / '+FIBRE_GOAL+' g','Fibre \u00b7 '+FRACT(T.fibre/FIBRE_GOAL)+'%'],
+    ['stp','var(--steps)',(ringSteps==null?'\u2014':Math.round(ringSteps).toLocaleString())+' / '+P.stepsTarget.toLocaleString(),'Steps \u00b7 '+FRACT((ringSteps||0)/P.stepsTarget)+'%']
+  ].map(([cls,c,v,l])=>'<div class="lline" data-ring="'+cls+'" style="--c:'+c+'"><b>'+v+'</b><span>'+l+'</span></div>').join('');
+  document.querySelectorAll('.lline[data-ring]').forEach(el=>el.onclick=()=>{selRing=el.dataset.ring;render();});
   /* bank row */
   document.getElementById('bankrow').innerHTML='<span class="bl">This week</span><span class="bv">'+wkUsed.toLocaleString()+' / '+wkBudget.toLocaleString()+' kcal · <strong>'+bankLeft.toLocaleString()+' in bank</strong></span>';
   /* meals */
@@ -290,18 +320,112 @@ function render(){
         +'<div class="mkcal">'+(f.kcal||0).toLocaleString()+' <span>cal</span></div><button class="copybtn" data-copy="'+f.id+'" aria-label="Copy to another day">&#10697;</button></div></div>';
     }
   }
+  /* activity: ultrahuman ring + steps */
+  const rg=(D&&D.ring)||{};
+  const metric=v=>v==null?'\u2014':String(Math.round(Number(v)*10)/10);
+  const wkSteps=FOODBRB.lastDays(7).map(k=>({k,s:FOODBRB.stepsOf(state.days[k])}));
+  const stepDays=wkSteps.filter(x=>x.s!=null);
+  const stepAvg=stepDays.length?Math.round(stepDays.reduce((a,x)=>a+x.s,0)/stepDays.length):null;
+  const maxS=Math.max(P.stepsTarget,...wkSteps.map(x=>x.s||0),1);
+  const latestW=(state.weights&&state.weights.length)?state.weights.slice().sort((a,b)=>a.date<b.date?1:-1)[0]:null;
+  document.getElementById('activity').innerHTML='<div class="actcard"><h2>Activity &middot; Ultrahuman</h2>'
+    +'<div class="actgrid">'
+    +'<div class="act"><div class="k">Recovery</div><div class="n">'+metric(rg.recovery_score)+'</div></div>'
+    +'<div class="act"><div class="k">Sleep score</div><div class="n">'+metric(rg.sleep_score)+'</div></div>'
+    +'<div class="act"><div class="k">Total sleep</div><div class="n">'+(rg.total_sleep||'\u2014')+'</div></div>'
+    +'<div class="act"><div class="k">HRV</div><div class="n">'+metric(rg.avg_sleep_hrv)+(rg.avg_sleep_hrv!=null?' ms':'')+'</div></div>'
+    +'<div class="act"><div class="k">Sleep RHR</div><div class="n">'+metric(rg.sleep_rhr)+(rg.sleep_rhr!=null?' bpm':'')+'</div></div>'
+    +'<div class="act"><div class="k">Weight</div><div class="n">'+(latestW?latestW.kg+' kg':'\u2014')+'</div></div>'
+    +'</div>'
+    +'<div class="sparkwrap"><div class="spark">'+wkSteps.map(x=>'<i class="'+(x.k===TODAY?'today':'')+'" style="height:'+Math.max(3,Math.round((x.s||0)/maxS*56))+'px" title="'+x.k+': '+(x.s==null?'no data':Math.round(x.s).toLocaleString())+' steps"><b>'+x.k.slice(8)+'</b></i>').join('')+'</div></div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px"><span style="font-size:11px;color:var(--dim)">Steps: '+(ringSteps==null?'\u2014 today':Math.round(ringSteps).toLocaleString()+' today')+(stepAvg!=null?' \u00b7 '+stepAvg.toLocaleString()+' 7-day avg':'')+'</span><button class="sheetbtn ghost" id="ringsync" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Sync ring</button></div>'
+    +'</div>';
+  const rsb=document.getElementById('ringsync');if(rsb)rsb.onclick=startRingSync;
   meals.innerHTML=html||'<div class="emptylog">Nothing logged '+(isToday?'yet today':'on this day')+'.'+(isToday?'<br>Tap + to add your first meal.':'')+'</div>';
   document.getElementById('mealcount').textContent=foods.length?foods.length+' items · '+T.kcal.toLocaleString()+' kcal':'';
   attachMealHandlers();
   if(dirty)save();
 }
+let selRing='cal';
+/* one-time: purge QA seed entries (est-* ids) */
+{let purged=false;for(const k of Object.keys(state.days||{})){const fs=state.days[k]&&state.days[k].foods;if(fs){const n=fs.filter(f=>!(f.id&&String(f.id).indexOf('est-')===0));if(n.length!==fs.length){state.days[k].foods=n;purged=true;}}}if(purged)save();}
+/* ---------- You sheet ---------- */
+function youSheet(){
+  const tok=localStorage.getItem(SYNC_TOKEN_KEY);
+  const lr=lastRingDay();
+  const row=(l,v)=>'<div class="yrow"><span class="yl">'+l+'</span><span class="yv">'+v+'</span></div>';
+  openSheet('<h3>You</h3>'
+    +'<div class="yhead"><div class="yava">'+esc((P.name||'A').trim()[0].toUpperCase())+'</div><div><b>'+esc(P.name||'Ajay')+'</b><div class="sub">'+FOODBRB.streak(state)+'-day streak</div></div></div>'
+    +row('Cloud sync','<span class="syncdot '+syncState+'"></span> '+esc(syncText))
+    +(tok?'<button class="sheetbtn ghost" id="y-syncnow">Sync now</button>':'<button class="sheetbtn primary" id="y-connect">Connect private sync</button>')
+    +row('Calories',P.kcalTarget.toLocaleString()+' kcal')
+    +row('Protein',P.proteinTarget+' g')
+    +row('Fibre',FIBRE_GOAL+' g')
+    +row('Steps',P.stepsTarget.toLocaleString())
+    +row('Ultrahuman ring',lr?fmtDay(lr):'Not synced yet')
+    +'<button class="sheetbtn ghost" id="y-ring">Sync ring</button>'
+    +'<div class="ynote">Everything lives on this phone, private to you. Cloud sync keeps a private backup and feeds the nightly MyFitnessPal import.</div>'
+    +'<button class="sheetbtn ghost" id="shcancel">Close</button>');
+  const sn=sheetEl.querySelector('#y-syncnow');if(sn)sn.onclick=()=>{cloudSync();};
+  const cn=sheetEl.querySelector('#y-connect');if(cn)cn.onclick=connectCloudSync;
+  sheetEl.querySelector('#y-ring').onclick=()=>{closeSheet();startRingSync();};
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+}
+document.getElementById('avatar').onclick=youSheet;
+/* boot sync */
+if(localStorage.getItem(SYNC_TOKEN_KEY)){syncStatus('ok','Connected');cloudSync();}
 render();
 /* ---------- toast ---------- */
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('on'),1800);}
 /* ---------- write layer ---------- */
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function uid(){return 'm'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
-function save(){localStorage.setItem('sadhana-v1',JSON.stringify(state));}
+function save(){localStorage.setItem('sadhana-v1',JSON.stringify(state));scheduleCloudSync();}
+
+/* ---------- cloud sync (ported from the old app; same worker, same merge) ---------- */
+const SYNC_TOKEN_KEY='foodBrbSyncToken', SYNC_REV_KEY='foodBrbSyncRev';
+const FOOD_SYNC_API_ORIGIN='https://super-poetry-42d8.ajay-7a2.workers.dev';
+const ULTRAHUMAN_SYNC_ORIGIN='https://food-brb-ultrahuman.ajay-7a2.workers.dev';
+let syncTimer=null,syncBusy=false,syncState='off',syncText='Not connected';
+function syncStatus(s,t){syncState=s;syncText=t;}
+function mergeBy(arrA,arrB,key){const m=new Map();for(const x of [...(arrA||[]),...(arrB||[])]){const k=x&&x[key];if(k!=null)m.set(k,Object.assign({},m.get(k)||{},x));}return [...m.values()];}
+function mergeCloud(local,remote){if(!remote)return local;const out=Object.assign({v:1},remote,local);out.profile=Object.assign({},remote.profile||{},local.profile||{});out.weights=mergeBy(remote.weights,local.weights,'date');out.days={};for(const k of new Set([...Object.keys(remote.days||{}),...Object.keys(local.days||{})])){const a=remote.days&&remote.days[k]||{},b=local.days&&local.days[k]||{};out.days[k]=Object.assign({},a,b,{foods:mergeBy(a.foods,b.foods,'id')});}return out;}
+function cloudSafe(){const x=JSON.parse(JSON.stringify(state));delete x.photos;if(x.profile)delete x.profile.geminiKey;return x;}
+async function cloudSync(){const token=localStorage.getItem(SYNC_TOKEN_KEY);if(!token||syncBusy)return;syncBusy=true;syncStatus('busy','Syncing...');try{
+  let rev=Number(localStorage.getItem(SYNC_REV_KEY)||0);
+  let r=await fetch(FOOD_SYNC_API_ORIGIN+'/data',{headers:{Authorization:'Bearer '+token}});
+  if(r.status===401){localStorage.removeItem(SYNC_TOKEN_KEY);throw Error('Reconnect cloud sync');}
+  if(!r.ok)throw Error('Sync unavailable ('+r.status+')');
+  let j=await r.json();state=mergeCloud(state,j.state);rev=j.rev||0;localStorage.setItem(FOODBRB.STORE,JSON.stringify(state));
+  let w=await fetch(FOOD_SYNC_API_ORIGIN+'/data',{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json','If-Match':String(rev)},body:JSON.stringify({state:cloudSafe()})});
+  if(w.status===409){j=await w.json();state=mergeCloud(state,j.state);w=await fetch(FOOD_SYNC_API_ORIGIN+'/data',{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json','If-Match':String(j.rev)},body:JSON.stringify({state:cloudSafe()})});}
+  if(!w.ok)throw Error('Sync could not save');
+  j=await w.json();localStorage.setItem(SYNC_REV_KEY,String(j.rev));localStorage.setItem(FOODBRB.STORE,JSON.stringify(state));
+  const t=new Date();syncStatus('ok','Synced '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0'));
+  render();
+}catch(e){syncStatus('err',e.name==='TypeError'?'Sync network blocked':(e.message||'Sync paused'));}finally{syncBusy=false;}}
+function scheduleCloudSync(){if(!localStorage.getItem(SYNC_TOKEN_KEY))return;clearTimeout(syncTimer);syncTimer=setTimeout(cloudSync,700);}
+function connectCloudSync(){window.open(ULTRAHUMAN_SYNC_ORIGIN+'/authorize','foodBrbCloudSync','width=520,height=680');}
+window.addEventListener('message',e=>{if(e.origin!==ULTRAHUMAN_SYNC_ORIGIN||!e.data||e.data.type!=='food-brb-sync-token')return;localStorage.setItem(SYNC_TOKEN_KEY,e.data.token);localStorage.setItem(SYNC_REV_KEY,'0');cloudSync();});
+/* ---------- Ultrahuman ring sync (ported) ---------- */
+let ringSyncWindow=null;
+function dayOf(k){if(!state.days[k])state.days[k]={};return state.days[k];}
+function startRingSync(){
+  const dates=FOODBRB.lastDays(7).join(',');
+  ringSyncWindow=window.open(ULTRAHUMAN_SYNC_ORIGIN+'/sync?dates='+encodeURIComponent(dates),'foodBrbRingSync','popup,width=520,height=680');
+  if(!ringSyncWindow)toast('Allow pop-ups for food.brb, then tap Sync ring again.');
+}
+window.addEventListener('message',e=>{
+  if(e.origin!==ULTRAHUMAN_SYNC_ORIGIN||e.source!==ringSyncWindow||!e.data||e.data.type!=='food-brb-ultrahuman'||!Array.isArray(e.data.days))return;
+  let days=0;
+  for(const r of e.data.days){if(!r||!/^\d{4}-\d{2}-\d{2}$/.test(r.date||'')||r.error)continue;const out={};
+    for(const k of ['sleep_score','total_sleep','time_in_bed','sleep_efficiency','recovery_score','avg_sleep_hrv','sleep_rhr','steps','active_minutes','temperature_deviation','vo2_max','movement_index','metabolic_score','spo2'])if(r[k]!=null&&(['number','string','boolean'].includes(typeof r[k])))out[k]=r[k];
+    dayOf(r.date).ring=out;days++;
+  }
+  ringSyncWindow=null;save();render();toast('Ring synced: '+days+' days.');
+});
+function lastRingDay(){const ks=Object.keys(state.days).filter(k=>state.days[k]&&state.days[k].ring).sort();return ks.length?ks[ks.length-1]:null;}
+
 function foodsOf(k){const d=state.days[k]=state.days[k]||{};d.foods=d.foods||[];return d.foods;}
 function findFood(k,id){return foodsOf(k).find(f=>f.id===id);}
 const SLOTCH=[['breakfast','Breakfast'],['lunch','Lunch'],['dinner','Dinner'],['snack','Snacks']];
