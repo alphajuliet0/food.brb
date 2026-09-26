@@ -771,10 +771,11 @@ async function startScan(){
   const ov=document.getElementById('scanov'),box=document.getElementById('scanbox'),msg=document.getElementById('scanmsg');
   ov.classList.add('on');msg.textContent='Loading scanner...';
   try{await loadQuagga();}catch(e){msg.textContent='Scanner could not load (needs internet the first time). Type the barcode below.';return;}
+  msg.textContent='Starting camera...';
   try{
-    Quagga.init({inputStream:{type:'LiveStream',target:box,constraints:{facingMode:'environment'}},locator:{patchSize:'medium',halfSample:true},numOfWorkers:0,frequency:5,decoder:{readers:['ean_reader','ean_8_reader','upc_reader','upc_e_reader','code_128_reader']},locate:true},err=>{
+    Quagga.init({inputStream:{type:'LiveStream',target:box,constraints:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}},locator:{patchSize:'medium',halfSample:true},numOfWorkers:2,frequency:10,decoder:{readers:['ean_reader','ean_8_reader','upc_reader','upc_e_reader','code_128_reader']},locate:true},err=>{
       if(err){msg.textContent='Camera permission was not given. Type the barcode below.';return;}
-      scanLive=true;Quagga.start();msg.textContent='Point at the barcode.';
+      msg.textContent='Point at the barcode.';scanLive=true;Quagga.start();
     });
     scanHandler=data=>{
       if(!scanLive)return;
