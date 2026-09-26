@@ -1013,6 +1013,33 @@ function youSheet(){
   sheetEl.querySelector('#shcancel').onclick=closeSheet;
 }
 document.getElementById('avatar').onclick=youSheet;
+/* ---------- activity device ---------- */
+const DEVICES={ultrahuman:{label:'Ultrahuman',integrated:true},oura:{label:'Oura',integrated:false},applewatch:{label:'Apple Watch',integrated:false},fitbit:{label:'Fitbit',integrated:false},none:{label:'Manual tracking',integrated:false}};
+function deviceOf(){return (state.profile&&state.profile.device)||'ultrahuman';}
+function stepsSheet(){
+  const D=state.days[sel]||{};
+  openSheet('<h3>Steps for '+(sel===TODAY?'today':fmtDay(sel))+'</h3><div class="fld"><label>Steps</label><input id="st-v" inputmode="numeric" placeholder="8000" value="'+(D.steps!=null?D.steps:'')+'"></div>'
+    +'<button class="sheetbtn primary" id="st-save">Save</button><button class="sheetbtn ghost" id="shcancel">Cancel</button>');
+  sheetEl.querySelector('#st-save').onclick=()=>{
+    const v=num(sheetEl.querySelector('#st-v').value);
+    if(v<0||v>200000){toast('Enter your steps');return;}
+    state.days[sel]=state.days[sel]||{foods:[]};
+    state.days[sel].steps=Math.round(v);
+    save();closeSheet();render();toast('Steps saved');
+  };
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+}
+function deviceSheet(){
+  const cur=deviceOf();
+  openSheet('<h3>Activity device</h3><div class="sub">What tracks your steps and recovery?</div>'
+    +Object.keys(DEVICES).map(k=>'<button class="sheetbtn '+(k===cur?'primary':'ghost')+'" data-d="'+k+'">'+DEVICES[k].label+(DEVICES[k].integrated?'':' - integration coming')+'</button>').join('')
+    +'<button class="sheetbtn ghost" id="shcancel">Back</button>');
+  sheetEl.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{
+    state.profile=state.profile||{}; state.profile.device=b.dataset.d;
+    P=FOODBRB.profile(state); save(); render(); youSheet(); toast('Device saved');
+  });
+  sheetEl.querySelector('#shcancel').onclick=youSheet;
+}
 /* boot sync */
 if(localStorage.getItem(SYNC_TOKEN_KEY)){syncStatus('ok','Connected');cloudSync();}
 render();
@@ -1040,33 +1067,6 @@ function activitySheet(){
     +'<div class="ynote" style="text-align:center;max-width:280px;margin:14px auto 0">Walking burns energy, helping your food plan create the calorie deficit that leads to weight loss.</div>'
     +'<button class="sheetbtn ghost" id="shcancel">Close</button>');
   sheetEl.querySelector('#shcancel').onclick=closeSheet;
-}
-/* ---------- activity device ---------- */
-const DEVICES={ultrahuman:{label:'Ultrahuman',integrated:true},oura:{label:'Oura',integrated:false},applewatch:{label:'Apple Watch',integrated:false},fitbit:{label:'Fitbit',integrated:false},none:{label:'Manual tracking',integrated:false}};
-function deviceOf(){return (state.profile&&state.profile.device)||'ultrahuman';}
-function stepsSheet(){
-  const D=state.days[sel]||{};
-  openSheet('<h3>Steps for '+(sel===TODAY?'today':fmtDay(sel))+'</h3><div class="fld"><label>Steps</label><input id="st-v" inputmode="numeric" placeholder="8000" value="'+(D.steps!=null?D.steps:'')+'"></div>'
-    +'<button class="sheetbtn primary" id="st-save">Save</button><button class="sheetbtn ghost" id="shcancel">Cancel</button>');
-  sheetEl.querySelector('#st-save').onclick=()=>{
-    const v=num(sheetEl.querySelector('#st-v').value);
-    if(v<0||v>200000){toast('Enter your steps');return;}
-    state.days[sel]=state.days[sel]||{foods:[]};
-    state.days[sel].steps=Math.round(v);
-    save();closeSheet();render();toast('Steps saved');
-  };
-  sheetEl.querySelector('#shcancel').onclick=closeSheet;
-}
-function deviceSheet(){
-  const cur=deviceOf();
-  openSheet('<h3>Activity device</h3><div class="sub">What tracks your steps and recovery?</div>'
-    +Object.keys(DEVICES).map(k=>'<button class="sheetbtn '+(k===cur?'primary':'ghost')+'" data-d="'+k+'">'+DEVICES[k].label+(DEVICES[k].integrated?'':' - integration coming')+'</button>').join('')
-    +'<button class="sheetbtn ghost" id="shcancel">Back</button>');
-  sheetEl.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{
-    state.profile=state.profile||{}; state.profile.device=b.dataset.d;
-    P=FOODBRB.profile(state); save(); render(); youSheet(); toast('Device saved');
-  });
-  sheetEl.querySelector('#shcancel').onclick=youSheet;
 }
 /* ---------- editable targets ---------- */
 function targetEdit(field,label){
