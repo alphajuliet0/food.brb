@@ -139,7 +139,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .logchip{background:var(--surface);border:1px solid var(--surface2);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;font-family:inherit;box-shadow:0 6px 18px rgba(0,0,0,.25);max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .logchip:active{transform:scale(.96)}
 .logbarinner{display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;padding:8px 8px 8px 18px;box-shadow:0 10px 34px rgba(0,0,0,.3)}
-.logbarinner input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--ink);font-size:15px}
+.logbarinner input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--ink);font-size:16px}
 .logbarinner input::placeholder{color:var(--dim)}
 .roundbtn{width:38px;height:38px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--dim);flex:0 0 auto}
 .roundbtn.primary{background:var(--kcal);color:#fff;font-size:20px;font-weight:600}
@@ -197,7 +197,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .onbplan .prow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 2px;border-bottom:1px solid var(--hair);font-size:14px;color:var(--dim)}
 .onbplan .prow b{font-size:17px;color:var(--ink);font-weight:700}
 .onbplan .prow button{background:none;border:0;color:var(--protein-hi);font-size:12px;font-weight:700;font-family:inherit;padding:4px 0 4px 10px}
-.onbplan .prow input{width:90px;background:var(--surface2);border:0;border-radius:10px;padding:8px 10px;color:var(--ink);font-size:15px;font-family:inherit;outline:0;text-align:right}
+.onbplan .prow input{width:90px;background:var(--surface2);border:0;border-radius:10px;padding:8px 10px;color:var(--ink);font-size:16px;font-family:inherit;outline:0;text-align:right}
 .onbnote{font-size:13px;color:var(--dim);line-height:1.5;margin:16px 0 4px}
 /* ---------- header steps ring ---------- */
 .miniring{position:relative;width:34px;height:34px;border-radius:50%;background:var(--surface2);display:grid;place-items:center;color:var(--dim);border:0;padding:0;font-family:inherit}
@@ -222,7 +222,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .sheet .sub{font-size:12px;color:var(--dim);margin-bottom:14px}
 .fld{margin-bottom:12px}
 .fld label{display:block;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
-.fld input{width:100%;background:var(--surface2);border:0;border-radius:12px;padding:11px 14px;font-size:15px;color:var(--ink);outline:0}
+.fld input{width:100%;background:var(--surface2);border:0;border-radius:12px;padding:11px 14px;font-size:16px;color:var(--ink);outline:0}
 .fld input:focus{box-shadow:0 0 0 2px var(--protein)}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .grid3 .fld{margin-bottom:0}
@@ -246,7 +246,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .scanbox canvas{display:none}
 .scanmsg{padding:16px 20px calc(20px + env(safe-area-inset-bottom));color:#ccc;font-size:13px;text-align:center;background:#000}
 .scanman{display:flex;gap:8px;padding:0 20px 14px;background:#000}
-.scanman input{flex:1;background:#222;border:0;border-radius:12px;padding:11px 14px;font-size:15px;color:#fff;outline:0}
+.scanman input{flex:1;background:#222;border:0;border-radius:12px;padding:11px 14px;font-size:16px;color:#fff;outline:0}
 .scanman button{background:var(--kcal);color:#fff;border-radius:12px;padding:0 18px;font-weight:700}
 .scanline{position:absolute;left:12%;right:12%;top:50%;height:2px;background:var(--kcal);opacity:.8;box-shadow:0 0 12px var(--kcal)}
 .draftrow{background:var(--surface2);border-radius:14px;padding:12px;margin-bottom:10px}
@@ -257,7 +257,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .swipewrap .draftrow{position:relative;margin-bottom:0}
 .draftrow .dr-name{width:100%;background:none;border:0;outline:0;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:8px}
 .draftrow .dr-nums{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:6px}
-.draftrow .dr-nums input{width:100%;background:var(--surface);border:0;border-radius:8px;padding:8px 10px;font-size:13px;color:var(--ink);outline:0;text-align:center}
+.draftrow .dr-nums input{width:100%;background:var(--surface);border:0;border-radius:8px;padding:8px 10px;font-size:16px;color:var(--ink);outline:0;text-align:center}
 .draftrow .dr-nums label{display:block;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--dim);text-align:center;margin-bottom:3px}
 .estnote{font-size:12px;color:var(--amber);margin-bottom:12px}
 .portrow{display:flex;gap:8px;align-items:center;margin-bottom:12px}
@@ -1045,7 +1045,8 @@ function renderChips(){
   const row=document.getElementById('chiprow'); if(!row)return;
   row.innerHTML='';
   if(sel!==TODAY)return;
-  if(!(foodsOf(sel)||[]).length)return;
+  if(document.activeElement!==loginput)return;
+  if(loginput.value.trim().length>=2)return;
   predictChips().forEach(f=>{
     const b=document.createElement('button');b.className='logchip';b.textContent=f.name;
     b.onclick=()=>draftSheet([{name:f.name,kcal:f.kcal,protein:f.protein,carbs:f.carbs,fat:f.fat,fibre:f.fibre}]);
@@ -1071,9 +1072,9 @@ loginput.addEventListener('keydown',async e=>{
   loginput.placeholder='What did you eat?';loginput.disabled=false;
 });
 let suggTimer=null;
-loginput.addEventListener('input',()=>{clearTimeout(suggTimer);suggTimer=setTimeout(()=>loadFoodDB().then(drawSuggest),120);});
-loginput.addEventListener('focus',()=>{if(loginput.value.trim().length>=2)loadFoodDB().then(drawSuggest);});
-loginput.addEventListener('blur',()=>setTimeout(hideSuggest,200));
+loginput.addEventListener('input',()=>{renderChips();clearTimeout(suggTimer);suggTimer=setTimeout(()=>loadFoodDB().then(drawSuggest),120);});
+loginput.addEventListener('focus',()=>{renderChips();if(loginput.value.trim().length>=2)loadFoodDB().then(drawSuggest);});
+loginput.addEventListener('blur',()=>setTimeout(()=>{hideSuggest();renderChips();},200));
 loginput.addEventListener('keydown',e=>{if(e.key==='Escape')hideSuggest();});
 /* one-time: purge QA seed entries (est-* ids) */
 {let purged=false;for(const k of Object.keys(state.days||{})){const fs=state.days[k]&&state.days[k].foods;if(fs){const n=fs.filter(f=>!(f.id&&String(f.id).indexOf('est-')===0));if(n.length!==fs.length){state.days[k].foods=n;purged=true;}}}if(purged)save();}
