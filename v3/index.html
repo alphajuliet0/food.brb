@@ -157,6 +157,8 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .toast.on{opacity:1}
 .mealhead{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:baseline;background:var(--page);padding:12px 4px 6px;font-size:12px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--dim)}
 .mealhead span{font-weight:600;letter-spacing:0;text-transform:none}
+.mealhead.tappable{cursor:pointer}
+.mealhead.tappable:active{color:var(--ink)}
 .mealwrap{position:relative;border-radius:18px;overflow:hidden}
 .swipebg{position:absolute;inset:0;display:flex;align-items:center;font-size:12px;font-weight:700;padding:0 18px;border-radius:18px}
 .swipebg.right{background:var(--kcal);color:#fff;justify-content:flex-start}
@@ -406,9 +408,9 @@ function render(){
   for(const f of foods){const sl=f.slot||(f.snack?'snack':'breakfast');(em[sl]=em[sl]||[]).push(f);}
   let html='';
   for(const [sl,icon,label] of SLOTS){
-    const items=em[sl];if(!items||!items.length)continue;
+    const items=em[sl]||[];
     const slotKcal=items.reduce((a,f)=>a+(f.kcal||0),0);
-    html+='<div class="mealhead">'+label+'<span>'+items.length+' item'+(items.length>1?'s':'')+' · '+slotKcal.toLocaleString()+' cal</span></div>';
+    html+='<div class="mealhead tappable" data-slot="'+sl+'">'+label+'<span>'+(items.length?items.length+' item'+(items.length>1?'s':'')+' · '+slotKcal.toLocaleString()+' cal &nbsp;+':'+ add')+'</span></div>';
     for(const f of items){
       if(!f.id){f.id=uid();dirty=true;}
       const mac=[f.protein?'P '+Math.round(f.protein)+'g':'',f.carbs?'C '+Math.round(f.carbs)+'g':'',f.fat?'F '+Math.round(f.fat)+'g':''].filter(Boolean).join(' · ');
@@ -443,7 +445,7 @@ function render(){
     +'</div>';
   const rsb=document.getElementById('ringsync');if(rsb)rsb.onclick=startRingSync;
   const sab=document.getElementById('stepadd');if(sab)sab.onclick=stepsSheet;
-  meals.innerHTML=html||'<div class="emptylog">Nothing logged '+(isToday?'yet today':'on this day')+'.'+(isToday?'<br>Tap + to add your first meal.':'')+'</div>';
+  meals.innerHTML=((D&&D.foods&&D.foods.length)?'':'<div class="emptylog">Nothing logged '+(isToday?'yet today':'on this day')+'.</div>')+html;
   document.getElementById('mealcount').textContent=foods.length?foods.length+' items · '+T.kcal.toLocaleString()+' kcal':'';
   attachMealHandlers();
   if(dirty)save();
@@ -668,11 +670,11 @@ function addSheet(pre){
     +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
   let meal=def, preFibre=0;
   if(pre){meal=pre.slot||def;preFibre=pre.fibre||0;
-    sheetEl.querySelector('#af-name').value=pre.name;
-    sheetEl.querySelector('#af-kcal').value=pre.kcal||'';
-    sheetEl.querySelector('#af-p').value=pre.protein||'';
-    sheetEl.querySelector('#af-c').value=pre.carbs||'';
-    sheetEl.querySelector('#af-f').value=pre.fat||'';
+    if(pre.name){sheetEl.querySelector('#af-name').value=pre.name;
+      sheetEl.querySelector('#af-kcal').value=pre.kcal||'';
+      sheetEl.querySelector('#af-p').value=pre.protein||'';
+      sheetEl.querySelector('#af-c').value=pre.carbs||'';
+      sheetEl.querySelector('#af-f').value=pre.fat||'';}
     sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x.dataset.meal===meal));}
   sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
   sheetEl.querySelector('#af-scan').onclick=()=>{closeSheet();startScan();};
@@ -979,7 +981,7 @@ document.getElementById('camfile').addEventListener('change',async e=>{
     const items=await estimatePhoto(dataUrl);
     if(items.length)draftSheet(items);
     else toast('Could not read that meal - try quick add');
-  }catch(err){toast('Photo estimate failed - try quick add');}
+  }catch(err){toast('Photo estimate failed ('+(err&&err.message||'error')+')');}
 });
 document.getElementById('labfile').addEventListener('change',async e=>{
   const file=e.target.files&&e.target.files[0];e.target.value='';
@@ -1004,7 +1006,7 @@ document.getElementById('labfile').addEventListener('change',async e=>{
       else draftSheet(items);
     }
     else{toast('Could not read that label - try quick add');if(draftCtx){const its=draftCtx.items;draftCtx=null;draftSheet(its);}}
-  }catch(err){toast('Label scan failed - try quick add');if(draftCtx){const its=draftCtx.items;draftCtx=null;draftSheet(its);}}
+  }catch(err){toast('Label scan failed ('+(err&&err.message||'error')+')');if(draftCtx){const its=draftCtx.items;draftCtx=null;draftSheet(its);}}
 });
 /* ---------- predictive meal chips (Ore-style, client-side) ---------- */
 function predictChips(){
@@ -1055,6 +1057,7 @@ function renderChips(){
 }
 /* ---------- log bar ---------- */
 document.getElementById('plusbtn').onclick=()=>addSheet();
+document.getElementById('meals').addEventListener('click',e=>{const h=e.target.closest('.mealhead');if(h)addSheet({slot:h.dataset.slot});});
 document.getElementById('prevchip').onclick=prevSheet;
 document.getElementById('micbtn').onclick=()=>toast('Voice logging comes after sentence logging');
 const loginput=document.getElementById('loginput');
@@ -1068,7 +1071,7 @@ loginput.addEventListener('keydown',async e=>{
     const items=await estimateSentence(v);
     if(items.length)draftSheet(items);
     else{addSheet();sheetEl.querySelector('#af-name').value=v;}
-  }catch(err){toast('Estimate failed - quick add instead');addSheet();sheetEl.querySelector('#af-name').value=v;}
+  }catch(err){toast('Estimate failed ('+(err&&err.message||'error')+')');addSheet();sheetEl.querySelector('#af-name').value=v;}
   loginput.placeholder='What did you eat?';loginput.disabled=false;
 });
 let suggTimer=null;
