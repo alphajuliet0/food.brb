@@ -1,4 +1,4 @@
-const CACHE='food-brb-v3-a3';
+const CACHE='food-brb-v3-a4';
 self.addEventListener('install',e=>{self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(clients.claim());});
 self.addEventListener('fetch',e=>{
