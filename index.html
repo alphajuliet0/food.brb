@@ -669,6 +669,7 @@ async function lookupBarcode(code){
 
 /* ---------- portion sheet: scan result, amount always visible + editable ---------- */
 function portionSheet(p){
+  const replacing=!!draftCtx;
   const hr=new Date().getHours();
   const def=hr<11?'breakfast':hr<15?'lunch':hr<21?'dinner':'snack';
   const modes=[['g','grams']];
@@ -677,8 +678,8 @@ function portionSheet(p){
     +'<div class="fld"><label>Amount</label><div class="portrow"><input id="pt-qty" inputmode="decimal" value="'+(p.serveGrams?'1':'100')+'"><div class="mchiprow" style="margin-bottom:0" id="pt-modes">'
     +modes.map(([v,l],i)=>'<button class="mchip'+(i===(p.serveGrams?1:0)?' sel':'')+'" data-mode="'+v+'">'+l+'</button>').join('')+'</div></div></div>'
     +'<div class="portpreview" id="pt-prev"></div>'
-    +'<div class="fld"><label>Meal</label><div class="mchiprow" style="margin-bottom:0">'+SLOTCH.map(([v,l])=>'<button class="mchip'+(v===def?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')+'</div></div>'
-    +'<button class="sheetbtn primary" id="pt-save">Add to '+(sel===TODAY?'today':fmtDay(sel))+'</button>'
+    +(replacing?'':'<div class="fld"><label>Meal</label><div class="mchiprow" style="margin-bottom:0">'+SLOTCH.map(([v,l])=>'<button class="mchip'+(v===def?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')+'</div></div>')
+    +'<button class="sheetbtn primary" id="pt-save">'+(replacing?'Replace item':'Add to '+(sel===TODAY?'today':fmtDay(sel)))+'</button>'
     +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
   let mode=p.serveGrams?'s':'g', meal=def;
   const qty=sheetEl.querySelector('#pt-qty');
