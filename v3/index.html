@@ -231,6 +231,11 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .scanman button{background:var(--kcal);color:#fff;border-radius:12px;padding:0 18px;font-weight:700}
 .scanline{position:absolute;left:12%;right:12%;top:50%;height:2px;background:var(--kcal);opacity:.8;box-shadow:0 0 12px var(--kcal)}
 .draftrow{background:var(--surface2);border-radius:14px;padding:12px;margin-bottom:10px}
+.swipewrap{position:relative;overflow:hidden;border-radius:14px;margin-bottom:10px}
+.swipeunder{position:absolute;inset:0;display:flex;font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase}
+.swipeunder .su-l{flex:1;display:flex;align-items:center;padding-left:18px;background:var(--surface);color:var(--ink)}
+.swipeunder .su-r{flex:1;display:flex;align-items:center;justify-content:flex-end;padding-right:18px;background:var(--kcal);color:#fff}
+.swipewrap .draftrow{position:relative;margin-bottom:0}
 .draftrow .dr-name{width:100%;background:none;border:0;outline:0;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:8px}
 .draftrow .dr-nums{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:6px}
 .draftrow .dr-nums input{width:100%;background:var(--surface);border:0;border-radius:8px;padding:8px 10px;font-size:13px;color:var(--ink);outline:0;text-align:center}
@@ -634,7 +639,7 @@ function stopScan(){
   if(window.Quagga){try{Quagga.stop();}catch(e){}}
   document.getElementById('scanov').classList.remove('on');
 }
-document.getElementById('scanclose').onclick=stopScan;
+document.getElementById('scanclose').onclick=()=>{stopScan();if(draftCtx){const its=draftCtx.items;draftCtx=null;draftSheet(its);}};
 document.getElementById('scanmanbtn').onclick=()=>{const v=document.getElementById('scanmanin').value.trim();if(v){stopScan();lookupBarcode(v);}};
 document.getElementById('scanmanin').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.value.trim();if(v){stopScan();lookupBarcode(v);}}});
 async function lookupBarcode(code){
@@ -653,10 +658,10 @@ async function lookupBarcode(code){
       const sg=parseServing(prod.serving_size);
       portionSheet({name:name,kcal100:kcal,p100:Number(n['proteins_100g'])||0,c100:Number(n['carbohydrates_100g'])||0,f100:Number(n['fat_100g'])||0,fi100:Number(n['fiber_100g'])||0,serveGrams:sg||0,serveLabel:sg?prod.serving_size:''});
     }else{
-      addSheet();
+      if(draftCtx)replaceSheet();else addSheet();
       toast('No data for '+code+' - type it in');
     }
-  }catch(e){addSheet();toast('Lookup failed - type it in');}
+  }catch(e){if(draftCtx)replaceSheet();else addSheet();toast('Lookup failed - type it in');}
 }
 
 /* ---------- portion sheet: scan result, amount always visible + editable ---------- */
@@ -685,10 +690,12 @@ function portionSheet(p){
   sheetEl.querySelector('#pt-save').onclick=()=>{
     const g=grams();
     if(g<=0){toast('Amount needed');return;}
-    foodsOf(sel).push({id:uid(),name:p.name,kcal:Math.round(p.kcal100*g/100),protein:Math.round(p.p100*g/1000)*10,carbs:Math.round(p.c100*g/1000)*10,fat:Math.round(p.f100*g/1000)*10,fibre:Math.round(p.fi100*g/1000)*10,slot:meal,snack:meal==='snack',source:'barcode'});
+    const it={name:p.name,kcal:Math.round(p.kcal100*g/100),protein:Math.round(p.p100*g/1000)*10,carbs:Math.round(p.c100*g/1000)*10,fat:Math.round(p.f100*g/1000)*10,fibre:Math.round(p.fi100*g/1000)*10};
+    if(draftCtx){draftCtx.items[draftCtx.index]=it;const its=draftCtx.items;draftCtx=null;draftSheet(its);toast('Item replaced');return;}
+    foodsOf(sel).push(Object.assign({id:uid(),slot:meal,snack:meal==='snack',source:'barcode'},it));
     save();closeSheet();render();toast('Added');
   };
-  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+  sheetEl.querySelector('#shcancel').onclick=()=>{if(draftCtx){const its=draftCtx.items;draftCtx=null;draftSheet(its);}else closeSheet();};
   preview();
 }
 /* ---------- sentence logging (Gemini rail) ---------- */
@@ -710,30 +717,81 @@ async function estimateSentence(text){
 function draftSheet(items){
   const hr=new Date().getHours();
   const def=hr<11?'breakfast':hr<15?'lunch':hr<21?'dinner':'snack';
-  openSheet('<h3>Log meal</h3><div class="estnote">AI estimates - check and edit anything before logging.</div>'
-    +items.map((f,i)=>'<div class="draftrow"><input class="dr-name" data-i="'+i+'" data-f="name" value="'+esc(f.name)+'">'
+  openSheet('<h3>Log meal</h3><div class="estnote">AI estimates - check and edit anything before logging. Swipe an item: right to replace, left to remove.</div>'
+    +items.map((f,i)=>'<div class="swipewrap"><div class="swipeunder"><span class="su-l">Edit</span><span class="su-r">Remove</span></div><div class="draftrow" data-swipe="'+i+'"><input class="dr-name" data-i="'+i+'" data-f="name" value="'+esc(f.name)+'">'
       +'<div class="dr-nums">'
       +'<div><label>kcal</label><input inputmode="numeric" data-i="'+i+'" data-f="kcal" value="'+f.kcal+'"></div>'
       +'<div><label>P</label><input inputmode="decimal" data-i="'+i+'" data-f="protein" value="'+f.protein+'"></div>'
       +'<div><label>C</label><input inputmode="decimal" data-i="'+i+'" data-f="carbs" value="'+f.carbs+'"></div>'
       +'<div><label>F</label><input inputmode="decimal" data-i="'+i+'" data-f="fat" value="'+f.fat+'"></div>'
-      +'</div></div>').join('')
+      +'</div></div></div>').join('')
     +'<div class="fld"><label>Meal</label><div class="mchiprow" style="margin-bottom:0">'+SLOTCH.map(([v,l])=>'<button class="mchip'+(v===def?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')+'</div></div>'
     +'<button class="sheetbtn primary" id="df-log">Log to '+(sel===TODAY?'today':fmtDay(sel))+'</button>'
     +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
   let meal=def;
   sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
-  sheetEl.querySelector('#df-log').onclick=()=>{
-    sheetEl.querySelectorAll('.draftrow input').forEach(inp=>{
-      const it=items[+inp.dataset.i],f=inp.dataset.f;
-      it[f]=f==='name'?inp.value.trim():num(inp.value);
+  sheetEl.querySelectorAll('.swipewrap').forEach(w=>{
+    const row=w.querySelector('.draftrow'),idx=+row.dataset.swipe;
+    w.addEventListener('touchstart',e=>{const t=e.touches[0];w._x=t.clientX;w._y=t.clientY;w._dx=0;w._h=null;},{passive:true});
+    w.addEventListener('touchmove',e=>{
+      const t=e.touches[0],dx=t.clientX-w._x,dy=t.clientY-w._y;
+      if(w._h===null&&(Math.abs(dx)>8||Math.abs(dy)>8))w._h=Math.abs(dx)>Math.abs(dy);
+      if(w._h){w._dx=dx;row.style.transition='none';row.style.transform='translateX('+dx+'px)';}
+    },{passive:true});
+    w.addEventListener('touchend',()=>{
+      row.style.transition='';row.style.transform='';
+      const dx=w._dx||0;w._dx=0;
+      if(!w._h)return;w._h=null;
+      if(dx<-72)draftRemove(items,idx);
+      else if(dx>72)draftReplace(items,idx);
     });
+  });
+  sheetEl.querySelector('#df-log').onclick=()=>{
+    flushDraft(items);
     const good=items.filter(it=>it.name&&it.kcal);
     if(!good.length){toast('Nothing to log');return;}
     for(const it of good)foodsOf(sel).push({id:uid(),name:it.name,kcal:it.kcal,protein:it.protein,carbs:it.carbs,fat:it.fat,fibre:it.fibre,slot:meal,snack:meal==='snack',source:'estimate'});
     save();closeSheet();render();toast('Logged '+good.length+' item'+(good.length>1?'s':''));
   };
   sheetEl.querySelector('#shcancel').onclick=closeSheet;
+}
+function flushDraft(items){sheetEl.querySelectorAll('.draftrow input').forEach(inp=>{const it=items[+inp.dataset.i],f=inp.dataset.f;if(it)it[f]=f==='name'?inp.value.trim():num(inp.value);});}
+let draftCtx=null;
+function draftRemove(items,i){
+  flushDraft(items);
+  items.splice(i,1);
+  if(!items.length){closeSheet();toast('Item removed - nothing left in the draft');return;}
+  draftSheet(items);toast('Removed');
+}
+function draftReplace(items,i){
+  flushDraft(items);
+  draftCtx={items:items,index:i};
+  replaceSheet();
+}
+function replaceSheet(){
+  const it=draftCtx.items[draftCtx.index];
+  openSheet('<h3>Replace item</h3><div class="sub">Wrong guess? Scan the real thing or type it in - the rest of the meal stays.</div>'
+    +'<div class="fld"><label>Name</label><input id="af-name" autocomplete="off" value="'+esc(it.name)+'"></div>'
+    +'<div class="fld"><label>Calories</label><input id="af-kcal" inputmode="numeric" value="'+it.kcal+'"></div>'
+    +'<div class="grid3">'
+    +'<div class="fld"><label>Protein g</label><input id="af-p" inputmode="decimal" value="'+it.protein+'"></div>'
+    +'<div class="fld"><label>Carbs g</label><input id="af-c" inputmode="decimal" value="'+it.carbs+'"></div>'
+    +'<div class="fld"><label>Fat g</label><input id="af-f" inputmode="decimal" value="'+it.fat+'"></div></div>'
+    +'<button class="sheetbtn ghost" id="af-scan" style="margin-bottom:2px">&#9638; Scan barcode</button>'
+    +'<button class="sheetbtn ghost" id="af-label" style="margin-bottom:2px">&#9644; Scan nutrition label</button>'
+    +'<button class="sheetbtn primary" id="af-save">Replace item</button>'
+    +'<button class="sheetbtn ghost" id="shcancel">Back to meal</button>');
+  sheetEl.querySelector('#af-scan').onclick=()=>{closeSheet();startScan();};
+  sheetEl.querySelector('#af-label').onclick=()=>{closeSheet();document.getElementById('labfile').click();};
+  sheetEl.querySelector('#af-save').onclick=()=>{
+    const name=sheetEl.querySelector('#af-name').value.trim();
+    const kcal=num(sheetEl.querySelector('#af-kcal').value);
+    if(!name||!kcal){toast('Name + calories needed');return;}
+    draftCtx.items[draftCtx.index]={name:name,kcal:kcal,protein:num(sheetEl.querySelector('#af-p').value),carbs:num(sheetEl.querySelector('#af-c').value),fat:num(sheetEl.querySelector('#af-f').value),fibre:0};
+    const its=draftCtx.items;draftCtx=null;
+    draftSheet(its);toast('Item replaced');
+  };
+  sheetEl.querySelector('#shcancel').onclick=()=>{const its=draftCtx.items;draftCtx=null;draftSheet(its);};
 }
 /* ---------- photo logging ---------- */
 function downscaleImage(file,maxDim,qual){return new Promise((res,rej)=>{
@@ -809,7 +867,7 @@ document.getElementById('camfile').addEventListener('change',async e=>{
 });
 document.getElementById('labfile').addEventListener('change',async e=>{
   const file=e.target.files&&e.target.files[0];e.target.value='';
-  if(!file)return;
+  if(!file){if(draftCtx){const its=draftCtx.items;draftCtx=null;draftSheet(its);}return;}
   if(!file.type.startsWith('image/')){toast('Please choose a photo');return;}
   if(file.size>12*1024*1024){toast('That photo is too large');return;}
   if(!groqKey()&&!geminiKey()){toast('Add an AI key first - tap your avatar, then Photo logging');return;}
@@ -817,9 +875,20 @@ document.getElementById('labfile').addEventListener('change',async e=>{
   try{
     const dataUrl=await downscaleImage(file,1600,0.85);
     const items=await estimateLabel(dataUrl);
-    if(items.length)draftSheet(items);
-    else toast('Could not read that label - try quick add');
-  }catch(err){toast('Label scan failed - try quick add');}
+    if(items.length){
+      if(draftCtx){
+        const it=items[0];
+        if(items.length>1)toast('Label had several items - used the first');
+        const m100=it.name.match(/^(.*)\s*\(per 100g\)\s*$/i);
+        const mServe=it.name.match(/^(.*)\s*\(1 serving\s*(\d+(?:\.\d+)?)g\)\s*$/i);
+        if(m100){portionSheet({name:m100[1].trim(),kcal100:it.kcal,p100:it.protein,c100:it.carbs,f100:it.fat,fi100:it.fibre,serveGrams:0,serveLabel:''});}
+        else if(mServe){const sg=+mServe[2];portionSheet({name:mServe[1].trim(),kcal100:it.kcal*100/sg,p100:it.protein*100/sg,c100:it.carbs*100/sg,f100:it.fat*100/sg,fi100:it.fibre*100/sg,serveGrams:sg,serveLabel:'1 serving '+sg+'g'});}
+        else{draftCtx.items[draftCtx.index]=it;const its=draftCtx.items;draftCtx=null;draftSheet(its);toast('Item replaced');}
+      }
+      else draftSheet(items);
+    }
+    else{toast('Could not read that label - try quick add');if(draftCtx){const its=draftCtx.items;draftCtx=null;draftSheet(its);}}
+  }catch(err){toast('Label scan failed - try quick add');if(draftCtx){const its=draftCtx.items;draftCtx=null;draftSheet(its);}}
 });
 /* ---------- log bar ---------- */
 document.getElementById('plusbtn').onclick=addSheet;
