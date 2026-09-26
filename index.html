@@ -231,7 +231,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 </div></div>
 <div class="logbar"><div class="logbarinner">
   <input id="loginput" placeholder="What did you eat?" autocomplete="off">
-  <label class="roundbtn" for="camfile" aria-label="Photo log" style="display:grid;place-items:center;cursor:pointer;margin:0">&#128247;</label><input type="file" id="camfile" accept="image/*" style="display:none">
+  <label class="roundbtn" for="camfile" aria-label="Photo log" style="display:grid;place-items:center;cursor:pointer;margin:0">&#128247;</label><input type="file" id="camfile" accept="image/*" style="display:none"><input type="file" id="labfile" accept="image/*" capture="environment" style="display:none">
   <button class="roundbtn" id="micbtn" aria-label="Voice log">◉</button>
   <button class="roundbtn primary" id="plusbtn" aria-label="Add food">＋</button>
 </div></div>
@@ -501,11 +501,13 @@ function addSheet(){
     +'<div class="fld"><label>Carbs g</label><input id="af-c" inputmode="decimal" placeholder="0"></div>'
     +'<div class="fld"><label>Fat g</label><input id="af-f" inputmode="decimal" placeholder="0"></div></div>'
     +'<button class="sheetbtn ghost" id="af-scan" style="margin-bottom:2px">&#9638; Scan barcode</button>'
+    +'<button class="sheetbtn ghost" id="af-label" style="margin-bottom:2px">&#9644; Scan nutrition label</button>'
     +'<button class="sheetbtn primary" id="af-save">Add to '+(sel===TODAY?'today':fmtDay(sel))+'</button>'
     +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
   let meal=def;
   sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
   sheetEl.querySelector('#af-scan').onclick=()=>{closeSheet();startScan();};
+  sheetEl.querySelector('#af-label').onclick=()=>{closeSheet();document.getElementById('labfile').click();};
   sheetEl.querySelector('#af-save').onclick=()=>{
     const name=sheetEl.querySelector('#af-name').value.trim();
     const kcal=num(sheetEl.querySelector('#af-kcal').value);
@@ -718,6 +720,30 @@ async function estimatePhotoGemini(dataUrl){
   return normItems(JSON.parse(t.replace(/```json|```/g,'').trim()));
 }
 function estimatePhoto(dataUrl){return groqKey()?estimatePhotoGroq(dataUrl):estimatePhotoGemini(dataUrl);}
+const LABEL_PROMPT='You read a nutrition label photo for a food diary. Extract the product name and nutrition values. Prefer the per-serving column; if only per-100g values exist, use those. State the basis in the name, e.g. "Product name (1 serving 30g)" or "Product name (per 100g)". If a value is missing from the label use 0.';
+async function estimateLabelGroq(dataUrl){
+  const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+    method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey()},
+    body:JSON.stringify({model:'qwen/qwen3.8-27b',temperature:0.1,response_format:{type:'json_object'},messages:[{role:'user',content:[{type:'text',text:LABEL_PROMPT+' Reply with ONLY JSON, no markdown: {"items":[{"name":"product name (basis)","kcal":number,"protein":number,"carbs":number,"fat":number,"fibre":number}]}.'},{type:'image_url',image_url:{url:dataUrl}}]}]})
+  });
+  if(!r.ok)throw new Error('groq '+r.status);
+  const j=await r.json();
+  const t=j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||'';
+  const o=JSON.parse(t.replace(/```json|```/g,'').trim());
+  return normItems(Array.isArray(o)?o:(o.items||[]));
+}
+async function estimateLabelGemini(dataUrl){
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',{
+    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':geminiKey()},
+    body:JSON.stringify({contents:[{parts:[{text:LABEL_PROMPT+' Reply with ONLY a JSON array, no markdown: [{"name":"product name (basis)","kcal":number,"protein":number,"carbs":number,"fat":number,"fibre":number}].'},{inline_data:{mime_type:'image/jpeg',data:dataUrl.split(',')[1]}}]}],generationConfig:{responseMimeType:'application/json'}})
+  });
+  if(!r.ok)throw new Error('gemini '+r.status);
+  const j=await r.json();
+  const t=j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0]&&j.candidates[0].content.parts[0].text||'';
+  return normItems(JSON.parse(t.replace(/```json|```/g,'').trim()));
+}
+function estimateLabel(dataUrl){return groqKey()?estimateLabelGroq(dataUrl):estimateLabelGemini(dataUrl);}
+
 document.getElementById('camfile').addEventListener('change',async e=>{
   const file=e.target.files&&e.target.files[0];e.target.value='';
   if(!file)return;
@@ -731,6 +757,20 @@ document.getElementById('camfile').addEventListener('change',async e=>{
     if(items.length)draftSheet(items);
     else toast('Could not read that meal - try quick add');
   }catch(err){toast('Photo estimate failed - try quick add');}
+});
+document.getElementById('labfile').addEventListener('change',async e=>{
+  const file=e.target.files&&e.target.files[0];e.target.value='';
+  if(!file)return;
+  if(!file.type.startsWith('image/')){toast('Please choose a photo');return;}
+  if(file.size>12*1024*1024){toast('That photo is too large');return;}
+  if(!groqKey()&&!geminiKey()){toast('Add an AI key first - tap your avatar, then Photo logging');return;}
+  toast('Reading the label...');
+  try{
+    const dataUrl=await downscaleImage(file,1600,0.85);
+    const items=await estimateLabel(dataUrl);
+    if(items.length)draftSheet(items);
+    else toast('Could not read that label - try quick add');
+  }catch(err){toast('Label scan failed - try quick add');}
 });
 /* ---------- log bar ---------- */
 document.getElementById('plusbtn').onclick=addSheet;
@@ -754,7 +794,7 @@ loginput.addEventListener('keydown',async e=>{
 /* ---------- You sheet ---------- */
 function aiKeySheet(){
   openSheet('<h3>Photo logging</h3>'
-    +'<div class="ynote">Snap your plate and AI reads the calories and macros for you.</div>'
+    +'<div class="ynote">Snap your plate or a nutrition label and AI reads the calories and macros for you.</div>'
     +'<div class="fld"><label>Groq API key</label><input id="ak-groq" type="password" autocomplete="off" placeholder="gsk_..." value="'+esc(groqKey())+'"></div>'
     +'<div class="ynote">Endpoint preset: https://api.groq.com/openai/v1 (model qwen/qwen3.8-27b). Get a free key at console.groq.com. The key stays on this device only - never synced, never in the app itself.</div>'
     +'<button class="sheetbtn primary" id="ak-save">Save key</button>'
