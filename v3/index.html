@@ -123,6 +123,10 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .qchip{background:var(--surface2);border-radius:999px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--dim);display:flex;align-items:center;gap:6px}
 .emptylog{padding:26px 20px;text-align:center;color:var(--dim);font-size:13px}
 .logbar{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));padding:10px 14px;background:linear-gradient(transparent,var(--page) 28%)}
+.chiprow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 4px 8px}
+.chiprow:empty{display:none}
+.logchip{background:var(--surface);border:1px solid var(--surface2);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;font-family:inherit;box-shadow:0 6px 18px rgba(0,0,0,.25);max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.logchip:active{transform:scale(.96)}
 .logbarinner{display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;padding:8px 8px 8px 18px;box-shadow:0 10px 34px rgba(0,0,0,.3)}
 .logbarinner input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--ink);font-size:15px}
 .logbarinner input::placeholder{color:var(--dim)}
@@ -284,7 +288,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
   <h2>Train</h2>
   <p>Workout logging is on its way. This tab is the next build.</p>
 </div></div>
-<div class="logbar"><div class="logbarinner">
+<div class="logbar"><div class="chiprow" id="chiprow"></div><div class="logbarinner">
   <input id="loginput" placeholder="What did you eat?" autocomplete="off">
   <label class="roundbtn" for="camfile" aria-label="Photo log" style="display:grid;place-items:center;cursor:pointer;margin:0">&#128247;</label><input type="file" id="camfile" accept="image/*" style="display:none"><input type="file" id="labfile" accept="image/*" capture="environment" style="display:none">
   <button class="roundbtn" id="micbtn" aria-label="Voice log">◉</button>
@@ -333,6 +337,7 @@ document.getElementById('backtoday').onclick=()=>{sel=TODAY;render();};
 let selRing='cal';
 function render(){
   renderMiniRing();
+  renderChips();
   let dirty=false;
   const D=state.days[sel]||null, T=FOODBRB.totals(D), isToday=sel===TODAY;
   const wk=weekOf(sel);
@@ -895,6 +900,51 @@ document.getElementById('labfile').addEventListener('change',async e=>{
     else{toast('Could not read that label - try quick add');if(draftCtx){const its=draftCtx.items;draftCtx=null;draftSheet(its);}}
   }catch(err){toast('Label scan failed - try quick add');if(draftCtx){const its=draftCtx.items;draftCtx=null;draftSheet(its);}}
 });
+/* ---------- predictive meal chips (Ore-style, client-side) ---------- */
+function predictChips(){
+  const hr=new Date().getHours();
+  const slot=hr<11?'breakfast':hr<15?'lunch':hr<21?'dinner':'snack';
+  const dow=new Date().getDay();
+  const agg={};
+  Object.keys(state.days||{}).forEach(k=>{
+    const d=new Date(k+'T12:00:00'); if(isNaN(d))return;
+    const daysAgo=Math.max(0,(Date.now()-d.getTime())/86400000);
+    ((state.days[k]||{}).foods||[]).forEach(f=>{
+      if(!f||!f.name)return;
+      const key=f.name.trim().toLowerCase(); if(!key)return;
+      const a=agg[key]||(agg[key]={count:0,last:1e9,slotHits:0,dowHits:0,lastDate:'',f:null});
+      a.count++;
+      a.last=Math.min(a.last,daysAgo);
+      if((f.slot||(f.snack?'snack':'breakfast'))===slot)a.slotHits++;
+      if(d.getDay()===dow)a.dowHits++;
+      if(k>=a.lastDate){a.lastDate=k;a.f={name:f.name.trim(),kcal:f.kcal||0,protein:f.protein||0,carbs:f.carbs||0,fat:f.fat||0,fibre:f.fibre||0};}
+    });
+  });
+  const todayLogged={};
+  (foodsOf(sel)||[]).forEach(f=>{if(f&&f.name)todayLogged[f.name.trim().toLowerCase()]=1;});
+  const out=[];
+  for(const key in agg){
+    const a=agg[key];
+    if(a.count<2||!a.f)continue;
+    if(todayLogged[key])continue;
+    const rec=Math.pow(0.5,a.last/14);
+    const slotBoost=a.slotHits>0?1.5+0.5*(a.slotHits/a.count):1;
+    const dowBoost=a.dowHits>0?1.15:1;
+    out.push({f:a.f,score:a.count*rec*slotBoost*dowBoost});
+  }
+  out.sort((x,y)=>y.score-x.score);
+  return out.slice(0,3).map(o=>o.f);
+}
+function renderChips(){
+  const row=document.getElementById('chiprow'); if(!row)return;
+  row.innerHTML='';
+  if(sel!==TODAY)return;
+  predictChips().forEach(f=>{
+    const b=document.createElement('button');b.className='logchip';b.textContent=f.name;
+    b.onclick=()=>draftSheet([{name:f.name,kcal:f.kcal,protein:f.protein,carbs:f.carbs,fat:f.fat,fibre:f.fibre}]);
+    row.appendChild(b);
+  });
+}
 /* ---------- log bar ---------- */
 document.getElementById('plusbtn').onclick=addSheet;
 document.getElementById('micbtn').onclick=()=>toast('Voice logging comes after sentence logging');
