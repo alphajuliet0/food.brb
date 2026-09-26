@@ -58,14 +58,13 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 .ringcenter .lbl{font-size:11px;color:var(--dim);letter-spacing:.8px;text-transform:uppercase;margin-top:4px}
 .ringcenter .bankin{font-size:11px;color:var(--protein);margin-top:6px;font-weight:600}
 .stack{width:148px;height:148px;position:relative;flex:0 0 auto}
-.stack .aring{position:absolute;border-radius:50%;background:conic-gradient(from -90deg,var(--hi),var(--c) calc(var(--fill)*1%),var(--surface2) 0);cursor:pointer;transition:transform .15s}
-.stack .aring.sel{transform:scale(1.045)}
-.aring.cal{inset:0;--c:var(--kcal);--hi:var(--kcal-hi)}
-.aring.pro{inset:13px;--c:var(--protein);--hi:var(--protein-hi)}
-.aring.fib{inset:26px;--c:var(--fibre);--hi:var(--fibre-hi)}
-.aring.stp{inset:39px;--c:#45424b;--hi:var(--steps)}
-.stack .score{position:absolute;inset:52px;border-radius:50%;background:var(--surface)}
-.stack .scenter{position:absolute;inset:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.stack svg{transform:rotate(-90deg)}
+.stack .rk{fill:none;stroke:var(--surface2);stroke-width:10}
+.stack .rv{fill:none;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1)}
+.stack .rv.cal{stroke:var(--kcal)}
+.stack .rv.pro{stroke:var(--protein)}
+.stack .rv.fib{stroke:var(--fibre)}
+.stack .scenter{position:absolute;inset:38px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .scenter .big{font-size:21px;font-weight:800;letter-spacing:-.5px;line-height:1}
 .scenter .big.over{color:var(--kcal)}
 .scenter .lbl{font-size:9px;color:var(--dim);letter-spacing:.5px;text-transform:uppercase;margin-top:3px}
@@ -278,28 +277,27 @@ function render(){
   document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{sel=b.dataset.day;render();});
   /* activity rings */
   const bigCls=over?'big over':'big', bigTxt=over?Math.abs(kcalLeft).toLocaleString():Math.max(0,kcalLeft).toLocaleString(), bigLbl=over?'kcal over':'kcal left';
-  const FRACT=v=>Math.max(0,Math.min(100,Math.round(v*100)));
+  const FRACT=v=>Math.max(0,Math.min(1,v));
   const rings=[
-    ['cal','calories',T.kcal/P.kcalTarget],
-    ['pro','protein',T.protein/P.proteinTarget],
-    ['fib','fibre',T.fibre/FIBRE_GOAL],
-    ['stp','steps',(ringSteps||0)/P.stepsTarget]
+    ['cal',66,T.kcal/P.kcalTarget],
+    ['pro',53,T.protein/P.proteinTarget],
+    ['fib',40,T.fibre/FIBRE_GOAL]
   ];
   const centers={
     cal:'<div class="'+bigCls+'">'+bigTxt+'</div><div class="lbl">'+bigLbl+'</div>',
     pro:'<div class="big">'+Math.round(T.protein*10)/10+'</div><div class="lbl">of '+P.proteinTarget+'g protein</div>',
-    fib:'<div class="big">'+Math.round(T.fibre*10)/10+'</div><div class="lbl">of '+FIBRE_GOAL+'g fibre</div>',
-    stp:'<div class="big">'+(ringSteps==null?'\u2014':Math.round(ringSteps).toLocaleString())+'</div><div class="lbl">of '+P.stepsTarget.toLocaleString()+' steps</div>'
+    fib:'<div class="big">'+Math.round(T.fibre*10)/10+'</div><div class="lbl">of '+FIBRE_GOAL+'g fibre</div>'
   };
+  if(!centers[selRing])selRing='cal';
+  const ringSvg=r=>{const c=2*Math.PI*r.r;return '<circle class="rk" cx="74" cy="74" r="'+r.r+'"/><circle class="rv '+r.cls+(selRing===r.cls?' sel':'')+'" data-ring="'+r.cls+'" cx="74" cy="74" r="'+r.r+'" stroke-dasharray="'+c+'" stroke-dashoffset="'+((1-FRACT(r.f))*c)+'" style="cursor:pointer"/>';};
   const stack=document.getElementById('stack');
-  stack.innerHTML=rings.map(([cls,,f])=>'<i class="aring '+cls+(selRing===cls?' sel':'')+'" data-ring="'+cls+'" style="--fill:'+FRACT(f)+'"></i>').join('')
-    +'<i class="score"></i><div class="scenter">'+centers[selRing]+'</div>';
+  stack.innerHTML='<svg width="148" height="148" viewBox="0 0 148 148">'+rings.map(r=>ringSvg({cls:r[0],r:r[1],f:r[2]})).join('')+'</svg>'
+    +'<div class="scenter">'+centers[selRing]+'</div>';
   stack.querySelectorAll('[data-ring]').forEach(el=>el.onclick=()=>{selRing=el.dataset.ring;render();});
   document.getElementById('legend').innerHTML=[
-    ['cal','var(--kcal)',Math.round(T.kcal).toLocaleString()+' / '+P.kcalTarget.toLocaleString(),'Calories \u00b7 '+FRACT(T.kcal/P.kcalTarget)+'%'],
-    ['pro','var(--protein)',(Math.round(T.protein*10)/10)+' / '+P.proteinTarget+' g','Protein \u00b7 '+FRACT(T.protein/P.proteinTarget)+'%'],
-    ['fib','var(--fibre)',(Math.round(T.fibre*10)/10)+' / '+FIBRE_GOAL+' g','Fibre \u00b7 '+FRACT(T.fibre/FIBRE_GOAL)+'%'],
-    ['stp','var(--steps)',(ringSteps==null?'\u2014':Math.round(ringSteps).toLocaleString())+' / '+P.stepsTarget.toLocaleString(),'Steps \u00b7 '+FRACT((ringSteps||0)/P.stepsTarget)+'%']
+    ['cal','var(--kcal)',Math.round(T.kcal).toLocaleString()+' / '+P.kcalTarget.toLocaleString(),'Calories \u00b7 '+Math.round(FRACT(T.kcal/P.kcalTarget)*100)+'%'],
+    ['pro','var(--protein)',(Math.round(T.protein*10)/10)+' / '+P.proteinTarget+' g','Protein \u00b7 '+Math.round(FRACT(T.protein/P.proteinTarget)*100)+'%'],
+    ['fib','var(--fibre)',(Math.round(T.fibre*10)/10)+' / '+FIBRE_GOAL+' g','Fibre \u00b7 '+Math.round(FRACT(T.fibre/FIBRE_GOAL)*100)+'%']
   ].map(([cls,c,v,l])=>'<div class="lline" data-ring="'+cls+'" style="--c:'+c+'"><b>'+v+'</b><span>'+l+'</span></div>').join('');
   document.querySelectorAll('.lline[data-ring]').forEach(el=>el.onclick=()=>{selRing=el.dataset.ring;render();});
   /* bank row */
