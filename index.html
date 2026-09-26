@@ -166,6 +166,10 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 [data-theme=light] .onbfld input{color-scheme:light}
 .onbrow2{display:flex;gap:10px}
 .onbrow2 .onbfld{flex:1}
+.onbrow3{display:grid;grid-template-columns:1fr 1.5fr 1.2fr;gap:8px}
+.onbfld select{width:100%;box-sizing:border-box;background:var(--surface2) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="%23999" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>') no-repeat right 14px center;border:0;border-radius:14px;padding:14px 32px 14px 12px;color:var(--ink);font-size:16px;font-family:inherit;outline:0;color-scheme:dark;appearance:none;-webkit-appearance:none}
+.onbfld select:invalid{color:var(--dim)}
+[data-theme=light] .onbfld select{color-scheme:light}
 .onbunit{display:flex;gap:8px;margin:2px 0 14px}
 .onbunit button{background:var(--surface2);color:var(--dim);border:0;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;font-family:inherit}
 .onbunit button.sel{background:#fff;color:#131114}
@@ -1037,8 +1041,25 @@ function renderOnb(){
     const e=onbShell('What\'s your sex?',optBtns([['male','Male'],['female','Female']],'sex'),!!a.sex);
     onbOpts(e,null,'sex');
   }else if(ONB.step===1){ /* dob */
-    const e=onbShell('When were you born?','<div class="onbfld"><label>Date of birth</label><input id="ob-dob" type="date" value="'+a.dob+'"></div>',!!onbAge(a.dob));
-    e.querySelector('#ob-dob').oninput=ev=>{a.dob=ev.target.value;e.querySelector('#onb-next').disabled=!onbAge(a.dob);};
+    const cy=new Date().getFullYear();
+    const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const parts=(a.dob||'').split('-'),yy=parts[0]||'',mm=parts[1]?String(+parts[1]):'',dd=parts[2]?String(+parts[2]):'';
+    const opt=(v,l,cur)=>'<option value="'+v+'"'+(v!==''&&String(v)===String(cur)?' selected':'')+'>'+l+'</option>';
+    let dO='<option value="" disabled'+(dd?'':' selected')+'>Day</option>'; for(let d=1;d<=31;d++)dO+=opt(d,d,dd);
+    let mO='<option value="" disabled'+(mm?'':' selected')+'>Month</option>'; months.forEach((m,i)=>mO+=opt(i+1,m,mm));
+    let yO='<option value="" disabled'+(yy?'':' selected')+'>Year</option>'; for(let y=cy-10;y>=cy-100;y--)yO+=opt(y,y,yy);
+    const e=onbShell('When were you born?','<div class="onbrow3">'
+      +'<div class="onbfld"><label>Day</label><select id="ob-dd" required>'+dO+'</select></div>'
+      +'<div class="onbfld"><label>Month</label><select id="ob-mm" required>'+mO+'</select></div>'
+      +'<div class="onbfld"><label>Year</label><select id="ob-yy" required>'+yO+'</select></div></div>',!!onbAge(a.dob));
+    const upd=()=>{
+      const d=e.querySelector('#ob-dd').value,m=e.querySelector('#ob-mm').value,y=e.querySelector('#ob-yy').value;
+      let ok=false;
+      if(d&&m&&y){const dt=new Date(+y,+m-1,+d); ok=dt.getFullYear()===+y&&dt.getMonth()===+m-1&&dt.getDate()===+d;}
+      a.dob=ok?y+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0'):'';
+      e.querySelector('#onb-next').disabled=!onbAge(a.dob);
+    };
+    e.querySelectorAll('select').forEach(selEl=>selEl.onchange=upd);
     e.querySelector('#onb-next').onclick=()=>{ONB.step++;renderOnb();};
   }else if(ONB.step===2){ /* height */
     const h=a.hUnit==='cm'
