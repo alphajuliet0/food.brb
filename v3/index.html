@@ -210,6 +210,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 <div class="quickchips"><button class="qchip">⊞ Saved foods</button><button class="qchip">↻ Recents</button></div>
 <div class="logbar"><div class="logbarinner">
   <input id="loginput" placeholder="What did you eat?" autocomplete="off">
+  <label class="roundbtn" for="camfile" aria-label="Photo log" style="display:grid;place-items:center;cursor:pointer;margin:0">&#128247;</label><input type="file" id="camfile" accept="image/*" capture="environment" style="display:none">
   <button class="roundbtn" id="micbtn" aria-label="Voice log">◉</button>
   <button class="roundbtn primary" id="plusbtn" aria-label="Add food">＋</button>
 </div></div>
@@ -661,6 +662,43 @@ function draftSheet(items){
   };
   sheetEl.querySelector('#shcancel').onclick=closeSheet;
 }
+/* ---------- photo logging ---------- */
+function downscaleImage(file,maxDim,qual){return new Promise((res,rej)=>{
+  const reader=new FileReader();
+  reader.onload=()=>{const img=new Image();
+    img.onload=()=>{const max=maxDim||1024,scale=Math.min(1,max/Math.max(img.width,img.height));
+      const w=Math.max(1,Math.round(img.width*scale)),hh=Math.max(1,Math.round(img.height*scale));
+      const c=document.createElement('canvas');c.width=w;c.height=hh;
+      c.getContext('2d').drawImage(img,0,0,w,hh);
+      res(c.toDataURL('image/jpeg',qual||0.8));};
+    img.onerror=()=>rej(new Error('img'));img.src=String(reader.result);};
+  reader.onerror=()=>rej(new Error('read'));reader.readAsDataURL(file);});}
+async function estimatePhoto(dataUrl){
+  const prompt='You estimate nutrition from a meal photo for a food diary. Identify each food visible and its portion. Reply with ONLY a JSON array, no markdown: [{"name":"plain item name with portion","kcal":number,"protein":number,"carbs":number,"fat":number,"fibre":number}]. Vegetarian context; eggs allowed. If a portion is unclear, use a typical restaurant portion.';
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',{
+    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':geminiKey()},
+    body:JSON.stringify({contents:[{parts:[{text:prompt},{inline_data:{mime_type:'image/jpeg',data:dataUrl.split(',')[1]}}]}],generationConfig:{responseMimeType:'application/json'}})
+  });
+  if(!r.ok)throw new Error('gemini '+r.status);
+  const j=await r.json();
+  const t=j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0]&&j.candidates[0].content.parts[0].text||'';
+  const arr=JSON.parse(t.replace(/```json|```/g,'').trim());
+  return arr.filter(x=>x&&x.name&&isFinite(Number(x.kcal))).map(x=>({name:String(x.name),kcal:Math.round(Number(x.kcal))||0,protein:Math.round(Number(x.protein)*10)/10||0,carbs:Math.round(Number(x.carbs)*10)/10||0,fat:Math.round(Number(x.fat)*10)/10||0,fibre:Math.round(Number(x.fibre)*10)/10||0}));
+}
+document.getElementById('camfile').addEventListener('change',async e=>{
+  const file=e.target.files&&e.target.files[0];e.target.value='';
+  if(!file)return;
+  if(!file.type.startsWith('image/')){toast('Please choose a photo');return;}
+  if(file.size>12*1024*1024){toast('That photo is too large');return;}
+  if(!geminiKey()){toast('Photo logging needs the Gemini key saved on this device');return;}
+  toast('Reading your meal...');
+  try{
+    const dataUrl=await downscaleImage(file,1024,0.8);
+    const items=await estimatePhoto(dataUrl);
+    if(items.length)draftSheet(items);
+    else toast('Could not read that meal - try quick add');
+  }catch(err){toast('Photo estimate failed - try quick add');}
+});
 /* ---------- log bar ---------- */
 document.getElementById('plusbtn').onclick=addSheet;
 document.getElementById('micbtn').onclick=()=>toast('Voice logging comes after sentence logging');
