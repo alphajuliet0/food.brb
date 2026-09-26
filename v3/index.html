@@ -405,7 +405,8 @@ function render(){
         +'<div class="mkcal">'+(f.kcal||0).toLocaleString()+' <span>cal</span></div><button class="copybtn" data-copy="'+f.id+'" aria-label="Copy to another day">&#10697;</button></div></div>';
     }
   }
-  /* activity: ultrahuman ring + steps */
+  /* activity: chosen device + steps */
+  const dev=deviceOf(),dInfo=DEVICES[dev]||DEVICES.ultrahuman;
   const rg=(D&&D.ring)||{};
   const metric=v=>v==null?'\u2014':String(Math.round(Number(v)*10)/10);
   const wkSteps=FOODBRB.lastDays(7).map(k=>({k,s:FOODBRB.stepsOf(state.days[k])}));
@@ -413,19 +414,23 @@ function render(){
   const stepAvg=stepDays.length?Math.round(stepDays.reduce((a,x)=>a+x.s,0)/stepDays.length):null;
   const maxS=Math.max(P.stepsTarget,...wkSteps.map(x=>x.s||0),1);
   const latestW=(state.weights&&state.weights.length)?state.weights.slice().sort((a,b)=>a.date<b.date?1:-1)[0]:null;
-  document.getElementById('activity').innerHTML='<div class="actcard"><h2>Activity &middot; Ultrahuman</h2>'
+  document.getElementById('activity').innerHTML='<div class="actcard"><h2>Activity'+(dev==='none'?'':' &middot; '+esc(dInfo.label))+'</h2>'
+    +(dev!=='ultrahuman'&&dev!=='none'?'<div class="ynote" style="margin:0 0 10px">'+esc(dInfo.label)+' integration coming - log steps manually for now.</div>':'')
     +'<div class="actgrid">'
-    +'<div class="act"><div class="k">Recovery</div><div class="n">'+metric(rg.recovery_score)+'</div></div>'
-    +'<div class="act"><div class="k">Sleep score</div><div class="n">'+metric(rg.sleep_score)+'</div></div>'
-    +'<div class="act"><div class="k">Total sleep</div><div class="n">'+(rg.total_sleep||'\u2014')+'</div></div>'
-    +'<div class="act"><div class="k">HRV</div><div class="n">'+metric(rg.avg_sleep_hrv)+(rg.avg_sleep_hrv!=null?' ms':'')+'</div></div>'
-    +'<div class="act"><div class="k">Sleep RHR</div><div class="n">'+metric(rg.sleep_rhr)+(rg.sleep_rhr!=null?' bpm':'')+'</div></div>'
+    +(dev==='ultrahuman'
+      ?'<div class="act"><div class="k">Recovery</div><div class="n">'+metric(rg.recovery_score)+'</div></div>'
+      +'<div class="act"><div class="k">Sleep score</div><div class="n">'+metric(rg.sleep_score)+'</div></div>'
+      +'<div class="act"><div class="k">Total sleep</div><div class="n">'+(rg.total_sleep||'\u2014')+'</div></div>'
+      +'<div class="act"><div class="k">HRV</div><div class="n">'+metric(rg.avg_sleep_hrv)+(rg.avg_sleep_hrv!=null?' ms':'')+'</div></div>'
+      +'<div class="act"><div class="k">Sleep RHR</div><div class="n">'+metric(rg.sleep_rhr)+(rg.sleep_rhr!=null?' bpm':'')+'</div></div>'
+      :'')
     +'<div class="act"><div class="k">Weight</div><div class="n">'+(latestW?latestW.kg+' kg':'\u2014')+'</div></div>'
     +'</div>'
     +'<div class="sparkwrap"><div class="spark">'+wkSteps.map(x=>'<i class="'+(x.k===TODAY?'today':'')+'" style="height:'+Math.max(3,Math.round((x.s||0)/maxS*56))+'px" title="'+x.k+': '+(x.s==null?'no data':Math.round(x.s).toLocaleString())+' steps"><b>'+x.k.slice(8)+'</b></i>').join('')+'</div></div>'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px"><span style="font-size:11px;color:var(--dim)">Steps: '+(ringSteps==null?'\u2014 today':Math.round(ringSteps).toLocaleString()+' today')+(stepAvg!=null?' \u00b7 '+stepAvg.toLocaleString()+' 7-day avg':'')+'</span><button class="sheetbtn ghost" id="ringsync" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Sync ring</button></div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px"><span style="font-size:11px;color:var(--dim)">Steps: '+(ringSteps==null?'\u2014 today':Math.round(ringSteps).toLocaleString()+' today') +(stepAvg!=null?' \u00b7 '+stepAvg.toLocaleString()+' 7-day avg':'')+'</span>'+(dev==='ultrahuman'?'<button class="sheetbtn ghost" id="ringsync" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Sync ring</button>':'<button class="sheetbtn ghost" id="stepadd" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Log steps</button>')+'</div>'
     +'</div>';
   const rsb=document.getElementById('ringsync');if(rsb)rsb.onclick=startRingSync;
+  const sab=document.getElementById('stepadd');if(sab)sab.onclick=stepsSheet;
   meals.innerHTML=html||'<div class="emptylog">Nothing logged '+(isToday?'yet today':'on this day')+'.'+(isToday?'<br>Tap + to add your first meal.':'')+'</div>';
   document.getElementById('mealcount').textContent=foods.length?foods.length+' items · '+T.kcal.toLocaleString()+' kcal':'';
   attachMealHandlers();
@@ -459,7 +464,8 @@ async function cloudSync(){const token=localStorage.getItem(SYNC_TOKEN_KEY);if(!
   j=await w.json();localStorage.setItem(SYNC_REV_KEY,String(j.rev));localStorage.setItem(FOODBRB.STORE,JSON.stringify(state));
   const t=new Date();syncStatus('ok','Synced '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0'));
   render();
-}catch(e){syncStatus('err',e.name==='TypeError'?'Sync network blocked':(e.message||'Sync paused'));}finally{syncBusy=false;}}
+  if(window.__onbRestore){const f=window.__onbRestore;window.__onbRestore=null;f(true);}
+}catch(e){syncStatus('err',e.name==='TypeError'?'Sync network blocked':(e.message||'Sync paused'));if(window.__onbRestore){const f=window.__onbRestore;window.__onbRestore=null;f(false);}}finally{syncBusy=false;}}
 function scheduleCloudSync(){if(!localStorage.getItem(SYNC_TOKEN_KEY))return;clearTimeout(syncTimer);syncTimer=setTimeout(cloudSync,700);}
 function connectCloudSync(){window.open(ULTRAHUMAN_SYNC_ORIGIN+'/authorize','foodBrbCloudSync','width=520,height=680');}
 window.addEventListener('message',e=>{if(e.origin!==ULTRAHUMAN_SYNC_ORIGIN||!e.data||e.data.type!=='food-brb-sync-token')return;localStorage.setItem(SYNC_TOKEN_KEY,e.data.token);localStorage.setItem(SYNC_REV_KEY,'0');cloudSync();});
@@ -980,6 +986,7 @@ function aiKeySheet(){
 function youSheet(){
   const tok=localStorage.getItem(SYNC_TOKEN_KEY);
   const lr=lastRingDay();
+  const dev=deviceOf(),dInfo=DEVICES[dev]||DEVICES.ultrahuman;
   const row=(l,v)=>'<div class="yrow"><span class="yl">'+l+'</span><span class="yv">'+v+'</span></div>';
   openSheet('<h3>You</h3>'
     +'<div class="yhead"><div class="yava">'+esc((P.name||'A').trim()[0].toUpperCase())+'</div><div><b>'+esc(P.name||'Ajay')+'</b><div class="sub">'+FOODBRB.streak(state)+'-day streak</div></div></div>'
@@ -989,8 +996,8 @@ function youSheet(){
     +'<div class="yrow tappable" data-t="proteinTarget" data-l="Protein g"><span class="yl">Protein</span><span class="yv">'+P.proteinTarget+' g</span></div>'
     +'<div class="yrow tappable" data-t="fibreTarget" data-l="Fibre g"><span class="yl">Fibre</span><span class="yv">'+FIBRE_GOAL+' g</span></div>'
     +'<div class="yrow tappable" data-t="stepsTarget" data-l="Steps"><span class="yl">Steps</span><span class="yv">'+P.stepsTarget.toLocaleString()+'</span></div>'
-    +row('Ultrahuman ring',lr?fmtDay(lr):'Not synced yet')
-    +'<button class="sheetbtn ghost" id="y-ring">Sync ring</button>'
+    +'<div class="yrow tappable" id="y-device"><span class="yl">Activity device</span><span class="yv">'+esc(dInfo.label)+'</span></div>'
+    +(dev==='ultrahuman'?row('Ring last synced',lr?fmtDay(lr):'Not synced yet')+'<button class="sheetbtn ghost" id="y-ring">Sync ring</button>':'<button class="sheetbtn ghost" id="y-steps">Log steps</button>')
     +row('Photo logging',groqKey()?'Groq key on this device':(geminiKey()?'Gemini key on this device':'Not set up'))
     +'<button class="sheetbtn ghost" id="y-aikey">'+(groqKey()?'AI key settings':'Set up photo logging')+'</button>'
     +'<button class="sheetbtn ghost" id="y-setup">Redo setup</button>'
@@ -998,7 +1005,9 @@ function youSheet(){
     +'<button class="sheetbtn ghost" id="shcancel">Close</button>');
   const sn=sheetEl.querySelector('#y-syncnow');if(sn)sn.onclick=()=>{cloudSync();};
   const cn=sheetEl.querySelector('#y-connect');if(cn)cn.onclick=connectCloudSync;
-  sheetEl.querySelector('#y-ring').onclick=()=>{closeSheet();startRingSync();};
+  const yr=sheetEl.querySelector('#y-ring');if(yr)yr.onclick=()=>{closeSheet();startRingSync();};
+  sheetEl.querySelector('#y-device').onclick=deviceSheet;
+  const ys=sheetEl.querySelector('#y-steps');if(ys)ys.onclick=stepsSheet;
   sheetEl.querySelector('#y-aikey').onclick=aiKeySheet;
   sheetEl.querySelectorAll('.yrow.tappable').forEach(r=>r.onclick=()=>targetEdit(r.dataset.t,r.dataset.l));
   sheetEl.querySelector('#y-setup').onclick=()=>{closeSheet();showOnboarding(false);};
@@ -1024,12 +1033,41 @@ function activitySheet(){
   const D=state.days[sel]||{}; const steps=FOODBRB.stepsOf(D)||0; const t=P.stepsTarget||8000;
   const f=Math.max(0,Math.min(1,steps/t)), r=80, c=(2*Math.PI*r).toFixed(1);
   const lr=lastRingDay();
-  openSheet('<h3 style="text-align:center">Activity</h3><div class="sub" style="text-align:center;margin-bottom:0">'+(lr?'Ring synced '+fmtDay(lr):'No ring data yet - sync from the You sheet')+'</div>'
+  const dev=deviceOf(),dInfo=DEVICES[dev]||DEVICES.ultrahuman;
+  const srcLine=dev==='ultrahuman'?(lr?'Ring synced '+fmtDay(lr):'No ring data yet - sync from the You sheet'):dev==='none'?'Steps added manually':dInfo.label+' integration coming - steps added manually for now';
+  openSheet('<h3 style="text-align:center">Activity</h3><div class="sub" style="text-align:center;margin-bottom:0">'+srcLine+'</div>'
     +'<div class="bigring"><div class="br-wrap"><svg width="190" height="190" viewBox="0 0 190 190"><circle cx="95" cy="95" r="'+r+'" fill="none" stroke="var(--surface2)" stroke-width="10"/><circle cx="95" cy="95" r="'+r+'" fill="none" stroke="var(--steps)" stroke-width="10" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+(c*(1-f)).toFixed(1)+'"/></svg>'
     +'<div class="br-center"><div class="n">'+steps.toLocaleString()+'</div><div class="t">of '+t.toLocaleString()+' steps</div></div></div></div>'
     +'<div class="ynote" style="text-align:center;max-width:280px;margin:14px auto 0">Walking burns energy, helping your food plan create the calorie deficit that leads to weight loss.</div>'
     +'<button class="sheetbtn ghost" id="shcancel">Close</button>');
   sheetEl.querySelector('#shcancel').onclick=closeSheet;
+}
+/* ---------- activity device ---------- */
+const DEVICES={ultrahuman:{label:'Ultrahuman',integrated:true},oura:{label:'Oura',integrated:false},applewatch:{label:'Apple Watch',integrated:false},fitbit:{label:'Fitbit',integrated:false},none:{label:'Manual tracking',integrated:false}};
+function deviceOf(){return (state.profile&&state.profile.device)||'ultrahuman';}
+function stepsSheet(){
+  const D=state.days[sel]||{};
+  openSheet('<h3>Steps for '+(sel===TODAY?'today':fmtDay(sel))+'</h3><div class="fld"><label>Steps</label><input id="st-v" inputmode="numeric" placeholder="8000" value="'+(D.steps!=null?D.steps:'')+'"></div>'
+    +'<button class="sheetbtn primary" id="st-save">Save</button><button class="sheetbtn ghost" id="shcancel">Cancel</button>');
+  sheetEl.querySelector('#st-save').onclick=()=>{
+    const v=num(sheetEl.querySelector('#st-v').value);
+    if(v<0||v>200000){toast('Enter your steps');return;}
+    state.days[sel]=state.days[sel]||{foods:[]};
+    state.days[sel].steps=Math.round(v);
+    save();closeSheet();render();toast('Steps saved');
+  };
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+}
+function deviceSheet(){
+  const cur=deviceOf();
+  openSheet('<h3>Activity device</h3><div class="sub">What tracks your steps and recovery?</div>'
+    +Object.keys(DEVICES).map(k=>'<button class="sheetbtn '+(k===cur?'primary':'ghost')+'" data-d="'+k+'">'+DEVICES[k].label+(DEVICES[k].integrated?'':' - integration coming')+'</button>').join('')
+    +'<button class="sheetbtn ghost" id="shcancel">Back</button>');
+  sheetEl.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{
+    state.profile=state.profile||{}; state.profile.device=b.dataset.d;
+    P=FOODBRB.profile(state); save(); render(); youSheet(); toast('Device saved');
+  });
+  sheetEl.querySelector('#shcancel').onclick=youSheet;
 }
 /* ---------- editable targets ---------- */
 function targetEdit(field,label){
@@ -1045,7 +1083,7 @@ function targetEdit(field,label){
 }
 /* ---------- onboarding ---------- */
 const ONB={step:0,preview:false,a:{}};
-const ONB_N=8;
+const ONB_N=9;
 function onbAge(dob){const d=new Date(dob+'T12:00:00'); if(isNaN(d))return null; const n=new Date(); let a=n.getFullYear()-d.getFullYear(); const m=n.getMonth()-d.getMonth(); if(m<0||(m===0&&n.getDate()<d.getDate()))a--; return (a>=10&&a<=100)?a:null;}
 function onbHeightCm(a){if(a.hUnit==='cm')return num(a.cm); return num(a.ft)*30.48+num(a.in)*2.54;}
 function onbWeightKg(a){if(a.wUnit==='kg')return num(a.kg); return num(a.st)*6.35029+num(a.lb)*0.453592;}
@@ -1065,14 +1103,14 @@ function computePlan(a){
   return {maintenance,daily,protein,fibre:30,steps,age,cm,kg,tKg};
 }
 function showOnboarding(preview){
-  ONB.preview=!!preview; ONB.step=0;
-  ONB.a={sex:null,dob:'',hUnit:'cm',cm:'',ft:'',in:'',wUnit:'kg',kg:'',st:'',lb:'',day:null,goal:null,tUnit:'kg',tKg:'',tSt:'',tLb:'',noTarget:false};
+  ONB.preview=!!preview; ONB.step=-1;
+  ONB.a={sex:null,dob:'',hUnit:'cm',cm:'',ft:'',in:'',wUnit:'kg',kg:'',st:'',lb:'',day:null,goal:null,tUnit:'kg',tKg:'',tSt:'',tLb:'',noTarget:false,device:null};
   document.getElementById('onb').classList.add('on');
   renderOnb();
 }
 function onbShell(q,inner,canNext){
   const el=document.getElementById('onb');
-  el.innerHTML='<div class="onbtop">'+(ONB.step>0?'<button class="onbback" id="onb-back">&lsaquo;</button>':'')+'<div class="onbprog"><i style="width:'+Math.round((ONB.step+1)/ONB_N*100)+'%"></i></div></div>'
+  el.innerHTML='<div class="onbtop">'+(ONB.step>-1?'<button class="onbback" id="onb-back">&lsaquo;</button>':'')+'<div class="onbprog"><i style="width:'+Math.round((ONB.step+1)/ONB_N*100)+'%"></i></div></div>'
     +'<div class="onbq">'+q+'</div>'+inner
     +'<button class="onbnext" id="onb-next"'+(canNext?'':' disabled')+'>Continue</button>';
   const bk=el.querySelector('#onb-back'); if(bk)bk.onclick=()=>{ONB.step--;renderOnb();};
@@ -1086,8 +1124,31 @@ function onbOpts(el,opts,key){
   });
   el.querySelector('#onb-next').onclick=()=>{ONB.step++;renderOnb();};
 }
+function startOnbRestore(){
+  const el=document.getElementById('onb');
+  el.innerHTML='<div class="onbtop"><div class="onbprog"><i style="width:4%"></i></div></div>'
+    +'<div class="onbq">Restore from cloud</div>'
+    +'<div class="onbnote" id="onb-restore-msg" style="margin-bottom:20px">A small sign-in window will open. Once it closes, your plan and history come down to this device and stay in sync.</div>'
+    +'<button class="sheetbtn ghost" id="onb-restore-back">Back</button>';
+  el.querySelector('#onb-restore-back').onclick=()=>{window.__onbRestore=null;ONB.step=-1;renderOnb();};
+  window.__onbRestore=ok=>{
+    if(ok){document.getElementById('onb').classList.remove('on');render();toast('Welcome back - everything synced');}
+    else{const m=document.getElementById('onb-restore-msg');if(m)m.textContent='That did not complete - check the pop-up was allowed, then try again.';}
+  };
+  connectCloudSync();
+}
 function renderOnb(){
   const a=ONB.a, el=document.getElementById('onb');
+  if(ONB.step===-1){ /* welcome: new plan or restore */
+  el.innerHTML='<div class="onbtop"><div class="onbprog"><i style="width:4%"></i></div></div>'
+      +'<div class="onbq">Welcome to form.brb</div>'
+      +'<div class="onbnote" style="margin-bottom:20px">New here, or back on a new device?</div>'
+      +'<button class="onbnext" id="onb-new">I\'m new - build my plan</button>'
+      +'<button class="sheetbtn ghost" id="onb-restore" style="margin-top:10px">I already use form.brb - restore from cloud</button>';
+    el.querySelector('#onb-new').onclick=()=>{ONB.step=0;renderOnb();};
+    el.querySelector('#onb-restore').onclick=startOnbRestore;
+    return;
+  }
   const optBtns=(list,key)=>'<div class="onbopts">'+list.map(([v,l])=>'<button class="onbopt'+(a[key]===v?' sel':'')+'" data-v="'+v+'">'+l+'</button>').join('')+'</div>';
   if(ONB.step===0){ /* sex */
     const e=onbShell('What\'s your sex?',optBtns([['male','Male'],['female','Female']],'sex'),!!a.sex);
@@ -1148,7 +1209,10 @@ function renderOnb(){
     e.querySelectorAll('input').forEach(i=>i.oninput=upd);
     e.querySelector('#ob-skip').onclick=()=>{a.noTarget=true;ONB.step++;renderOnb();};
     e.querySelector('#onb-next').onclick=()=>{ONB.step++;renderOnb();};
-  }else if(ONB.step===7){ /* build + plan */
+  }else if(ONB.step===7){ /* activity device */
+    const e=onbShell('What tracks your activity?',optBtns([['ultrahuman','Ultrahuman Ring'],['oura','Oura Ring'],['applewatch','Apple Watch'],['fitbit','Fitbit'],['none','Nothing / manual']],'device'),!!a.device);
+    onbOpts(e,null,'device');
+  }else if(ONB.step===8){ /* build + plan */
     el.innerHTML='<div class="onbtop"><div class="onbprog"><i style="width:100%"></i></div></div><div class="onbq">Building your plan</div><div class="onbcheck"><div>Estimating your energy needs...</div><div>Adjusting for your goal...</div><div>Setting protein to protect muscle...</div></div>';
     const plan=computePlan(a); ONB.plan=plan;
     const lines=el.querySelectorAll('.onbcheck div');
@@ -1186,7 +1250,7 @@ function finishOnboarding(plan){
   state.profile=Object.assign({},state.profile,{
     kcalTarget:plan.daily,proteinTarget:plan.protein,fibreTarget:plan.fibre,stepsTarget:plan.steps,
     sex:ONB.a.sex,dob:ONB.a.dob,heightCm:Math.round(plan.cm*10)/10,weightKg:Math.round(plan.kg*10)/10,
-    activity:ONB.a.day,goal:ONB.a.goal,targetKg:plan.tKg,onboarded:true});
+    activity:ONB.a.day,goal:ONB.a.goal,targetKg:plan.tKg,device:ONB.a.device||'none',onboarded:true});
   P=FOODBRB.profile(state); FIBRE_GOAL=P.fibreTarget||30;
   save(); render(); toast('Your plan is set');
 }
