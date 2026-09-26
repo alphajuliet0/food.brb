@@ -128,6 +128,8 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .chiprow:empty{display:none}
 .suggest{position:absolute;left:10px;right:10px;bottom:calc(100% + 8px);background:var(--surface);border:1px solid var(--surface2);border-radius:16px;box-shadow:0 12px 32px rgba(0,0,0,.45);overflow:hidden;display:none;max-height:46vh;overflow-y:auto}
 .suggest.on{display:block}
+.fldrel{position:relative}
+.suggest.below{left:0;right:0;top:calc(100% + 6px);bottom:auto}
 .suggrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 14px;font-size:13px;border-bottom:1px solid var(--surface2);width:100%;text-align:left;color:var(--ink);background:none;border-left:0;border-right:0;border-top:0;border-radius:0}
 .suggrow:last-child{border-bottom:0}
 .suggrow .sm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
@@ -539,7 +541,7 @@ function editSheet(dayKey,id){
   const f=findFood(dayKey,id);if(!f)return;
   const cur=f.slot||(f.snack?'snack':'breakfast');
   openSheet('<h3>Edit food</h3><div class="sub">'+esc(fmtDay(dayKey))+'</div>'
-    +'<div class="fld"><label>Name</label><input id="ef-name" value="'+esc(f.name||'')+'"></div>'
+    +'<div class="fld fldrel"><label>Name</label><input id="ef-name" value="'+esc(f.name||'')+'"><div class="suggest below" id="ef-suggest"></div></div>'
     +'<div class="fld"><label>Meal</label><div class="mchiprow" style="margin-bottom:0">'+SLOTCH.map(([v,l])=>'<button class="mchip'+(v===cur?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')+'</div></div>'
     +'<div class="fld"><label>Calories</label><input id="ef-kcal" inputmode="numeric" value="'+(f.kcal||0)+'"></div>'
     +'<div class="grid3">'
@@ -552,6 +554,14 @@ function editSheet(dayKey,id){
     +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
   let meal=cur;
   sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
+  wireSheetTypeahead('#ef-name','#ef-suggest',s=>{
+    sheetEl.querySelector('#ef-name').value=s.name;
+    sheetEl.querySelector('#ef-kcal').value=s.kcal;
+    sheetEl.querySelector('#ef-p').value=s.protein;
+    sheetEl.querySelector('#ef-c').value=s.carbs;
+    sheetEl.querySelector('#ef-f').value=s.fat;
+    sheetEl.querySelector('#ef-fi').value=s.fibre||0;
+  });
   sheetEl.querySelector('#ef-save').onclick=()=>{
     const name=sheetEl.querySelector('#ef-name').value.trim();
     if(!name){toast('Name needed');return;}
@@ -632,23 +642,39 @@ function dbMatches(ql,exclude){
   out.sort((a,b)=>a.score-b.score);
   return out;
 }
-function drawSuggest(){
-  const box=document.getElementById('suggest');if(!box)return;
-  const ql=loginput.value.trim().toLowerCase();
-  if(ql.length<2){box.classList.remove('on');box.innerHTML='';return;}
+function suggRows(ql){
+  if(!ql||ql.length<2)return [];
   const hist=historyFoods().filter(f=>f.name.toLowerCase().indexOf(ql)>=0);
   hist.sort((a,b)=>a.name.toLowerCase().indexOf(ql)-b.name.toLowerCase().indexOf(ql));
   const seen={};hist.forEach(f=>seen[f.name.toLowerCase()]=1);
   const db=dbMatches(ql,seen);
-  const rows=hist.slice(0,4).map(f=>({f,hist:true})).concat(db.slice(0,6).map(f=>({f,hist:false}))).slice(0,6);
+  return hist.slice(0,4).map(f=>({f,hist:true})).concat(db.slice(0,6).map(f=>({f,hist:false}))).slice(0,6);
+}
+function drawSuggestInto(box,input,onPick){
+  if(!box)return;
+  const rows=suggRows(input.value.trim().toLowerCase());
   if(!rows.length){box.classList.remove('on');box.innerHTML='';return;}
   box.innerHTML=rows.map((s,i)=>'<button class="suggrow" data-i="'+i+'"><span class="sm">'+(s.hist?'↻ ':'')+esc(s.f.name)+'</span><span class="sk">'+s.f.kcal+' kcal</span></button>').join('');
   box.classList.add('on');
   box.querySelectorAll('.suggrow').forEach(b=>b.onclick=()=>{
     const s=rows[+b.dataset.i].f;
-    box.classList.remove('on');box.innerHTML='';loginput.value='';
+    box.classList.remove('on');box.innerHTML='';
+    onPick(s);
+  });
+}
+function drawSuggest(){
+  drawSuggestInto(document.getElementById('suggest'),loginput,s=>{
+    loginput.value='';
     draftSheet([{name:s.name,kcal:s.kcal,protein:s.protein,carbs:s.carbs,fat:s.fat,fibre:s.fibre}]);
   });
+}
+function wireSheetTypeahead(nameSel,boxSel,fill){
+  const inp=sheetEl.querySelector(nameSel),box=sheetEl.querySelector(boxSel);
+  if(!inp||!box)return;
+  let t=null;
+  inp.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(()=>loadFoodDB().then(()=>drawSuggestInto(box,inp,fill)),120);});
+  inp.addEventListener('focus',()=>{if(inp.value.trim().length>=2)loadFoodDB().then(()=>drawSuggestInto(box,inp,fill));});
+  inp.addEventListener('blur',()=>setTimeout(()=>{box.classList.remove('on');box.innerHTML='';},200));
 }
 function hideSuggest(){const box=document.getElementById('suggest');if(box){box.classList.remove('on');box.innerHTML='';}}
 /* ---------- quick add ---------- */
@@ -656,7 +682,7 @@ function addSheet(pre){
   const hr=new Date().getHours();
   const def=hr<11?'breakfast':hr<15?'lunch':hr<21?'dinner':'snack';
   openSheet('<h3>Add food</h3><div class="sub">Quick add - estimates come with sentence logging.</div>'
-    +'<div class="fld"><label>Name</label><input id="af-name" placeholder="e.g. Masala eggs" autocomplete="off"></div>'
+    +'<div class="fld fldrel"><label>Name</label><input id="af-name" placeholder="e.g. Masala eggs" autocomplete="off"><div class="suggest below" id="af-suggest"></div></div>'
     +'<div class="fld"><label>Meal</label><div class="mchiprow" style="margin-bottom:0">'+SLOTCH.map(([v,l])=>'<button class="mchip'+(v===def?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')+'</div></div>'
     +'<div class="fld"><label>Calories</label><input id="af-kcal" inputmode="numeric" placeholder="0"></div>'
     +'<div class="grid3">'
@@ -665,6 +691,7 @@ function addSheet(pre){
     +'<div class="fld"><label>Fat g</label><input id="af-f" inputmode="decimal" placeholder="0"></div></div>'
     +'<button class="sheetbtn ghost" id="af-scan" style="margin-bottom:2px">&#9638; Scan barcode</button>'
     +'<button class="sheetbtn ghost" id="af-label" style="margin-bottom:2px">&#9644; Scan nutrition label</button>'
+    +'<button class="sheetbtn ghost" id="af-photo" style="margin-bottom:2px">&#128247; Photo of food (estimate)</button>'
     +'<button class="sheetbtn primary" id="af-save">Add to '+(sel===TODAY?'today':fmtDay(sel))+'</button>'
     +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
   let meal=def, preFibre=0;
@@ -678,6 +705,15 @@ function addSheet(pre){
   sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
   sheetEl.querySelector('#af-scan').onclick=()=>{closeSheet();startScan();};
   sheetEl.querySelector('#af-label').onclick=()=>{closeSheet();document.getElementById('labfile').click();};
+  sheetEl.querySelector('#af-photo').onclick=()=>{closeSheet();document.getElementById('camfile').click();};
+  wireSheetTypeahead('#af-name','#af-suggest',s=>{
+    sheetEl.querySelector('#af-name').value=s.name;
+    sheetEl.querySelector('#af-kcal').value=s.kcal;
+    sheetEl.querySelector('#af-p').value=s.protein;
+    sheetEl.querySelector('#af-c').value=s.carbs;
+    sheetEl.querySelector('#af-f').value=s.fat;
+    if(typeof preFibre!=='undefined')preFibre=s.fibre||0;
+  });
   sheetEl.querySelector('#af-save').onclick=()=>{
     const name=sheetEl.querySelector('#af-name').value.trim();
     const kcal=num(sheetEl.querySelector('#af-kcal').value);
@@ -896,10 +932,20 @@ function replaceSheet(){
     +'<div class="fld"><label>Fat g</label><input id="af-f" inputmode="decimal" value="'+it.fat+'"></div></div>'
     +'<button class="sheetbtn ghost" id="af-scan" style="margin-bottom:2px">&#9638; Scan barcode</button>'
     +'<button class="sheetbtn ghost" id="af-label" style="margin-bottom:2px">&#9644; Scan nutrition label</button>'
+    +'<button class="sheetbtn ghost" id="af-photo" style="margin-bottom:2px">&#128247; Photo of food (estimate)</button>'
     +'<button class="sheetbtn primary" id="af-save">Replace item</button>'
     +'<button class="sheetbtn ghost" id="shcancel">Back to meal</button>');
   sheetEl.querySelector('#af-scan').onclick=()=>{closeSheet();startScan();};
   sheetEl.querySelector('#af-label').onclick=()=>{closeSheet();document.getElementById('labfile').click();};
+  sheetEl.querySelector('#af-photo').onclick=()=>{closeSheet();document.getElementById('camfile').click();};
+  wireSheetTypeahead('#af-name','#af-suggest',s=>{
+    sheetEl.querySelector('#af-name').value=s.name;
+    sheetEl.querySelector('#af-kcal').value=s.kcal;
+    sheetEl.querySelector('#af-p').value=s.protein;
+    sheetEl.querySelector('#af-c').value=s.carbs;
+    sheetEl.querySelector('#af-f').value=s.fat;
+    if(typeof preFibre!=='undefined')preFibre=s.fibre||0;
+  });
   sheetEl.querySelector('#af-save').onclick=()=>{
     const name=sheetEl.querySelector('#af-name').value.trim();
     const kcal=num(sheetEl.querySelector('#af-kcal').value);
