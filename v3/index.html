@@ -621,7 +621,9 @@ function portionSheet(p){
   preview();
 }
 /* ---------- sentence logging (Gemini rail) ---------- */
+function normItems(arr){return arr.filter(x=>x&&x.name&&isFinite(Number(x.kcal))).map(x=>({name:String(x.name),kcal:Math.round(Number(x.kcal))||0,protein:Math.round(Number(x.protein)*10)/10||0,carbs:Math.round(Number(x.carbs)*10)/10||0,fat:Math.round(Number(x.fat)*10)/10||0,fibre:Math.round(Number(x.fibre)*10)/10||0}));}
 function geminiKey(){return (localStorage.getItem('foodBrbGeminiKey')||'').trim();}
+function groqKey(){return (localStorage.getItem('foodBrbGroqKey')||'').trim();}
 async function estimateSentence(text){
   const prompt='You estimate nutrition for a food diary. Split this into individual foods. Reply with ONLY a JSON array, no markdown: [{"name":"plain item name with portion","kcal":number,"protein":number,"carbs":number,"fat":number,"fibre":number}]. Use typical portions when unclear. Vegetarian context. Sentence: '+text;
   const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',{
@@ -632,7 +634,7 @@ async function estimateSentence(text){
   const j=await r.json();
   const t=j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0]&&j.candidates[0].content.parts[0].text||'';
   const arr=JSON.parse(t.replace(/```json|```/g,'').trim());
-  return arr.filter(x=>x&&x.name&&isFinite(Number(x.kcal))).map(x=>({name:String(x.name),kcal:Math.round(Number(x.kcal))||0,protein:Math.round(Number(x.protein)*10)/10||0,carbs:Math.round(Number(x.carbs)*10)/10||0,fat:Math.round(Number(x.fat)*10)/10||0,fibre:Math.round(Number(x.fibre)*10)/10||0}));
+  return normItems(arr);
 }
 function draftSheet(items){
   const hr=new Date().getHours();
@@ -673,24 +675,35 @@ function downscaleImage(file,maxDim,qual){return new Promise((res,rej)=>{
       res(c.toDataURL('image/jpeg',qual||0.8));};
     img.onerror=()=>rej(new Error('img'));img.src=String(reader.result);};
   reader.onerror=()=>rej(new Error('read'));reader.readAsDataURL(file);});}
-async function estimatePhoto(dataUrl){
-  const prompt='You estimate nutrition from a meal photo for a food diary. Identify each food visible and its portion. Reply with ONLY a JSON array, no markdown: [{"name":"plain item name with portion","kcal":number,"protein":number,"carbs":number,"fat":number,"fibre":number}]. Vegetarian context; eggs allowed. If a portion is unclear, use a typical restaurant portion.';
+const PHOTO_PROMPT='You estimate nutrition from a meal photo for a food diary. Identify each food visible and its portion. Vegetarian context; eggs allowed. If a portion is unclear, use a typical restaurant portion.';
+async function estimatePhotoGroq(dataUrl){
+  const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+    method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey()},
+    body:JSON.stringify({model:'qwen/qwen3.8-27b',temperature:0.2,response_format:{type:'json_object'},messages:[{role:'user',content:[{type:'text',text:PHOTO_PROMPT+' Reply with ONLY JSON, no markdown: {"items":[{"name":"plain item name with portion","kcal":number,"protein":number,"carbs":number,"fat":number,"fibre":number}]}.'},{type:'image_url',image_url:{url:dataUrl}}]}]})
+  });
+  if(!r.ok)throw new Error('groq '+r.status);
+  const j=await r.json();
+  const t=j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content||'';
+  const o=JSON.parse(t.replace(/```json|```/g,'').trim());
+  return normItems(Array.isArray(o)?o:(o.items||[]));
+}
+async function estimatePhotoGemini(dataUrl){
   const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',{
     method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':geminiKey()},
-    body:JSON.stringify({contents:[{parts:[{text:prompt},{inline_data:{mime_type:'image/jpeg',data:dataUrl.split(',')[1]}}]}],generationConfig:{responseMimeType:'application/json'}})
+    body:JSON.stringify({contents:[{parts:[{text:PHOTO_PROMPT+' Reply with ONLY a JSON array, no markdown: [{"name":"plain item name with portion","kcal":number,"protein":number,"carbs":number,"fat":number,"fibre":number}].'},{inline_data:{mime_type:'image/jpeg',data:dataUrl.split(',')[1]}}]}],generationConfig:{responseMimeType:'application/json'}})
   });
   if(!r.ok)throw new Error('gemini '+r.status);
   const j=await r.json();
   const t=j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0]&&j.candidates[0].content.parts[0].text||'';
-  const arr=JSON.parse(t.replace(/```json|```/g,'').trim());
-  return arr.filter(x=>x&&x.name&&isFinite(Number(x.kcal))).map(x=>({name:String(x.name),kcal:Math.round(Number(x.kcal))||0,protein:Math.round(Number(x.protein)*10)/10||0,carbs:Math.round(Number(x.carbs)*10)/10||0,fat:Math.round(Number(x.fat)*10)/10||0,fibre:Math.round(Number(x.fibre)*10)/10||0}));
+  return normItems(JSON.parse(t.replace(/```json|```/g,'').trim()));
 }
+function estimatePhoto(dataUrl){return groqKey()?estimatePhotoGroq(dataUrl):estimatePhotoGemini(dataUrl);}
 document.getElementById('camfile').addEventListener('change',async e=>{
   const file=e.target.files&&e.target.files[0];e.target.value='';
   if(!file)return;
   if(!file.type.startsWith('image/')){toast('Please choose a photo');return;}
   if(file.size>12*1024*1024){toast('That photo is too large');return;}
-  if(!geminiKey()){toast('Photo logging needs the Gemini key saved on this device');return;}
+  if(!groqKey()&&!geminiKey()){toast('Add an AI key first - tap your avatar, then Photo logging');return;}
   toast('Reading your meal...');
   try{
     const dataUrl=await downscaleImage(file,1024,0.8);
@@ -719,6 +732,18 @@ loginput.addEventListener('keydown',async e=>{
 /* one-time: purge QA seed entries (est-* ids) */
 {let purged=false;for(const k of Object.keys(state.days||{})){const fs=state.days[k]&&state.days[k].foods;if(fs){const n=fs.filter(f=>!(f.id&&String(f.id).indexOf('est-')===0));if(n.length!==fs.length){state.days[k].foods=n;purged=true;}}}if(purged)save();}
 /* ---------- You sheet ---------- */
+function aiKeySheet(){
+  openSheet('<h3>Photo logging</h3>'
+    +'<div class="ynote">Snap your plate and AI reads the calories and macros for you.</div>'
+    +'<div class="fld"><label>Groq API key</label><input id="ak-groq" type="password" autocomplete="off" placeholder="gsk_..." value="'+esc(groqKey())+'"></div>'
+    +'<div class="ynote">Endpoint preset: https://api.groq.com/openai/v1 (model qwen/qwen3.8-27b). Get a free key at console.groq.com. The key stays on this device only - never synced, never in the app itself.</div>'
+    +'<button class="sheetbtn primary" id="ak-save">Save key</button>'
+    +(groqKey()?'<button class="sheetbtn ghost" id="ak-clear">Remove key</button>':'')
+    +'<button class="sheetbtn ghost" id="shcancel">Close</button>');
+  sheetEl.querySelector('#ak-save').onclick=()=>{const k=sheetEl.querySelector('#ak-groq').value.trim();if(!k){toast('Paste your Groq key first');return;}localStorage.setItem('foodBrbGroqKey',k);closeSheet();toast('Key saved on this device');};
+  const cl=sheetEl.querySelector('#ak-clear');if(cl)cl.onclick=()=>{localStorage.removeItem('foodBrbGroqKey');closeSheet();toast('Key removed');};
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+}
 function youSheet(){
   const tok=localStorage.getItem(SYNC_TOKEN_KEY);
   const lr=lastRingDay();
@@ -733,11 +758,14 @@ function youSheet(){
     +row('Steps',P.stepsTarget.toLocaleString())
     +row('Ultrahuman ring',lr?fmtDay(lr):'Not synced yet')
     +'<button class="sheetbtn ghost" id="y-ring">Sync ring</button>'
+    +row('Photo logging',groqKey()?'Groq key on this device':(geminiKey()?'Gemini key on this device':'Not set up'))
+    +'<button class="sheetbtn ghost" id="y-aikey">'+(groqKey()?'AI key settings':'Set up photo logging')+'</button>'
     +'<div class="ynote">Everything lives on this phone, private to you. Cloud sync keeps a private backup and feeds the nightly MyFitnessPal import.</div>'
     +'<button class="sheetbtn ghost" id="shcancel">Close</button>');
   const sn=sheetEl.querySelector('#y-syncnow');if(sn)sn.onclick=()=>{cloudSync();};
   const cn=sheetEl.querySelector('#y-connect');if(cn)cn.onclick=connectCloudSync;
   sheetEl.querySelector('#y-ring').onclick=()=>{closeSheet();startRingSync();};
+  sheetEl.querySelector('#y-aikey').onclick=aiKeySheet;
   sheetEl.querySelector('#shcancel').onclick=closeSheet;
 }
 document.getElementById('avatar').onclick=youSheet;
