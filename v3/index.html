@@ -84,6 +84,7 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 .spark i{flex:1;background:var(--surface2);border-radius:4px 4px 0 0;position:relative;min-height:3px}
 .spark i.today{background:linear-gradient(var(--kcal-hi),var(--kcal))}
 .spark b{position:absolute;top:calc(100% + 4px);left:0;right:0;text-align:center;font-size:9px;color:var(--dim);font-weight:600}
+.spark i u{position:absolute;left:-2.5px;right:-2.5px;bottom:0;border:1.5px solid var(--dim);border-bottom:0;opacity:.45;border-radius:4px 4px 0 0;z-index:-1}
 .syncdot{width:8px;height:8px;border-radius:50%;background:var(--grey);display:inline-block;vertical-align:baseline}
 .syncdot.ok{background:var(--green)}.syncdot.busy{background:var(--amber)}.syncdot.err{background:var(--kcal)}
 .yhead{display:flex;align-items:center;gap:12px;margin-bottom:10px}
@@ -424,10 +425,16 @@ function render(){
   const dev=deviceOf(),dInfo=DEVICES[dev]||DEVICES.ultrahuman;
   const rg=(D&&D.ring)||{};
   const metric=v=>v==null?'\u2014':String(Math.round(Number(v)*10)/10);
-  const wkSteps=FOODBRB.lastDays(7).map(k=>({k,s:FOODBRB.stepsOf(state.days[k])}));
+  const prevWk=k=>{const d=new Date(k+'T12:00:00');d.setDate(d.getDate()-7);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  const wkSteps=FOODBRB.lastDays(7).map(k=>({k,s:FOODBRB.stepsOf(state.days[k]),p:FOODBRB.stepsOf(state.days[prevWk(k)])}));
   const stepDays=wkSteps.filter(x=>x.s!=null);
   const stepAvg=stepDays.length?Math.round(stepDays.reduce((a,x)=>a+x.s,0)/stepDays.length):null;
-  const maxS=Math.max(P.stepsTarget,...wkSteps.map(x=>x.s||0),1);
+  const maxS=Math.max(P.stepsTarget,...wkSteps.map(x=>x.s||0),...wkSteps.map(x=>x.p||0),1);
+  const wkTot=Math.round(wkSteps.reduce((a,x)=>a+(x.s||0),0)),prevTot=Math.round(wkSteps.reduce((a,x)=>a+(x.p||0),0));
+  const wkDelta=prevTot>0?Math.round((wkTot-prevTot)/prevTot*100):null;
+  const selPrev=FOODBRB.stepsOf(state.days[prevWk(sel)]);
+  const selDelta=(ringSteps!=null&&selPrev>0)?Math.round((ringSteps-selPrev)/selPrev*100):null;
+  const selDayName=new Date(sel+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short'});
   const latestW=(state.weights&&state.weights.length)?state.weights.slice().sort((a,b)=>a.date<b.date?1:-1)[0]:null;
   document.getElementById('activity').innerHTML='<div class="actcard"><h2>Activity'+(dev==='none'?'':' &middot; '+esc(dInfo.label))+'</h2>'
     +(dev!=='ultrahuman'&&dev!=='none'?'<div class="ynote" style="margin:0 0 10px">'+esc(dInfo.label)+' integration coming - log steps manually for now.</div>':'')
@@ -441,8 +448,9 @@ function render(){
       :'')
     +'<div class="act"><div class="k">Weight</div><div class="n">'+(latestW?latestW.kg+' kg':'\u2014')+'</div></div>'
     +'</div>'
-    +'<div class="sparkwrap"><div class="spark">'+wkSteps.map(x=>'<i class="'+(x.k===TODAY?'today':'')+'" style="height:'+Math.max(3,Math.round((x.s||0)/maxS*56))+'px" title="'+x.k+': '+(x.s==null?'no data':Math.round(x.s).toLocaleString())+' steps"><b>'+x.k.slice(8)+'</b></i>').join('')+'</div></div>'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px"><span style="font-size:11px;color:var(--dim)">Steps: '+(ringSteps==null?'\u2014 today':Math.round(ringSteps).toLocaleString()+' today') +(stepAvg!=null?' \u00b7 '+stepAvg.toLocaleString()+' 7-day avg':'')+'</span>'+(dev==='ultrahuman'?'<button class="sheetbtn ghost" id="ringsync" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Sync ring</button>':'<button class="sheetbtn ghost" id="stepadd" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Log steps</button>')+'</div>'
+    +'<div class="sparkwrap"><div class="spark">'+wkSteps.map(x=>'<i class="'+(x.k===TODAY?'today':'')+'" style="height:'+Math.max(3,Math.round((x.s||0)/maxS*56))+'px" title="'+x.k+': '+(x.s==null?'no data':Math.round(x.s).toLocaleString())+' steps'+(x.p!=null?' \u00b7 last week '+Math.round(x.p).toLocaleString():'')+'">'+(x.p!=null?'<u style="height:'+Math.max(2,Math.round(x.p/maxS*56))+'px"></u>':'')+'<b>'+x.k.slice(8)+'</b></i>').join('')+'</div></div>'
+    +(prevTot>0?'<div style="font-size:11px;color:var(--dim);margin-top:15px">This week '+wkTot.toLocaleString()+' \u00b7 Last week '+prevTot.toLocaleString()+' ('+(wkDelta>=0?'+':'')+wkDelta+'%)</div>':'')
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px"><span style="font-size:11px;color:var(--dim)">Steps: '+(ringSteps==null?'\u2014 today':Math.round(ringSteps).toLocaleString()+' today')+(selDelta!=null?' \u00b7 '+selDayName+' '+(selDelta>=0?'+':'')+selDelta+'% vs last '+selDayName:'')+(stepAvg!=null?' \u00b7 '+stepAvg.toLocaleString()+' 7-day avg':'')+'</span>'+(dev==='ultrahuman'?'<button class="sheetbtn ghost" id="ringsync" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Sync ring</button>':'<button class="sheetbtn ghost" id="stepadd" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Log steps</button>')+'</div>'
     +'</div>';
   const rsb=document.getElementById('ringsync');if(rsb)rsb.onclick=startRingSync;
   const sab=document.getElementById('stepadd');if(sab)sab.onclick=stepsSheet;
