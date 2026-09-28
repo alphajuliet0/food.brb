@@ -25,3 +25,15 @@
 ### MFP write path (for future mirroring, if ever needed)
 
 MFP free tier quick-add is calories-only (macro quick-add is Premium). Exact macros: create a private Personal Food at /food/new (step 1 brand+description via React-safe native setter → Continue → "Create Food" on the duplicates page → full nutrition form; ids: serving, unit, container, caloriesCapitalized, protein, carbohydrates, total_fat, "food.dietaryFiber" → SAVE CHANGES, lands /food/mine). Then on /food/mine trusted-click the food name (JS .click() does NOT expand the row), click ADD TO DIARY, open the Meal Name combobox (custom MUI div combobox — click ref, then click the option), set input#date via native setter (M/D/YYYY), click ADD FOOD. Verify via the printable diary URL above.
+
+## 2026-09-28 — Photo logging input path (standing)
+
+**What:** Ajay will sometimes send food photos to be logged into form.brb on his behalf.
+
+**Flow:** He sends a photo via iMessage → the main agent reads it, estimates items/portions/macros → entries are passed to the build agent → build agent writes them to the worker (same `{state}` envelope + If-Match rev PUT used for the weekend backfill) → main agent tells Ajay exactly what was logged so he can correct it.
+
+**Conventions:**
+- Photo-derived entries carry `source:"estimate"` in the day entry (matching the app's existing estimate taxonomy; never presented as manual entries Ajay typed himself).
+- If Ajay supplies exact macros for a photo ("no re-estimating"), those numbers are written verbatim, as with the 26-28 Sep backfill.
+- Corrections land through the normal path: Ajay edits in-app (portion control, delete) or sends a correction and the worker is updated.
+- Nothing is pushed to MyFitnessPal (sync retired same day, see above).
