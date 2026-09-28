@@ -81,10 +81,11 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 .act .n{font-size:15px;font-weight:700;margin-top:3px}
 .sparkwrap{padding-bottom:18px;margin-top:14px}
 .spark{display:flex;align-items:flex-end;gap:6px;height:56px}
-.spark i{flex:1;background:var(--surface2);border-radius:4px 4px 0 0;position:relative;min-height:3px}
-.spark i.today{background:linear-gradient(var(--kcal-hi),var(--kcal))}
+.spark i{flex:1;position:relative;height:56px}
+.spark i em{position:absolute;left:3px;right:3px;bottom:0;background:var(--surface2);border-radius:4px 4px 0 0}
+.spark i.today em{background:linear-gradient(var(--kcal-hi),var(--kcal))}
 .spark b{position:absolute;top:calc(100% + 4px);left:0;right:0;text-align:center;font-size:9px;color:var(--dim);font-weight:600}
-.spark i u{position:absolute;left:-2.5px;right:-2.5px;bottom:0;border:1.5px solid var(--dim);border-bottom:0;opacity:.45;border-radius:4px 4px 0 0;z-index:-1}
+.spark i u{position:absolute;left:0;right:0;bottom:0;border:1.5px solid var(--steps);border-bottom:0;opacity:.65;border-radius:4px 4px 0 0}
 .syncdot{width:8px;height:8px;border-radius:50%;background:var(--grey);display:inline-block;vertical-align:baseline}
 .syncdot.ok{background:var(--green)}.syncdot.busy{background:var(--amber)}.syncdot.err{background:var(--kcal)}
 .yhead{display:flex;align-items:center;gap:12px;margin-bottom:10px}
@@ -448,7 +449,7 @@ function render(){
       :'')
     +'<div class="act"><div class="k">Weight</div><div class="n">'+(latestW?latestW.kg+' kg':'\u2014')+'</div></div>'
     +'</div>'
-    +'<div class="sparkwrap"><div class="spark">'+wkSteps.map(x=>'<i class="'+(x.k===TODAY?'today':'')+'" style="height:'+Math.max(3,Math.round((x.s||0)/maxS*56))+'px" title="'+x.k+': '+(x.s==null?'no data':Math.round(x.s).toLocaleString())+' steps'+(x.p!=null?' \u00b7 last week '+Math.round(x.p).toLocaleString():'')+'">'+(x.p!=null?'<u style="height:'+Math.max(2,Math.round(x.p/maxS*56))+'px"></u>':'')+'<b>'+x.k.slice(8)+'</b></i>').join('')+'</div></div>'
+    +'<div class="sparkwrap"><div class="spark">'+wkSteps.map(x=>'<i class="'+(x.k===TODAY?'today':'')+'" title="'+x.k+': '+(x.s==null?'no data':Math.round(x.s).toLocaleString())+' steps'+(x.p!=null?' \u00b7 last week '+Math.round(x.p).toLocaleString():'')+'">'+(x.p!=null?'<u style="height:'+Math.max(2,Math.round(x.p/maxS*56))+'px"></u>':'')+'<em style="height:'+Math.max(3,Math.round((x.s||0)/maxS*56))+'px"></em><b>'+x.k.slice(8)+'</b></i>').join('')+'</div></div>'
     +(prevTot>0?'<div style="font-size:11px;color:var(--dim);margin-top:15px">This week '+wkTot.toLocaleString()+' \u00b7 Last week '+prevTot.toLocaleString()+' ('+(wkDelta>=0?'+':'')+wkDelta+'%)</div>':'')
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px"><span style="font-size:11px;color:var(--dim)">Steps: '+(ringSteps==null?'\u2014 today':Math.round(ringSteps).toLocaleString()+' today')+(selDelta!=null?' \u00b7 '+selDayName+' '+(selDelta>=0?'+':'')+selDelta+'% vs last '+selDayName:'')+(stepAvg!=null?' \u00b7 '+stepAvg.toLocaleString()+' 7-day avg':'')+'</span>'+(dev==='ultrahuman'?'<button class="sheetbtn ghost" id="ringsync" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Sync ring</button>':'<button class="sheetbtn ghost" id="stepadd" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Log steps</button>')+'</div>'
     +'</div>';
