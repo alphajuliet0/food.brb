@@ -411,7 +411,7 @@ function render(){
   for(const [sl,icon,label] of SLOTS){
     const items=em[sl]||[];
     const slotKcal=items.reduce((a,f)=>a+(f.kcal||0),0);
-    html+='<div class="mealhead tappable" data-slot="'+sl+'">'+label+'<span>'+(items.length?items.length+' item'+(items.length>1?'s':'')+' · '+slotKcal.toLocaleString()+' cal &nbsp;+':'+ add')+'</span></div>';
+    html+='<div class="mealhead tappable" data-slot="'+sl+'">'+label+'<span>'+(items.length?items.length+' item'+(items.length>1?'s':'')+' · '+slotKcal.toLocaleString()+' cal &nbsp;+':'+')+'</span></div>';
     for(const f of items){
       if(!f.id){f.id=uid();dirty=true;}
       const mac=[f.protein?'P '+Math.round(f.protein)+'g':'',f.carbs?'C '+Math.round(f.carbs)+'g':'',f.fat?'F '+Math.round(f.fat)+'g':''].filter(Boolean).join(' · ');
@@ -685,6 +685,7 @@ function addSheet(pre){
   openSheet('<h3>Add food</h3><div class="sub">Quick add - estimates come with sentence logging.</div>'
     +'<div class="fld fldrel"><label>Name</label><input id="af-name" placeholder="e.g. Masala eggs" autocomplete="off"><div class="suggest below" id="af-suggest"></div></div>'
     +'<div class="fld"><label>Meal</label><div class="mchiprow" style="margin-bottom:0">'+SLOTCH.map(([v,l])=>'<button class="mchip'+(v===def?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')+'</div></div>'
+    +'<div class="fld" id="af-portwrap" style="display:none"><label>Portion (g)</label><input id="af-portion" inputmode="decimal" placeholder="100"></div>'
     +'<div class="fld"><label>Calories</label><input id="af-kcal" inputmode="numeric" placeholder="0"></div>'
     +'<div class="grid3">'
     +'<div class="fld"><label>Protein g</label><input id="af-p" inputmode="decimal" placeholder="0"></div>'
@@ -703,6 +704,25 @@ function addSheet(pre){
       sheetEl.querySelector('#af-c').value=pre.carbs||'';
       sheetEl.querySelector('#af-f').value=pre.fat||'';}
     sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x.dataset.meal===meal));}
+  let portBase=null;
+  function maybePortion(){
+    const m=sheetEl.querySelector('#af-name').value.match(/,\s*(\d+(?:\.\d+)?)\s*g\s*$/i);
+    const wrap=sheetEl.querySelector('#af-portwrap');
+    if(m){wrap.style.display='';sheetEl.querySelector('#af-portion').value=m[1];
+      portBase={g:parseFloat(m[1]),kcal:num(sheetEl.querySelector('#af-kcal').value),p:num(sheetEl.querySelector('#af-p').value),c:num(sheetEl.querySelector('#af-c').value),f:num(sheetEl.querySelector('#af-f').value),fi:preFibre};
+    }else{wrap.style.display='none';portBase=null;}
+  }
+  sheetEl.querySelector('#af-portion').addEventListener('input',()=>{
+    if(!portBase||!portBase.g)return;
+    const g=parseFloat(sheetEl.querySelector('#af-portion').value)||0, k=g/portBase.g;
+    sheetEl.querySelector('#af-kcal').value=Math.round(portBase.kcal*k);
+    sheetEl.querySelector('#af-p').value=Math.round(portBase.p*k*10)/10;
+    sheetEl.querySelector('#af-c').value=Math.round(portBase.c*k*10)/10;
+    sheetEl.querySelector('#af-f').value=Math.round(portBase.f*k*10)/10;
+    preFibre=Math.round(portBase.fi*k*10)/10;
+    sheetEl.querySelector('#af-name').value=sheetEl.querySelector('#af-name').value.replace(/,\s*\d+(?:\.\d+)?\s*g\s*$/i,', '+(Math.round(g*10)/10)+' g');
+  });
+  maybePortion();
   sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
   sheetEl.querySelector('#af-scan').onclick=()=>{closeSheet();startScan();};
   sheetEl.querySelector('#af-label').onclick=()=>{closeSheet();document.getElementById('labfile').click();};
@@ -714,6 +734,7 @@ function addSheet(pre){
     sheetEl.querySelector('#af-c').value=s.carbs;
     sheetEl.querySelector('#af-f').value=s.fat;
     if(typeof preFibre!=='undefined')preFibre=s.fibre||0;
+    maybePortion();
   });
   sheetEl.querySelector('#af-save').onclick=()=>{
     const name=sheetEl.querySelector('#af-name').value.trim();
@@ -806,6 +827,7 @@ async function lookupBarcode(code){
     const j=await r.json(),prod=j&&j.product,n=prod&&prod.nutriments||{};
     const kcal=Number(n['energy-kcal_100g']);
     let name=String(prod&&prod.product_name||'').trim();
+    name=name.replace(/#+/g,' ').replace(/\s{2,}/g,' ').trim();
     const brand=String(prod&&prod.brands||'').trim();
     if(j&&j.status===1&&name&&isFinite(kcal)&&kcal>0){
       if(brand&&name.toLowerCase().indexOf(brand.toLowerCase())<0)name=brand+' '+name;
