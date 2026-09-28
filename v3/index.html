@@ -79,11 +79,25 @@ h1.today{font-size:25px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;
 .act{background:var(--surface2);border-radius:12px;padding:9px 10px}
 .act .k{font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:var(--dim)}
 .act .n{font-size:15px;font-weight:700;margin-top:3px}
-.sparkwrap{padding-bottom:18px;margin-top:14px}
-.spark{display:flex;align-items:flex-end;gap:6px;height:56px}
-.spark i{flex:1;position:relative;height:56px}
-.spark i em{position:absolute;left:3px;right:3px;bottom:0;background:var(--surface2);border-radius:4px 4px 0 0}
-.spark i.today em{background:linear-gradient(var(--kcal-hi),var(--kcal))}
+.sparkwrap{padding-top:16px;padding-bottom:16px;margin-top:4px}
+.spark{position:relative;display:flex;align-items:flex-end;gap:6px;height:56px}
+.spark .target{position:absolute;left:0;right:0;border-top:1.5px dashed var(--dim);opacity:.55;pointer-events:none}
+.spark .tlbl{position:absolute;right:0;font-size:9px;color:var(--dim);pointer-events:none}
+.spark i{flex:1;background:var(--surface2);border-radius:4px 4px 0 0;position:relative;min-height:3px}
+.spark i em{display:none}
+.spark i.today{background:linear-gradient(var(--kcal-hi),var(--kcal))}
+.spark i .sv{position:absolute;bottom:calc(100% + 3px);left:0;right:0;text-align:center;font-size:9px;color:var(--dim);font-weight:600;font-style:normal}
+.act .q{font-size:10px;color:var(--dim);margin-top:2px;font-weight:600}
+.prow{margin-top:12px}
+.prow .ph{display:flex;justify-content:space-between;align-items:baseline;font-size:11px}
+.prow .pl{color:var(--dim);font-weight:700;letter-spacing:.4px;font-size:10px}
+.prow .pv{color:var(--ink);font-weight:600}
+.pbar{height:6px;border-radius:3px;background:var(--surface2);position:relative;margin:5px 0 3px}
+.pbar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.pbar .tick{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--dim);border-radius:1px}
+.prow .ps{font-size:10px;color:var(--dim)}
+.slabel{display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;font-size:10px;color:var(--dim);font-weight:700;letter-spacing:.4px}
+.slabel span{font-weight:600;letter-spacing:0}
 .spark b{position:absolute;top:calc(100% + 4px);left:0;right:0;text-align:center;font-size:9px;color:var(--dim);font-weight:600}
 .spark i u{position:absolute;left:0;right:0;bottom:0;border:1.5px solid var(--steps);border-bottom:0;opacity:.65;border-radius:4px 4px 0 0}
 .syncdot{width:8px;height:8px;border-radius:50%;background:var(--grey);display:inline-block;vertical-align:baseline}
@@ -430,28 +444,41 @@ function render(){
   const wkSteps=FOODBRB.lastDays(7).map(k=>({k,s:FOODBRB.stepsOf(state.days[k]),p:FOODBRB.stepsOf(state.days[prevWk(k)])}));
   const stepDays=wkSteps.filter(x=>x.s!=null);
   const stepAvg=stepDays.length?Math.round(stepDays.reduce((a,x)=>a+x.s,0)/stepDays.length):null;
-  const maxS=Math.max(P.stepsTarget,...wkSteps.map(x=>x.s||0),...wkSteps.map(x=>x.p||0),1);
+  const maxS=Math.max(P.stepsTarget,...wkSteps.map(x=>x.s||0),1);
   const wkTot=Math.round(wkSteps.reduce((a,x)=>a+(x.s||0),0)),prevTot=Math.round(wkSteps.reduce((a,x)=>a+(x.p||0),0));
   const wkDelta=prevTot>0?Math.round((wkTot-prevTot)/prevTot*100):null;
-  const selPrev=FOODBRB.stepsOf(state.days[prevWk(sel)]);
-  const selDelta=(ringSteps!=null&&selPrev>0)?Math.round((ringSteps-selPrev)/selPrev*100):null;
-  const selDayName=new Date(sel+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short'});
+  const wkKeys=weekOf(TODAY);
+  const bankUsed=wkKeys.reduce((a,k)=>{const dd=state.days[k];return a+(FOODBRB.logged(dd)?FOODBRB.totals(dd).kcal:0);},0);
+  const dayIdx=Math.max(1,wkKeys.indexOf(TODAY)+1);
+  const paceExp=Math.round(wkBudget*dayIdx/7);
+  const paceDiff=Math.round(bankUsed-paceExp);
+  const paceWord=Math.abs(paceDiff)<=wkBudget*0.05?'On pace':(paceDiff>0?paceDiff.toLocaleString()+' kcal ahead of pace':(-paceDiff).toLocaleString()+' kcal behind pace');
+  const bankPct=Math.min(100,Math.round(bankUsed/wkBudget*100)),pacePct=Math.min(100,Math.round(dayIdx/7*100));
+  const wkLogged=wkKeys.filter(k=>FOODBRB.logged(state.days[k]));
+  const proAvg=wkLogged.length?Math.round(wkLogged.reduce((a,k)=>a+FOODBRB.totals(state.days[k]).protein,0)/wkLogged.length):null;
+  const proPct=proAvg!=null?Math.min(100,Math.round(proAvg/P.proteinTarget*100)):0;
+  const stepPct=stepAvg!=null?Math.min(100,Math.round(stepAvg/P.stepsTarget*100)):0;
+  const qual=v=>v==null?'':(v>=80?'strong':v>=65?'good':v>=50?'fair':'low');
+  const fmtK=v=>(Math.round(v/100)/10).toLocaleString()+'k';
   const latestW=(state.weights&&state.weights.length)?state.weights.slice().sort((a,b)=>a.date<b.date?1:-1)[0]:null;
   document.getElementById('activity').innerHTML='<div class="actcard"><h2>Activity'+(dev==='none'?'':' &middot; '+esc(dInfo.label))+'</h2>'
     +(dev!=='ultrahuman'&&dev!=='none'?'<div class="ynote" style="margin:0 0 10px">'+esc(dInfo.label)+' integration coming - log steps manually for now.</div>':'')
     +'<div class="actgrid">'
     +(dev==='ultrahuman'
-      ?'<div class="act"><div class="k">Recovery</div><div class="n">'+metric(rg.recovery_score)+'</div></div>'
-      +'<div class="act"><div class="k">Sleep score</div><div class="n">'+metric(rg.sleep_score)+'</div></div>'
+      ?'<div class="act"><div class="k">Recovery</div><div class="n">'+metric(rg.recovery_score)+'</div>'+(rg.recovery_score!=null?'<div class="q">'+qual(rg.recovery_score)+'</div>':'')+'</div>'
+      +'<div class="act"><div class="k">Sleep score</div><div class="n">'+metric(rg.sleep_score)+'</div>'+(rg.sleep_score!=null?'<div class="q">'+qual(rg.sleep_score)+'</div>':'')+'</div>'
       +'<div class="act"><div class="k">Total sleep</div><div class="n">'+(rg.total_sleep||'\u2014')+'</div></div>'
       +'<div class="act"><div class="k">HRV</div><div class="n">'+metric(rg.avg_sleep_hrv)+(rg.avg_sleep_hrv!=null?' ms':'')+'</div></div>'
       +'<div class="act"><div class="k">Sleep RHR</div><div class="n">'+metric(rg.sleep_rhr)+(rg.sleep_rhr!=null?' bpm':'')+'</div></div>'
       :'')
     +'<div class="act"><div class="k">Weight</div><div class="n">'+(latestW?latestW.kg+' kg':'\u2014')+'</div></div>'
     +'</div>'
-    +'<div class="sparkwrap"><div class="spark">'+wkSteps.map(x=>'<i class="'+(x.k===TODAY?'today':'')+'" title="'+x.k+': '+(x.s==null?'no data':Math.round(x.s).toLocaleString())+' steps'+(x.p!=null?' \u00b7 last week '+Math.round(x.p).toLocaleString():'')+'">'+(x.p!=null?'<u style="height:'+Math.max(2,Math.round(x.p/maxS*56))+'px"></u>':'')+'<em style="height:'+Math.max(3,Math.round((x.s||0)/maxS*56))+'px"></em><b>'+x.k.slice(8)+'</b></i>').join('')+'</div></div>'
-    +(prevTot>0?'<div style="font-size:11px;color:var(--dim);margin-top:15px">This week '+wkTot.toLocaleString()+' \u00b7 Last week '+prevTot.toLocaleString()+' ('+(wkDelta>=0?'+':'')+wkDelta+'%)</div>':'')
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px"><span style="font-size:11px;color:var(--dim)">Steps: '+(ringSteps==null?'\u2014 today':Math.round(ringSteps).toLocaleString()+' today')+(selDelta!=null?' \u00b7 '+selDayName+' '+(selDelta>=0?'+':'')+selDelta+'% vs last '+selDayName:'')+(stepAvg!=null?' \u00b7 '+stepAvg.toLocaleString()+' 7-day avg':'')+'</span>'+(dev==='ultrahuman'?'<button class="sheetbtn ghost" id="ringsync" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Sync ring</button>':'<button class="sheetbtn ghost" id="stepadd" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Log steps</button>')+'</div>'
+    +'<div class="prow"><div class="ph"><span class="pl">CALORIE BANK &middot; THIS WEEK</span><span class="pv">'+Math.round(bankUsed).toLocaleString()+' of '+wkBudget.toLocaleString()+' kcal</span></div><div class="pbar"><i style="width:'+bankPct+'%;background:var(--kcal)"></i><span class="tick" style="left:'+pacePct+'%"></span></div><div class="ps">'+paceWord+' &middot; tick = expected by today</div></div>'
+    +(proAvg!=null?'<div class="prow"><div class="ph"><span class="pl">PROTEIN &middot; DAILY AVG THIS WEEK</span><span class="pv">'+proAvg+'g of '+P.proteinTarget+'g</span></div><div class="pbar"><i style="width:'+proPct+'%;background:var(--protein)"></i></div><div class="ps">'+(proAvg>=P.proteinTarget?'On target':(P.proteinTarget-proAvg)+'g under target')+'</div></div>':'')
+    +(stepAvg!=null?'<div class="prow"><div class="ph"><span class="pl">STEPS &middot; DAILY AVG, LAST 7 DAYS</span><span class="pv">'+stepAvg.toLocaleString()+' of '+P.stepsTarget.toLocaleString()+'</span></div><div class="pbar"><i style="width:'+stepPct+'%;background:var(--steps)"></i></div><div class="ps">'+(stepAvg>=P.stepsTarget?'On target':(P.stepsTarget-stepAvg).toLocaleString()+' under target')+'</div></div>':'')
+    +'<div class="slabel">STEPS &middot; LAST 7 DAYS'+(wkDelta!=null?'<span>'+wkTot.toLocaleString()+' total &middot; '+(wkDelta>=0?'+':'')+wkDelta+'% on prior 7 days</span>':'')+'</div>'
+    +'<div class="sparkwrap"><div class="spark"><span class="target" style="bottom:'+Math.round(P.stepsTarget/maxS*56)+'px"></span><span class="tlbl" style="bottom:'+(Math.round(P.stepsTarget/maxS*56)+3)+'px">target</span>'+wkSteps.map(x=>'<i class="'+(x.k===TODAY?'today':'')+'" style="height:'+Math.max(3,Math.round((x.s||0)/maxS*56))+'px" title="'+x.k+': '+(x.s==null?'no data':Math.round(x.s).toLocaleString())+' steps">'+(x.s!=null?'<span class="sv">'+fmtK(x.s)+'</span>':'')+'<b>'+DOWS[new Date(x.k+'T12:00:00').getDay()].slice(0,2)+'</b></i>').join('')+'</div></div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px"><span style="font-size:11px;color:var(--dim)">Steps: '+(ringSteps==null?'\u2014 today':Math.round(ringSteps).toLocaleString()+' today')+' &middot; target '+P.stepsTarget.toLocaleString()+'</span>'+(dev==='ultrahuman'?'<button class="sheetbtn ghost" id="ringsync" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Sync ring</button>':'<button class="sheetbtn ghost" id="stepadd" style="width:auto;padding:8px 14px;margin:0;font-size:12px">Log steps</button>')+'</div>'
     +'</div>';
   const rsb=document.getElementById('ringsync');if(rsb)rsb.onclick=startRingSync;
   const sab=document.getElementById('stepadd');if(sab)sab.onclick=stepsSheet;
