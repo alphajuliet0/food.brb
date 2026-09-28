@@ -139,7 +139,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .quickchips{display:flex;gap:8px;padding:16px 20px 4px}
 .qchip{background:var(--surface2);border-radius:999px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--dim);display:flex;align-items:center;gap:6px}
 .emptylog{padding:26px 20px;text-align:center;color:var(--dim);font-size:13px}
-.logbar{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));padding:10px 14px;background:linear-gradient(transparent,var(--page) 28%)}
+.logbar{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));z-index:10;padding:10px 14px;background:linear-gradient(transparent,var(--page) 28%)}
 .chiprow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 4px 8px}
 .chiprow:empty{display:none}
 .suggest{position:absolute;left:10px;right:10px;bottom:calc(100% + 8px);background:var(--surface);border:1px solid var(--surface2);border-radius:16px;box-shadow:0 12px 32px rgba(0,0,0,.45);overflow:hidden;display:none;max-height:46vh;overflow-y:auto}
