@@ -539,8 +539,9 @@ async function cloudSync(){const token=localStorage.getItem(SYNC_TOKEN_KEY);if(!
   if(window.__onbRestore){const f=window.__onbRestore;window.__onbRestore=null;f(true);}
 }catch(e){syncStatus('err',e.name==='TypeError'?'Sync network blocked':(e.message||'Sync paused'));if(window.__onbRestore){const f=window.__onbRestore;window.__onbRestore=null;f(false);}}finally{syncBusy=false;}}
 function scheduleCloudSync(){if(!localStorage.getItem(SYNC_TOKEN_KEY))return;clearTimeout(syncTimer);syncTimer=setTimeout(cloudSync,700);}
-function connectCloudSync(){window.open(ULTRAHUMAN_SYNC_ORIGIN+'/authorize','foodBrbCloudSync','width=520,height=680');}
-window.addEventListener('message',e=>{if(e.origin!==ULTRAHUMAN_SYNC_ORIGIN||!e.data||e.data.type!=='food-brb-sync-token')return;localStorage.setItem(SYNC_TOKEN_KEY,e.data.token);localStorage.setItem(SYNC_REV_KEY,'0');cloudSync();});
+function connectCloudSync(){window.open(FOOD_SYNC_API_ORIGIN+'/connect','foodBrbCloudSync','width=520,height=680');}
+async function connectScale(){const token=localStorage.getItem(SYNC_TOKEN_KEY);if(!token){toast('Connect cloud sync first');return;}try{const r=await fetch(FOOD_SYNC_API_ORIGIN+'/withings/auth?format=json',{headers:{Authorization:'Bearer '+token}});const j=await r.json();if(j.url)window.open(j.url,'foodBrbScale','width=520,height=680');else toast('Scale link unavailable');}catch(e){toast('Scale link unavailable');}}
+window.addEventListener('message',e=>{if((e.origin!==ULTRAHUMAN_SYNC_ORIGIN&&e.origin!==FOOD_SYNC_API_ORIGIN)||!e.data||e.data.type!=='food-brb-sync-token')return;localStorage.setItem(SYNC_TOKEN_KEY,e.data.token);localStorage.setItem(SYNC_REV_KEY,'0');cloudSync();});
 /* ---------- Ultrahuman ring sync (ported) ---------- */
 let ringSyncWindow=null;
 function dayOf(k){if(!state.days[k])state.days[k]={};return state.days[k];}
@@ -1236,6 +1237,7 @@ function youSheet(){
     +'<div class="yrow tappable" data-t="stepsTarget" data-l="Steps"><span class="yl">Steps</span><span class="yv">'+P.stepsTarget.toLocaleString()+'</span></div>'
     +'<div class="yrow tappable" id="y-device"><span class="yl">Activity device</span><span class="yv">'+esc(dInfo.label)+'</span></div>'
     +(dev==='ultrahuman'?row('Ring last synced',lr?fmtDay(lr):'Not synced yet')+'<button class="sheetbtn ghost" id="y-ring">Sync ring</button>':'<button class="sheetbtn ghost" id="y-steps">Log steps</button>')
+    +(tok?'<button class="sheetbtn ghost" id="y-scale">Connect smart scale</button>':'')
     +row('Appearance',(localStorage.getItem('foodBrbTheme')||'dark')==='dark'?'Dark':'Light')
     +'<button class="sheetbtn ghost" id="y-theme">Switch to '+((localStorage.getItem('foodBrbTheme')||'dark')==='dark'?'light':'dark')+' mode</button>'
     +row('Photo logging',groqKey()?'Groq key on this device':(geminiKey()?'Gemini key on this device':'Not set up'))
@@ -1246,6 +1248,7 @@ function youSheet(){
   const sn=sheetEl.querySelector('#y-syncnow');if(sn)sn.onclick=()=>{cloudSync();};
   const cn=sheetEl.querySelector('#y-connect');if(cn)cn.onclick=connectCloudSync;
   const yr=sheetEl.querySelector('#y-ring');if(yr)yr.onclick=()=>{closeSheet();startRingSync();};
+  const ysc=sheetEl.querySelector('#y-scale');if(ysc)ysc.onclick=connectScale;
   sheetEl.querySelector('#y-device').onclick=deviceSheet;
   const ys=sheetEl.querySelector('#y-steps');if(ys)ys.onclick=stepsSheet;
   sheetEl.querySelector('#y-aikey').onclick=aiKeySheet;
