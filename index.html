@@ -1048,7 +1048,7 @@ function downscaleImage(file,maxDim,qual){return new Promise((res,rej)=>{
       res(c.toDataURL('image/jpeg',qual||0.8));};
     img.onerror=()=>rej(new Error('img'));img.src=String(reader.result);};
   reader.onerror=()=>rej(new Error('read'));reader.readAsDataURL(file);});}
-const PHOTO_PROMPT='You estimate nutrition from a meal photo for a food diary. Identify each food visible and its portion. Vegetarian context; eggs allowed. If a portion is unclear, use a typical restaurant portion.';
+const PHOTO_PROMPT='You estimate nutrition from a meal photo for a food diary. Identify each food visible and its portion. Vegetarian context; eggs allowed. The user often eats Indian home cooking: dal (a lentil curry, often orange or yellow, served in a bowl - never call it soup), rotli/roti/chapati (flatbreads), sabzi or saak (cooked vegetable dishes such as bhinda/okra or bateta/potato - never call them leaves or salad), rice and khichdi. Prefer these identifications when the visual evidence fits. If a portion is unclear, use a typical restaurant portion.';
 async function groqFetch(body){
   const opt={method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+groqKey()},body:JSON.stringify(body)};
   let r=await fetch('https://api.groq.com/openai/v1/chat/completions',opt);
