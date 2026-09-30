@@ -1365,7 +1365,50 @@ function restSheet(){
 }
 function trTrends(){
   const el=document.getElementById('trainbody');if(!el)return;
-  el.innerHTML='<div class="ynote trpad" style="margin-top:4px">Trends land in the next update: week vs week volume, sets per muscle group, best sets and estimated 1-rep max.</div>';
+  const all=exEntries();
+  if(!all.length){el.innerHTML='<div class="ynote trpad" style="margin-top:4px">Trends appear once you have logged a few sessions.</div>';return;}
+  const d7=FOODBRB.shiftKey(TODAY,-6),d14=FOODBRB.shiftKey(TODAY,-13),dPrev=FOODBRB.shiftKey(TODAY,-7);
+  const thisW=all.filter(w=>w.date>=d7),lastW=all.filter(w=>w.date>=d14&&w.date<=dPrev);
+  const volKg=rows=>Math.round(rows.reduce((t,w)=>t+w.sets.reduce((x,s)=>x+(+s.w||0)*(+s.r||0)*(w.unit==='lbs'?LB2KG:1),0),0));
+  const setsN=rows=>rows.reduce((t,w)=>t+w.sets.length,0);
+  const sess=rows=>new Set(rows.map(w=>w.date)).size;
+  const dl=(a,b)=>{const d=a-b;return d===0?'&middot; no change':(d>0?'&middot; +':'&middot; ')+d+' vs before';};
+  const dlv=(a,b,u)=>{const d=a-b;return d===0?'&middot; no change':'&middot; '+(d>0?'+':'')+d.toLocaleString()+' '+u+' vs before';};
+  let h='<div class="trpad"><div class="slabel">LAST 7 DAYS &middot; VS THE 7 BEFORE</div>'
+    +'<div class="exsess" style="cursor:default">'
+    +'<div class="trset"><span>Sessions</span><span class="trtgt">'+sess(thisW)+' '+dl(sess(thisW),sess(lastW))+'</span></div>'
+    +'<div class="trset"><span>Sets</span><span class="trtgt">'+setsN(thisW)+' '+dl(setsN(thisW),setsN(lastW))+'</span></div>'
+    +'<div class="trset"><span>Volume</span><span class="trtgt">'+volKg(thisW).toLocaleString()+' kg '+dlv(volKg(thisW),volKg(lastW),'kg')+'</span></div>'
+    +'</div>';
+  const mus={};thisW.forEach(w=>{const m=exMeta(w.exercise).m||'other';mus[m]=(mus[m]||0)+w.sets.length;});
+  const mOrder=['legs','chest','back','shoulders','arms','core','other'];
+  const mRows=mOrder.filter(m=>mus[m]).map(m=>({m:m,n:mus[m]}));
+  if(mRows.length){
+    const mx=Math.max.apply(null,mRows.map(r=>r.n));
+    h+='<div class="slabel" style="margin-top:16px">SETS BY MUSCLE &middot; LAST 7 DAYS</div><div class="exsess" style="cursor:default">'
+      +mRows.map(r=>'<div class="trset"><span style="text-transform:capitalize">'+r.m+'</span><span class="trtgt">'+r.n+' sets</span></div><div class="pbar" style="margin:2px 0 8px"><i style="width:'+Math.round(r.n/mx*100)+'%"></i></div>').join('')
+      +'</div>';
+  } else h+='<div class="ynote">No sets logged in the last 7 days.</div>';
+  const names=exNamesLogged();
+  h+='<div class="slabel" style="margin-top:16px">BEST SET &middot; ESTIMATED 1RM</div><div class="exsess" style="cursor:default">'
+    +names.map(n=>{
+      let best=null,be=0;
+      exEntries().filter(w=>w.exercise===n).forEach(w=>w.sets.forEach(s=>{
+        const kg=(+s.w||0)*(w.unit==='lbs'?LB2KG:1);const e=kg*(1+(+s.r||0)/30);
+        if(e>be&&kg>0){be=e;best={kg:kg,r:+s.r,u:w.unit||'kg',w:+s.w};}
+      }));
+      if(!best)return '<div class="trset"><span>'+esc(n)+'</span><span class="trtgt">bodyweight only</span></div>';
+      return '<div class="trset"><span>'+esc(n)+'</span><span class="trtgt">'+(Math.round(best.w*10)/10)+' '+best.u+' x '+best.r+' &middot; ~'+Math.round(be)+' kg</span></div>';
+    }).join('')+'</div>';
+  const yr=all.filter(w=>w.date<=FOODBRB.shiftKey(TODAY,-300));
+  if(yr.length){
+    const byEx={};yr.forEach(w=>{if(!byEx[w.exercise]||byEx[w.exercise].date<w.date)byEx[w.exercise]=w;});
+    h+='<div class="slabel" style="margin-top:16px">A YEAR AGO</div><div class="exsess" style="cursor:default">'
+      +Object.keys(byEx).sort().map(n=>'<div class="trset"><span>'+esc(n)+'</span><span class="trtgt">'+esc(exSummary(byEx[n]))+' &middot; '+fmtDay(byEx[n].date)+'</span></div>').join('')
+      +'</div>';
+  }
+  h+='<div class="ynote">Volume counts weighted sets only. Estimated 1RM uses the Epley formula - an estimate, not a test.</div></div>';
+  el.innerHTML=h;
 }
 function exPicker(onPick){
   const all=new Set(LIFTS);(state.exercises||[]).forEach(n=>all.add(n));exEntries().forEach(w=>all.add(w.exercise));
