@@ -174,10 +174,10 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .exgo{color:var(--dim);font-size:20px;padding-left:10px}
 .exchart{width:100%;height:auto;margin:10px 0 14px}
 .setrow{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end}
-.setrow input{width:100%;box-sizing:border-box;background:var(--surface2);border:0;border-radius:12px;padding:12px;color:var(--ink);font-size:16px;font-family:inherit;outline:0}
+.setrow input{width:100%;max-width:100%;min-width:0;box-sizing:border-box;background:var(--surface2);border:0;border-radius:12px;padding:12px;color:var(--ink);font-size:16px;font-family:inherit;outline:0}
 .setrow label,.exfld label{display:block;font-size:10px;letter-spacing:.08em;color:var(--dim);margin:0 0 4px 2px;text-transform:uppercase;font-weight:600}
 .exfld{margin-bottom:12px}
-.exfld input[type=date]{width:100%;box-sizing:border-box;background:var(--surface2);border:0;border-radius:12px;padding:12px;color:var(--ink);font-size:16px;font-family:inherit;outline:0;color-scheme:dark}
+.exfld input[type=date]{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;background:var(--surface2);border:0;border-radius:12px;padding:12px;color:var(--ink);font-size:16px;font-family:inherit;outline:0;color-scheme:dark;-webkit-appearance:none;appearance:none}
 [data-theme=light] .exfld input[type=date]{color-scheme:light}
 .setdel{background:var(--surface2);border:0;border-radius:12px;color:var(--dim);width:42px;height:45px;font-size:16px;font-family:inherit}
 .segrow{display:flex;background:var(--surface2);border-radius:12px;padding:3px;gap:3px}
@@ -1136,7 +1136,8 @@ function exPicker(){
   const all=new Set(LIFTS);(state.exercises||[]).forEach(n=>all.add(n));exEntries().forEach(w=>all.add(w.exercise));
   openSheet('<h3>Log exercise</h3><div class="sub">Pick one, or add your own.</div>'
     +'<input class="picksearch" id="ex-q" placeholder="Search exercises" autocomplete="off">'
-    +'<div id="ex-picks"></div>');
+    +'<div id="ex-picks"></div><button class="sheetbtn ghost" id="shcancel" style="margin-top:8px">Cancel</button>');
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
   const q=document.getElementById('ex-q'),picks=document.getElementById('ex-picks');
   function draw(){
     const v=q.value.trim().toLowerCase();
@@ -1169,6 +1170,7 @@ function exEntry(name){
     setsEl.querySelectorAll('input').forEach(inp=>inp.oninput=()=>{sets[+inp.dataset.s][inp.dataset.f]=inp.value;});
     setsEl.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(sets.length===1){sets[0]={w:'',r:''};}else sets.splice(+b.dataset.del,1);drawSets();});
   }
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
   drawSets();
   sheetEl.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{unit=b.dataset.u;sheetEl.querySelectorAll('[data-u]').forEach(x=>x.classList.toggle('sel',x===b));drawSets();});
   document.getElementById('ex-addset').onclick=()=>{sets.push({w:sets.length?sets[sets.length-1].w:'',r:sets.length?sets[sets.length-1].r:''});drawSets();};
@@ -1214,6 +1216,7 @@ function exHistory(name){
     openSheet('<h3>'+esc(exSummary(w))+'</h3><div class="sub">'+fmtDay(w.date)+' &middot; logged as '+(w.unit||'kg')+'</div>'
       +'<button class="sheetbtn ghost" id="ex-del" style="color:var(--kcal)">Delete this session</button>'
       +'<button class="sheetbtn ghost" id="shcancel">Keep it</button>');
+    sheetEl.querySelector('#shcancel').onclick=closeSheet;
     document.getElementById('ex-del').onclick=()=>{
       state.workouts=exEntries().filter(x=>x.id!==id);
       if(state.deletedIds)state.deletedIds.push(id);
