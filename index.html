@@ -205,7 +205,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .restx{background:var(--surface2);border:0;border-radius:10px;color:var(--dim);width:30px;height:30px;font-size:15px;font-family:inherit}
 .rtmove{display:flex;gap:6px;margin-top:8px}
 .rtmove button{background:var(--surface2);border:0;border-radius:8px;color:var(--dim);width:34px;height:26px;font-size:13px;font-family:inherit}
-.rtcardbtn{background:var(--surface2);border:0;border-radius:8px;color:var(--ink);font-size:12px;font-weight:700;padding:7px 16px;font-family:inherit}
+.rtmove .rtcardbtn{width:auto;height:auto;background:var(--surface2);border:0;border-radius:8px;color:var(--ink);font-size:12px;font-weight:700;padding:7px 16px;font-family:inherit}
 .restadj{background:var(--surface2);border:0;border-radius:10px;color:var(--ink);font-size:12px;font-weight:700;padding:7px 10px;font-family:inherit}
 .pickrow{display:block;width:100%;text-align:left;background:var(--surface2);border:0;border-radius:12px;padding:13px 14px;margin-bottom:6px;color:var(--ink);font-size:15px;font-weight:600;font-family:inherit}
 .picksearch{width:100%;box-sizing:border-box;background:var(--surface2);border:0;border-radius:12px;padding:13px 14px;color:var(--ink);font-size:16px;font-family:inherit;outline:0;margin-bottom:10px}
@@ -1244,7 +1244,7 @@ function trRoutineDetail(id){
   el.innerHTML='<div class="mealshead"><h2>'+esc(r.name)+'</h2><span>'+r.items.length+' exercises</span></div>'
     +'<button class="sheetbtn ghost" id="rt-back" style="width:auto;padding:8px 14px;margin:0 0 14px 20px">&lsaquo; Routines</button>'
     +'<div class="trpad"><button class="sheetbtn primary" id="rt-start" style="margin:0 0 16px"'+(r.items.length?'':' disabled')+'>Start routine</button></div>'
-    +'<div class="trpad">'+r.items.map((it,i)=>'<div class="exsess" data-rti="'+i+'"><div class="d">'+esc(eqLabel(exMeta(it.exercise).e))+'</div><div class="s">'+esc(it.exercise)+'<span class="trtgt">'+it.sets+' x '+it.reps+'</span></div><div class="rtmove"><button data-mv="-1" data-i="'+i+'" aria-label="Move up">&uarr;</button><button data-mv="1" data-i="'+i+'" aria-label="Move down">&darr;</button></div></div>').join('')+'</div>'
+    +'<div class="trpad">'+r.items.map((it,i)=>'<div class="exsess" data-rti="'+i+'"><div class="d">'+esc(eqLabel(exMeta(it.exercise).e))+'</div><div class="s" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">'+esc(it.exercise)+'<span class="trtgt" style="margin-left:0">'+it.sets+' x '+it.reps+'</span></div><div class="rtmove"><button data-mv="-1" data-i="'+i+'" aria-label="Move up">&uarr;</button><button data-mv="1" data-i="'+i+'" aria-label="Move down">&darr;</button></div></div>').join('')+'</div>'
     +'<div class="trpad"><button class="sheetbtn ghost" id="rt-addex">+ Add exercise</button>'
     +'<button class="sheetbtn ghost" id="rt-rename">Rename routine</button>'
     +'<button class="sheetbtn danger" id="rt-del">Delete routine</button></div>';
@@ -1386,7 +1386,7 @@ function trTrends(){
   if(mRows.length){
     const mx=Math.max.apply(null,mRows.map(r=>r.n));
     h+='<div class="slabel" style="margin-top:16px">SETS BY MUSCLE &middot; LAST 7 DAYS</div><div class="exsess" style="cursor:default">'
-      +mRows.map(r=>'<div class="trset"><span style="text-transform:capitalize">'+r.m+'</span><span class="trtgt">'+r.n+' sets</span></div><div class="pbar" style="margin:2px 0 8px"><i style="width:'+Math.round(r.n/mx*100)+'%"></i></div>').join('')
+      +mRows.map(r=>'<div class="trset"><span style="text-transform:capitalize">'+r.m+'</span><span class="trtgt">'+r.n+' sets</span></div><div class="pbar" style="margin:2px 0 8px"><i style="width:'+Math.round(r.n/mx*100)+'%;background:var(--kcal)"></i></div>').join('')
       +'</div>';
   } else h+='<div class="ynote">No sets logged in the last 7 days.</div>';
   const names=exNamesLogged();
