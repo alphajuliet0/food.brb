@@ -205,6 +205,8 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .restx{background:var(--surface2);border:0;border-radius:10px;color:var(--dim);width:30px;height:30px;font-size:15px;font-family:inherit}
 .rtmove{display:flex;gap:6px;margin-top:8px}
 .rtmove button{background:var(--surface2);border:0;border-radius:8px;color:var(--dim);width:34px;height:26px;font-size:13px;font-family:inherit}
+.rtcardbtn{background:var(--surface2);border:0;border-radius:8px;color:var(--ink);font-size:12px;font-weight:700;padding:7px 16px;font-family:inherit}
+.restadj{background:var(--surface2);border:0;border-radius:10px;color:var(--ink);font-size:12px;font-weight:700;padding:7px 10px;font-family:inherit}
 .pickrow{display:block;width:100%;text-align:left;background:var(--surface2);border:0;border-radius:12px;padding:13px 14px;margin-bottom:6px;color:var(--ink);font-size:15px;font-weight:600;font-family:inherit}
 .picksearch{width:100%;box-sizing:border-box;background:var(--surface2);border:0;border-radius:12px;padding:13px 14px;color:var(--ink);font-size:16px;font-family:inherit;outline:0;margin-bottom:10px}
 [data-tab=train] #view-train{display:block}
@@ -1215,9 +1217,11 @@ function trRoutines(){
   const el=document.getElementById('trainbody');if(!el)return;
   const rs=state.routines||[];
   el.innerHTML='<div class="trpad">'
-    +rs.map(r=>'<div class="exsess" data-rt="'+r.id+'"><div class="d">'+r.items.length+' exercises</div><div class="s">'+esc(r.name)+'</div></div>').join('')
+    +rs.map(r=>'<div class="exsess" data-rt="'+r.id+'"><div class="d">'+r.items.length+' exercises</div><div class="s">'+esc(r.name)+'</div><div class="rtmove"><button class="rtcardbtn" data-start="'+r.id+'" style="color:var(--kcal)">Start</button><button class="rtcardbtn" data-edit="'+r.id+'">Edit</button></div></div>').join('')
     +'<button class="sheetbtn ghost" id="rt-new">+ New routine</button></div>';
   el.querySelectorAll('[data-rt]').forEach(c=>c.onclick=()=>trRoutineDetail(c.dataset.rt));
+  el.querySelectorAll('[data-start]').forEach(b=>b.onclick=e=>{e.stopPropagation();rtStart(b.dataset.start);});
+  el.querySelectorAll('[data-edit]').forEach(b=>b.onclick=e=>{e.stopPropagation();trRoutineDetail(b.dataset.edit);});
   document.getElementById('rt-new').onclick=()=>{
     openSheet('<h3>New routine</h3><div class="sub">Name it, then add exercises.</div>'
       +'<input class="picksearch" id="rtn-name" placeholder="e.g. Upper body" autocomplete="off">'
@@ -1255,17 +1259,22 @@ function trRoutineDetail(id){
   });
   el.querySelectorAll('[data-rti]').forEach(c=>c.onclick=()=>{
     const i=+c.dataset.rti,it=r.items[i];
+    let rtRest=it.rest||null;
+    const restOpts=[null,60,90,120,150,180,240,300];
+    const restLbl=v=>v==null?'Default ('+Math.floor(restDefaultSec()/60)+':'+String(restDefaultSec()%60).padStart(2,'0')+')':(Math.floor(v/60)+':'+String(v%60).padStart(2,'0'));
     openSheet('<h3>'+esc(it.exercise)+'</h3><div class="sub">Target in '+esc(r.name)+'</div>'
       +'<div class="exfld"><label>Sets</label><input class="picksearch" inputmode="numeric" id="rti-sets" value="'+it.sets+'"></div>'
       +'<div class="exfld"><label>Reps</label><input class="picksearch" inputmode="numeric" id="rti-reps" value="'+it.reps+'"></div>'
+      +'<div class="exfld"><label>Rest after this exercise</label><button class="eqpick" id="rti-rest" type="button">'+restLbl(rtRest)+'</button></div>'
       +'<button class="sheetbtn primary" id="rti-save">Save target</button>'
       +'<button class="sheetbtn ghost" id="rti-rm" style="color:var(--kcal)">Remove from routine</button>'
       +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
     sheetEl.querySelector('#shcancel').onclick=closeSheet;
+    document.getElementById('rti-rest').onclick=()=>{rtRest=restOpts[(restOpts.indexOf(rtRest)+1)%restOpts.length];document.getElementById('rti-rest').textContent=restLbl(rtRest);};
     document.getElementById('rti-save').onclick=()=>{
       const s=parseInt(document.getElementById('rti-sets').value)||0,rp=parseInt(document.getElementById('rti-reps').value)||0;
       if(s<1||rp<1){toast('Sets and reps need to be 1 or more');return;}
-      it.sets=s;it.reps=rp;save();closeSheet();trRoutineDetail(id);
+      it.sets=s;it.reps=rp;if(rtRest==null)delete it.rest;else it.rest=rtRest;save();closeSheet();trRoutineDetail(id);
     };
     document.getElementById('rti-rm').onclick=()=>{r.items.splice(i,1);save();closeSheet();trRoutineDetail(id);toast(it.exercise+' removed');};
   });
@@ -1307,11 +1316,13 @@ function restStart(sec){
   restEnd=Date.now()+dur*1000;
   let bar=document.getElementById('restbar');
   if(!bar){bar=document.createElement('div');bar.id='restbar';bar.className='restbar';document.body.appendChild(bar);}
-  bar.innerHTML='<span class="restlab">REST</span><span class="resttime" id="resttime"></span><button class="restbtn" id="restchg" type="button">Change</button><button class="restx" id="restx" type="button" aria-label="Dismiss">&times;</button>';
+  bar.innerHTML='<span class="restlab">REST</span><span class="resttime" id="resttime"></span><button class="restadj" id="restminus" type="button" style="margin-left:auto">&minus;30</button><button class="restadj" id="restplus" type="button">+30</button><button class="restbtn" id="restchg" type="button">Default</button><button class="restx" id="restx" type="button" aria-label="Skip">Skip</button>';
   bar.style.display='flex';
   document.getElementById('restchg').onclick=restSheet;
   document.getElementById('resttime').onclick=restSheet;
   document.getElementById('restx').onclick=restStop;
+  document.getElementById('restminus').onclick=()=>{restEnd=Math.max(Date.now()+1000,restEnd-30000);};
+  document.getElementById('restplus').onclick=()=>{restEnd=restEnd+30000;};
   const tick=()=>{
     const left=Math.round((restEnd-Date.now())/1000);
     const t=document.getElementById('resttime');
@@ -1320,6 +1331,27 @@ function restStart(sec){
     t.textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');
   };
   tick();restT=setInterval(tick,500);
+}
+function rtFinishCheck(r){
+  const diffs=[];
+  r.items.forEach(it=>{
+    const e=exEntries().filter(w=>w.date===TODAY&&w.exercise===it.exercise).sort((a,b)=>a.id<b.id?1:-1)[0];
+    if(!e)return;
+    const ns=e.sets.length;
+    const cnt={};e.sets.forEach(s=>{cnt[s.r]=(cnt[s.r]||0)+1;});
+    const mr=+Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];
+    if(ns!==it.sets||mr!==it.reps)diffs.push({it:it,ns:ns,mr:mr});
+  });
+  if(!diffs.length)return;
+  openSheet('<h3>Update '+esc(r.name)+'?</h3><div class="sub">What you logged differs from the targets. The routine stays as is unless you say otherwise.</div>'
+    +diffs.map(d=>'<div class="trset"><span>'+esc(d.it.exercise)+'</span><span class="trtgt">'+d.it.sets+' x '+d.it.reps+' &rarr; '+d.ns+' x '+d.mr+'</span></div>').join('')
+    +'<button class="sheetbtn primary" id="rtu-yes">Update routine targets</button>'
+    +'<button class="sheetbtn ghost" id="shcancel">Keep as is</button>');
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+  document.getElementById('rtu-yes').onclick=()=>{
+    diffs.forEach(d=>{d.it.sets=d.ns;d.it.reps=d.mr;});
+    save();closeSheet();renderTrain();toast(r.name+' updated');
+  };
 }
 function restSheet(){
   const opts=[60,90,120,150,180,240,300];
@@ -1390,13 +1422,14 @@ function exEntry(name,target){
     if(!EXEQ[name]){state.exmeta=state.exmeta||{};state.exmeta[name]={e:eq,m:exMeta(name).m||''};}
     localStorage.setItem('foodBrbExUnit',unit);
     save();closeSheet();renderTrain();
-    restStart();
     if(rtRun){
       const r=(state.routines||[]).find(x=>x.id===rtRun.rid);
+      const just=r?r.items[rtRun.idx]:null;
+      restStart(just&&just.rest?just.rest:undefined);
       rtRun.idx++;
       if(r&&rtRun.idx<r.items.length){const nxt=r.items[rtRun.idx];toast('Next: '+nxt.exercise);exEntry(nxt.exercise,{sets:nxt.sets,reps:nxt.reps});}
-      else{toast((r?r.name:'Routine')+' complete');rtRun=null;}
-    } else toast(name+' logged');
+      else{rtRun=null;toast((r?r.name:'Routine')+' complete');if(r)rtFinishCheck(r);}
+    } else {restStart();toast(name+' logged');}
   };
 }
 function exChart(pts){
