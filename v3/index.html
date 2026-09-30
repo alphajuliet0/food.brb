@@ -186,6 +186,18 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .exsess{background:var(--surface);border:1px solid var(--hair);border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer}
 .exsess .d{font-size:12px;color:var(--dim);font-weight:600}
 .exsess .s{font-size:15px;font-weight:700;margin-top:2px}
+.trseg{display:flex;gap:6px;padding:2px 20px 12px}
+.trseg button{flex:1;background:var(--surface);border:1px solid var(--hair);border-radius:10px;padding:8px 0;font-size:12px;font-weight:700;color:var(--dim);font-family:inherit}
+.trseg button.sel{color:var(--kcal);border-color:var(--kcal)}
+.trpad{padding:0 20px}
+.trbw{padding:0 20px 12px;font-size:12px;color:var(--dim);font-weight:600}
+.trset{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;margin-top:8px}
+.trsetn{flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:var(--surface2);color:var(--dim);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.trsetw{min-width:70px}
+.trtgt{margin-left:auto;color:var(--dim);font-size:12px;font-weight:700}
+.trsetsum{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px;font-weight:600;padding:8px 0;border-bottom:1px solid var(--hair)}
+.eqpick{width:100%;background:var(--surface2);border:0;border-radius:12px;padding:12px;color:var(--ink);font-size:15px;font-weight:600;font-family:inherit;text-align:left}
+.pickrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .pickrow{display:block;width:100%;text-align:left;background:var(--surface2);border:0;border-radius:12px;padding:13px 14px;margin-bottom:6px;color:var(--ink);font-size:15px;font-weight:600;font-family:inherit}
 .picksearch{width:100%;box-sizing:border-box;background:var(--surface2);border:0;border-radius:12px;padding:13px 14px;color:var(--ink);font-size:16px;font-family:inherit;outline:0;margin-bottom:10px}
 [data-tab=train] #view-train{display:block}
@@ -1114,23 +1126,101 @@ async function estimateLabelGemini(dataUrl){
 function estimateLabel(dataUrl){return groqKey()?estimateLabelGroq(dataUrl):estimateLabelGemini(dataUrl);}
 
 
-// --- Train: exercise log + history (state.workouts: {id,date,exercise,unit,sets:[{w,r}]}; state.exercises: custom names) ---
-const LIFTS=['Back Squat','Front Squat','Leg Press','Hack Squat','Lunge','Romanian Deadlift','Deadlift','Hip Thrust','Leg Curl','Leg Extension','Calf Raise','Bench Press','Incline Bench Press','Overhead Press','Dumbbell Shoulder Press','Chest Fly','Push-Up','Dip','Pull-Up','Lat Pulldown','Barbell Row','Dumbbell Row','Seated Row','Face Pull','Bicep Curl','Hammer Curl','Triceps Pushdown','Triceps Extension','Lateral Raise','Plank','Crunch'];
+// --- Train: day-centric workouts (state.workouts: {id,date,exercise,unit,eq?,sets:[{w,r}]}; state.exercises: custom names; state.exmeta {name:{e,m}}; state.routines [{id,name,items:[{exercise,sets,reps}]}]) ---
+const LIFTS=['Back Squat','Front Squat','Leg Press','Hack Squat','Lunge','Romanian Deadlift','Deadlift','Hip Thrust','Leg Curl','Leg Extension','Calf Raise','Bench Press','Incline Bench Press','Overhead Press','Dumbbell Shoulder Press','Chest Fly','Push-Up','Dip','Pull-Up','Lat Pulldown','Barbell Row','Dumbbell Row','Seated Row','Face Pull','Bicep Curl','Hammer Curl','Triceps Pushdown','Triceps Extension','Lateral Raise','Plank','Crunch','Chest Press','Shoulder Press'];
+const EXEQ={'Back Squat':['barbell','legs'],'Front Squat':['barbell','legs'],'Leg Press':['machine','legs'],'Hack Squat':['machine','legs'],'Lunge':['dumbbell','legs'],'Romanian Deadlift':['barbell','legs'],'Deadlift':['barbell','back'],'Hip Thrust':['barbell','legs'],'Leg Curl':['machine','legs'],'Leg Extension':['machine','legs'],'Calf Raise':['machine','legs'],'Bench Press':['barbell','chest'],'Incline Bench Press':['barbell','chest'],'Overhead Press':['barbell','shoulders'],'Dumbbell Shoulder Press':['dumbbell','shoulders'],'Chest Fly':['dumbbell','chest'],'Push-Up':['bodyweight','chest'],'Dip':['bodyweight','chest'],'Pull-Up':['bodyweight','back'],'Lat Pulldown':['cable','back'],'Barbell Row':['barbell','back'],'Dumbbell Row':['dumbbell','back'],'Seated Row':['cable','back'],'Face Pull':['cable','shoulders'],'Bicep Curl':['dumbbell','arms'],'Hammer Curl':['dumbbell','arms'],'Triceps Pushdown':['cable','arms'],'Triceps Extension':['dumbbell','arms'],'Lateral Raise':['dumbbell','shoulders'],'Plank':['bodyweight','core'],'Crunch':['bodyweight','core'],'Chest Press':['machine','chest'],'Shoulder Press':['machine','shoulders']};
+const EQNAMES={barbell:'Barbell',dumbbell:'Dumbbell',machine:'Machine',cable:'Cable',bodyweight:'Bodyweight',kettlebell:'Kettlebell',other:'Other'};
+const EQORDER=['barbell','dumbbell','machine','cable','bodyweight','kettlebell','other'];
 const LB2KG=0.45359237;
 function exEntries(){return (state.workouts||[]);}
 function exLast(name){let best=null;exEntries().forEach(w=>{if(w.exercise===name&&(!best||w.date>best.date||(w.date===best.date&&w.id>best.id)))best=w;});return best;}
 function exUnitFor(name){const l=exLast(name);return l?l.unit:(localStorage.getItem('foodBrbExUnit')||'kg');}
 function exSummary(w){const u=w.unit||'kg';const first=w.sets[0];if(w.sets.length&&w.sets.every(s=>s.w===first.w&&s.r===first.r)){return w.sets.length+' x '+first.r+(+first.w?' @ '+(Math.round(first.w*10)/10)+' '+u:' bodyweight');}return w.sets.map(s=>s.r+(+s.w?'@'+(Math.round(s.w*10)/10):'')).join(' / ')+' '+u;}
 function exNamesLogged(){const seen=new Set();exEntries().forEach(w=>seen.add(w.exercise));return [...seen].sort((a,b)=>{const la=exLast(a),lb=exLast(b);return (lb?lb.date+lb.id:'')<(la?la.date+la.id:'')?-1:1;});}
+function exMeta(name){const m=(state.exmeta||{})[name];if(m)return m;const c=EXEQ[name];return c?{e:c[0],m:c[1]}:{e:'other',m:''};}
+function eqLabel(k){return EQNAMES[k]||'Other';}
+function bwFor(day){const ws=(state.weights||[]).filter(w=>w.date<=day).sort((a,b)=>a.date<b.date?1:-1);return ws.length?ws[0].kg:null;}
+function ensureRoutines(){if(state.routines&&state.routines.length)return;state.routines=[
+  {id:'rt-push',name:'Push',items:[{exercise:'Chest Press',sets:3,reps:6},{exercise:'Shoulder Press',sets:3,reps:8},{exercise:'Incline Bench Press',sets:2,reps:10},{exercise:'Lateral Raise',sets:3,reps:8},{exercise:'Triceps Pushdown',sets:3,reps:8}]},
+  {id:'rt-pull',name:'Pull',items:[{exercise:'Lat Pulldown',sets:3,reps:6},{exercise:'Barbell Row',sets:3,reps:8},{exercise:'Face Pull',sets:2,reps:12},{exercise:'Bicep Curl',sets:3,reps:6}]},
+  {id:'rt-legs',name:'Legs',items:[{exercise:'Back Squat',sets:3,reps:8},{exercise:'Leg Press',sets:3,reps:10},{exercise:'Leg Extension',sets:2,reps:8},{exercise:'Leg Curl',sets:2,reps:10},{exercise:'Calf Raise',sets:3,reps:12}]},
+  {id:'rt-fullbody',name:'Full Body',items:[{exercise:'Back Squat',sets:3,reps:8},{exercise:'Chest Press',sets:3,reps:8},{exercise:'Lat Pulldown',sets:3,reps:8},{exercise:'Shoulder Press',sets:2,reps:8},{exercise:'Romanian Deadlift',sets:2,reps:10},{exercise:'Plank',sets:3,reps:30}]}
+];save();}
+let tsel=TODAY,tview=localStorage.getItem('foodBrbTrainView')||'today';
 function renderTrain(){
   const rootEl=document.getElementById('trainroot');if(!rootEl)return;
-  const names=exNamesLogged();
+  ensureRoutines();
+  const views=[['today','Today'],['ex','Exercises'],['routines','Routines'],['trends','Trends']];
   rootEl.innerHTML='<div class="mealshead"><h2>Train</h2></div>'
-    +'<button class="sheetbtn primary" id="ex-add" style="margin-bottom:16px">Log exercise</button>'
-    +(names.length?names.map(n=>{const l=exLast(n);return '<div class="exrow" data-ex="'+esc(n)+'"><div><div class="exname">'+esc(n)+'</div><div class="exsub">'+esc(exSummary(l))+' &middot; '+fmtDay(l.date)+'</div></div><div class="exgo">&rsaquo;</div></div>';}).join('')
-      :'<div class="ynote">Nothing logged yet. First exercise takes ten seconds.</div>');
+    +'<div class="trseg">'+views.map(v=>'<button data-tv="'+v[0]+'"'+(tview===v[0]?' class="sel"':'')+'>'+v[1]+'</button>').join('')+'</div>'
+    +'<div id="trainbody"></div>';
+  rootEl.querySelectorAll('[data-tv]').forEach(b=>b.onclick=()=>{tview=b.dataset.tv;localStorage.setItem('foodBrbTrainView',tview);renderTrain();});
+  if(tview==='ex')trExercises();else if(tview==='routines')trRoutines();else if(tview==='trends')trTrends();else trToday();
+}
+function trToday(){
+  const el=document.getElementById('trainbody');if(!el)return;
+  const isToday=tsel===TODAY;
+  const title=isToday?'Today':(tsel===FOODBRB.shiftKey(TODAY,-1)?'Yesterday':fmtDay(tsel));
+  const rows=exEntries().filter(w=>w.date===tsel).sort((a,b)=>a.id<b.id?-1:1);
+  const groups=[];rows.forEach(w=>{const g=groups[groups.length-1];if(g&&g.name===w.exercise)g.rows.push(w);else groups.push({name:w.exercise,rows:[w]});});
+  const bw=bwFor(tsel);
+  el.innerHTML='<div class="titlerow"><button class="navchev" id="tprev" aria-label="Previous day">&lsaquo;</button><h1 class="today">'+title+'</h1><button class="navchev" id="tnext" aria-label="Next day"'+(isToday?' disabled':'')+'>&rsaquo;</button>'+(!isToday?'<button class="backchip" id="tback">Back to today</button>':'')+'</div>'
+    +(bw!=null?'<div class="trbw">Bodyweight '+bw+' kg</div>':'')
+    +'<div class="trpad"><button class="sheetbtn primary" id="ex-add" style="margin:2px 0 16px">Log exercise</button></div>'
+    +(groups.length?'<div class="trpad">'+groups.map(g=>{
+        const defEq=exMeta(g.name).e,ovr=g.rows.find(w=>w.eq&&w.eq!==defEq);
+        let n=0;const setLines=[];
+        g.rows.forEach(w=>w.sets.forEach(s=>{n++;setLines.push('<div class="trset"><span class="trsetn">'+n+'</span><span class="trsetw">'+(+s.w?(Math.round(s.w*10)/10)+' '+(w.unit||'kg'):'Bodyweight')+'</span><span>'+s.r+' reps</span></div>');}));
+        return '<div class="exsess" data-exs="'+esc(g.name)+'"><div class="d">'+esc(eqLabel(ovr?ovr.eq:defEq))+'</div><div class="s">'+esc(g.name)+'</div>'+setLines.join('')+'</div>';
+      }).join('')+'</div>'
+      :'<div class="ynote trpad">Nothing logged '+(isToday?'yet today':'this day')+'.</div>');
+  document.getElementById('tprev').onclick=()=>{tsel=FOODBRB.shiftKey(tsel,-1);trToday();};
+  document.getElementById('tnext').onclick=()=>{if(tsel<TODAY){tsel=FOODBRB.shiftKey(tsel,1);trToday();}};
+  const bk=document.getElementById('tback');if(bk)bk.onclick=()=>{tsel=TODAY;trToday();};
   document.getElementById('ex-add').onclick=exPicker;
-  rootEl.querySelectorAll('[data-ex]').forEach(el=>el.onclick=()=>exHistory(el.dataset.ex));
+  el.querySelectorAll('[data-exs]').forEach(c=>c.onclick=()=>exDaySheet(c.dataset.exs));
+}
+function exDaySheet(name){
+  const rows=exEntries().filter(w=>w.date===tsel&&w.exercise===name);
+  openSheet('<h3>'+esc(name)+'</h3><div class="sub">'+fmtDay(tsel)+' &middot; '+esc(eqLabel(exMeta(name).e))+'</div>'
+    +rows.map(w=>'<div class="trsetsum"><span>'+esc(exSummary(w))+'</span><button class="setdel" data-del="'+w.id+'" aria-label="Delete">&times;</button></div>').join('')
+    +'<button class="sheetbtn primary" id="exs-more">Add sets</button>'
+    +'<button class="sheetbtn ghost" id="shcancel">Close</button>');
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+  document.getElementById('exs-more').onclick=()=>exEntry(name);
+  sheetEl.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.del;
+    state.workouts=exEntries().filter(x=>x.id!==id);
+    if(state.deletedIds)state.deletedIds.push(id);
+    save();closeSheet();trToday();toast('Deleted');
+  });
+}
+function trExercises(){
+  const el=document.getElementById('trainbody');if(!el)return;
+  const names=exNamesLogged();
+  el.innerHTML='<div class="trpad"><button class="sheetbtn primary" id="ex-add2" style="margin:2px 0 16px">Log exercise</button></div>'
+    +(names.length?names.map(n=>{const l=exLast(n);return '<div class="exrow" data-ex="'+esc(n)+'"><div><div class="exname">'+esc(n)+'</div><div class="exsub">'+esc(eqLabel(exMeta(n).e))+' &middot; '+esc(exSummary(l))+' &middot; '+fmtDay(l.date)+'</div></div><div class="exgo">&rsaquo;</div></div>';}).join('')
+      :'<div class="ynote trpad">Nothing logged yet. First exercise takes ten seconds.</div>');
+  document.getElementById('ex-add2').onclick=exPicker;
+  el.querySelectorAll('[data-ex]').forEach(x=>x.onclick=()=>exHistory(x.dataset.ex));
+}
+function trRoutines(){
+  const el=document.getElementById('trainbody');if(!el)return;
+  const rs=state.routines||[];
+  el.innerHTML='<div class="trpad">'
+    +rs.map(r=>'<div class="exsess" data-rt="'+r.id+'"><div class="d">'+r.items.length+' exercises</div><div class="s">'+esc(r.name)+'</div></div>').join('')
+    +'<div class="ynote">Editing and starting routines lands in the next update. Want a target changed now? Just message and it is done.</div></div>';
+  el.querySelectorAll('[data-rt]').forEach(c=>c.onclick=()=>{
+    const r=(state.routines||[]).find(x=>x.id===c.dataset.rt);if(!r)return;
+    openSheet('<h3>'+esc(r.name)+'</h3><div class="sub">'+r.items.length+' exercises</div>'
+      +r.items.map(it=>'<div class="trset"><span>'+esc(it.exercise)+'</span><span class="trtgt">'+it.sets+' x '+it.reps+' &middot; '+esc(eqLabel(exMeta(it.exercise).e))+'</span></div>').join('')
+      +'<button class="sheetbtn ghost" id="shcancel">Close</button>');
+    sheetEl.querySelector('#shcancel').onclick=closeSheet;
+  });
+}
+function trTrends(){
+  const el=document.getElementById('trainbody');if(!el)return;
+  el.innerHTML='<div class="ynote trpad" style="margin-top:4px">Trends land in the next update: week vs week volume, sets per muscle group, best sets and estimated 1-rep max.</div>';
 }
 function exPicker(){
   const all=new Set(LIFTS);(state.exercises||[]).forEach(n=>all.add(n));exEntries().forEach(w=>all.add(w.exercise));
@@ -1142,7 +1232,7 @@ function exPicker(){
   function draw(){
     const v=q.value.trim().toLowerCase();
     const list=[...all].filter(n=>!v||n.toLowerCase().includes(v)).sort((a,b)=>a.localeCompare(b)).slice(0,8);
-    let h=list.map(n=>'<button class="pickrow" data-pick="'+esc(n)+'">'+esc(n)+'</button>').join('');
+    let h=list.map(n=>'<button class="pickrow" data-pick="'+esc(n)+'"><span>'+esc(n)+'</span><span class="trtgt">'+esc(eqLabel(exMeta(n).e))+'</span></button>').join('');
     if(v&&![...all].some(n=>n.toLowerCase()===v))h+='<button class="pickrow" data-pick="'+esc(q.value.trim())+'" style="color:var(--kcal)">Add &quot;'+esc(q.value.trim())+'&quot;</button>';
     picks.innerHTML=h||'<div class="ynote">No matches.</div>';
     picks.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{
@@ -1155,30 +1245,35 @@ function exPicker(){
 }
 function exEntry(name){
   const last=exLast(name);
+  const defDay=(tview==='today')?tsel:TODAY;
   let unit=exUnitFor(name);
+  let eq=exMeta(name).e;
   let sets=last?last.sets.map(s=>({w:s.w,r:s.r})):[{w:'',r:''}];
   openSheet('<h3>'+esc(name)+'</h3><div class="sub">'+(last?'Last time: '+esc(exSummary(last))+' on '+fmtDay(last.date):'First time logging this one.')+'</div>'
-    +'<div class="exfld"><label>Date</label><input type="date" id="ex-date" value="'+TODAY+'" max="'+TODAY+'"></div>'
+    +'<div class="exfld"><label>Date</label><input type="date" id="ex-date" value="'+defDay+'" max="'+TODAY+'"></div>'
     +'<div class="exfld"><label>Units</label><div class="segrow" id="ex-seg"><button class="segbtn'+(unit==='kg'?' sel':'')+'" data-u="kg">kg</button><button class="segbtn'+(unit==='lbs'?' sel':'')+'" data-u="lbs">lbs</button></div></div>'
+    +'<div class="exfld"><label>Equipment</label><button class="eqpick" id="ex-eq" type="button">'+eqLabel(eq)+'</button><div class="ynote" style="margin-top:4px">Tap to change - for this entry only.</div></div>'
     +'<div id="ex-sets"></div>'
     +'<button class="sheetbtn ghost" id="ex-addset" style="margin-bottom:10px">+ Add set</button>'
     +'<button class="sheetbtn primary" id="ex-save">Save set'+'s</button>'
     +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
   const setsEl=document.getElementById('ex-sets');
   function drawSets(){
-    setsEl.innerHTML=sets.map((s,i)=>'<div class="setrow"><div><label>Weight ('+unit+')</label><input inputmode="decimal" data-s="'+i+'" data-f="w" value="'+s.w+'" placeholder="'+(unit==='kg'?'0 = bodyweight':'0 = bodyweight')+'"></div><div><label>Reps</label><input inputmode="numeric" data-s="'+i+'" data-f="r" value="'+s.r+'"></div><button class="setdel" data-del="'+i+'" aria-label="Remove set">&times;</button></div>').join('');
+    setsEl.innerHTML=sets.map((s,i)=>'<div class="setrow"><div><label>Weight ('+unit+')</label><input inputmode="decimal" data-s="'+i+'" data-f="w" value="'+s.w+'" placeholder="0 = bodyweight"></div><div><label>Reps</label><input inputmode="numeric" data-s="'+i+'" data-f="r" value="'+s.r+'"></div><button class="setdel" data-del="'+i+'" aria-label="Remove set">&times;</button></div>').join('');
     setsEl.querySelectorAll('input').forEach(inp=>inp.oninput=()=>{sets[+inp.dataset.s][inp.dataset.f]=inp.value;});
     setsEl.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(sets.length===1){sets[0]={w:'',r:''};}else sets.splice(+b.dataset.del,1);drawSets();});
   }
   sheetEl.querySelector('#shcancel').onclick=closeSheet;
   drawSets();
   sheetEl.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{unit=b.dataset.u;sheetEl.querySelectorAll('[data-u]').forEach(x=>x.classList.toggle('sel',x===b));drawSets();});
+  document.getElementById('ex-eq').onclick=()=>{eq=EQORDER[(EQORDER.indexOf(eq)+1)%EQORDER.length];document.getElementById('ex-eq').textContent=eqLabel(eq);};
   document.getElementById('ex-addset').onclick=()=>{sets.push({w:sets.length?sets[sets.length-1].w:'',r:sets.length?sets[sets.length-1].r:''});drawSets();};
   document.getElementById('ex-save').onclick=()=>{
-    const date=document.getElementById('ex-date').value||TODAY;
+    const date=document.getElementById('ex-date').value||defDay;
     const clean=sets.map(s=>({w:parseFloat(s.w)||0,r:parseInt(s.r)||0})).filter(s=>s.r>0);
     if(!clean.length){toast('Add at least one set with reps');return;}
-    state.workouts=(state.workouts||[]).concat([{id:uid(),date:date,exercise:name,unit:unit,sets:clean}]);
+    state.workouts=(state.workouts||[]).concat([{id:uid(),date:date,exercise:name,unit:unit,eq:eq,sets:clean}]);
+    if(!EXEQ[name]){state.exmeta=state.exmeta||{};state.exmeta[name]={e:eq,m:exMeta(name).m||''};}
     localStorage.setItem('foodBrbExUnit',unit);
     save();closeSheet();renderTrain();toast(name+' logged');
   };
@@ -1198,22 +1293,22 @@ function exChart(pts){
   return s+'</svg>';
 }
 function exHistory(name){
-  const rootEl=document.getElementById('trainroot');
+  const rootEl=document.getElementById('trainbody');if(!rootEl)return;
   const rows=exEntries().filter(w=>w.exercise===name).sort((a,b)=>(b.date+b.id)<(a.date+a.id)?-1:1);
   const byDay={};rows.forEach(w=>{const top=Math.max.apply(null,w.sets.map(s=>+s.w||0));const kg=w.unit==='lbs'?top*LB2KG:top;if(byDay[w.date]==null||kg>byDay[w.date])byDay[w.date]=kg;});
   const pts=Object.keys(byDay).sort().map(d=>({d:d,kg:Math.round(byDay[d]*10)/10}));
   const first=pts.length?pts[0].kg:null,lastKg=pts.length?pts[pts.length-1].kg:null;
   const delta=(pts.length>1)?Math.round((lastKg-first)*10)/10:null;
-  rootEl.innerHTML='<div class="mealshead"><h2>'+esc(name)+'</h2></div>'
-    +'<button class="sheetbtn ghost" id="ex-back" style="width:auto;padding:8px 14px;margin-bottom:14px">&lsaquo; Train</button>'
-    +'<button class="sheetbtn primary" id="ex-again" style="margin-bottom:16px">Log '+esc(name)+'</button>'
-    +(pts.length?'<div class="slabel">TOP SET &middot; KG OVER TIME<span>'+(delta!=null?(delta>0?'+':'')+delta+' kg since '+fmtDay(pts[0].d):'one session so far')+'</span></div>'+exChart(pts):'')
-    +rows.map(w=>'<div class="exsess" data-sess="'+w.id+'"><div class="d">'+fmtDay(w.date)+'</div><div class="s">'+esc(exSummary(w))+'</div></div>').join('');
+  rootEl.innerHTML='<div class="mealshead"><h2>'+esc(name)+'</h2><span>'+esc(eqLabel(exMeta(name).e))+'</span></div>'
+    +'<button class="sheetbtn ghost" id="ex-back" style="width:auto;padding:8px 14px;margin:0 0 14px 20px">&lsaquo; Exercises</button>'
+    +'<div class="trpad"><button class="sheetbtn primary" id="ex-again" style="margin:0 0 16px">Log '+esc(name)+'</button></div>'
+    +(pts.length?'<div class="trpad"><div class="slabel">TOP SET &middot; KG OVER TIME<span>'+(delta!=null?(delta>0?'+':'')+delta+' kg since '+fmtDay(pts[0].d):'one session so far')+'</span></div>'+exChart(pts)+'</div>':'')
+    +rows.map(w=>'<div class="exsess" data-sess="'+w.id+'"><div class="d">'+fmtDay(w.date)+(w.eq&&w.eq!==exMeta(name).e?' &middot; '+esc(eqLabel(w.eq)):'')+'</div><div class="s">'+esc(exSummary(w))+'</div></div>').join('');
   document.getElementById('ex-back').onclick=renderTrain;
   document.getElementById('ex-again').onclick=()=>exEntry(name);
   rootEl.querySelectorAll('[data-sess]').forEach(el=>el.onclick=()=>{
     const id=el.dataset.sess,w=exEntries().find(x=>x.id===id);if(!w)return;
-    openSheet('<h3>'+esc(exSummary(w))+'</h3><div class="sub">'+fmtDay(w.date)+' &middot; logged as '+(w.unit||'kg')+'</div>'
+    openSheet('<h3>'+esc(exSummary(w))+'</h3><div class="sub">'+fmtDay(w.date)+' &middot; logged as '+(w.unit||'kg')+(w.eq?' &middot; '+esc(eqLabel(w.eq)):'')+'</div>'
       +'<button class="sheetbtn ghost" id="ex-del" style="color:var(--kcal)">Delete this session</button>'
       +'<button class="sheetbtn ghost" id="shcancel">Keep it</button>');
     sheetEl.querySelector('#shcancel').onclick=closeSheet;
