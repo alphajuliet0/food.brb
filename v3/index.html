@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="stylesheet" href="fonts.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="fonts.css"></noscript>
+<link rel="stylesheet" href="fonts.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="fonts.css"></noscript><link rel="stylesheet" href="sg.css" media="print" onload="this.media='all'">
 <style>
 :root{
   --kcal:#E5321B; --kcal-hi:#ff725f; --protein:#6f7fbf; --protein-hi:#aab6ff; --fibre:#d9a441; --fibre-hi:#ffd06b; --steps:#85818a;
@@ -329,6 +329,10 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .portpreview span{color:var(--dim)}
 
 
+:root{--hd:"Space Grotesk",Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif}
+.brand,h1.today,.mealshead h2,.sheet h3,.ringcenter .big,.scenter .big,.br-center .n,.trainph h2,.onbq,.resttime,.actcard h2{font-family:var(--hd)}
+.brand,h1.today,.ringcenter .big,.scenter .big,.br-center .n,.onbq{font-weight:700}
+.brand{letter-spacing:-.03em}
 </style>
 </head>
 <body>
