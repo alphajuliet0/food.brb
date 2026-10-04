@@ -213,7 +213,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .trainph svg{width:44px;height:44px;color:var(--dim);margin-bottom:14px}
 .trainph h2{font-size:20px;font-weight:800;margin-bottom:6px}
 .trainph p{font-size:13px;color:var(--dim);max-width:260px;margin:0 auto;line-height:1.5}
-.toast{position:fixed;left:50%;bottom:168px;transform:translateX(-50%);background:var(--surface2);color:var(--ink);padding:10px 18px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+.toast{z-index:60;position:fixed;left:50%;bottom:168px;transform:translateX(-50%);background:var(--surface2);color:var(--ink);padding:10px 18px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1}
 .mealhead{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:baseline;background:var(--page);padding:12px 4px 6px;font-size:12px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--dim)}
 .mealhead span{font-weight:600;letter-spacing:0;text-transform:none}
@@ -355,6 +355,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .gwset.done .gwck{background:var(--kcal);border-color:var(--kcal)}.gwset.done input{opacity:.55}
 .gwnav{position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom));background:var(--page);border-top:1px solid var(--hair)}
 .gwnav .sheetbtn{margin:0}.gwnav .sheetbtn.ghost{flex:0 0 96px}.gwnav .sheetbtn.primary{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exerr{background:rgba(229,50,27,.14);color:var(--kcal-hi);border-radius:12px;padding:10px 12px;margin:0 0 10px;font-size:13px;line-height:1.4}.setrow input.bad{box-shadow:inset 0 0 0 2px var(--kcal)}
 </style>
 </head>
 <body>
@@ -1288,7 +1289,7 @@ function trToday(){
   document.getElementById('tprev').onclick=()=>{tsel=FOODBRB.shiftKey(tsel,-1);trToday();};
   document.getElementById('tnext').onclick=()=>{if(tsel<TODAY){tsel=FOODBRB.shiftKey(tsel,1);trToday();}};
   const bk=document.getElementById('tback');if(bk)bk.onclick=()=>{tsel=TODAY;trToday();};
-  document.getElementById('ex-add').onclick=exPicker;const rsm=document.getElementById('gw-resume');if(rsm)rsm.onclick=gwResume;
+  document.getElementById('ex-add').onclick=()=>exPicker();const rsm=document.getElementById('gw-resume');if(rsm)rsm.onclick=gwResume;
   el.querySelectorAll('[data-exs]').forEach(c=>c.onclick=()=>exDaySheet(c.dataset.exs));
 }
 function exDaySheet(name){
@@ -1312,7 +1313,7 @@ function trExercises(){
   el.innerHTML='<div class="trpad"><button class="sheetbtn primary" id="ex-add2" style="margin:2px 0 16px">Log exercise</button></div>'
     +(names.length?names.map(n=>{const l=exLast(n);return '<div class="exrow" data-ex="'+esc(n)+'"><div><div class="exname">'+esc(n)+'</div><div class="exsub">'+esc(eqLabel(exMeta(n).e))+' &middot; '+esc(exSummary(l))+' &middot; '+fmtDay(l.date)+'</div></div><div class="exgo">&rsaquo;</div></div>';}).join('')
       :'<div class="ynote trpad">Nothing logged yet. First exercise takes ten seconds.</div>');
-  document.getElementById('ex-add2').onclick=exPicker;
+  document.getElementById('ex-add2').onclick=()=>exPicker();
   el.querySelectorAll('[data-ex]').forEach(x=>x.onclick=()=>exHistory(x.dataset.ex));
 }
 function trRoutines(){
@@ -1752,7 +1753,7 @@ function exPicker(onPick){
     picks.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{
       const name=b.dataset.pick;
       if(![...all].some(n=>n.toLowerCase()===name.toLowerCase())){state.exercises=(state.exercises||[]).concat([name]);save();}
-      if(onPick)onPick(name);else exEntry(name);
+      if(typeof onPick==='function')onPick(name);else exEntry(name);
     });
   }
   q.oninput=draw;draw();
@@ -1789,7 +1790,14 @@ function exEntry(name,target){
   document.getElementById('ex-save').onclick=()=>{
     const date=document.getElementById('ex-date').value||defDay;
     const clean=sets.map(s=>({w:parseFloat(s.w)||0,r:parseInt(s.r)||0})).filter(s=>s.r>0);
-    if(!clean.length){toast('Add at least one set with reps');return;}
+    if(!clean.length){
+      let msg=document.getElementById('ex-err');
+      if(!msg){msg=document.createElement('div');msg.id='ex-err';msg.className='exerr';document.getElementById('ex-save').before(msg);}
+      msg.textContent='Nothing saved yet. Add the reps for at least one set, then tap Save sets.';
+      const emp=[...setsEl.querySelectorAll('input[data-f=r]')].filter(x=>!(parseInt(x.value)>0));
+      emp.forEach(x=>x.classList.add('bad'));
+      if(emp[0]){emp[0].scrollIntoView({block:'center'});emp[0].focus();}
+      return;}
     state.workouts=(state.workouts||[]).concat([{id:uid(),date:date,exercise:name,unit:unit,eq:eq,sets:clean}]);
     if(!EXEQ[name]){state.exmeta=state.exmeta||{};state.exmeta[name]={e:eq,m:exMeta(name).m||''};}
     localStorage.setItem('foodBrbExUnit',unit);
