@@ -358,6 +358,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .exerr{background:rgba(229,50,27,.14);color:var(--kcal-hi);border-radius:12px;padding:10px 12px;margin:0 0 10px;font-size:13px;line-height:1.4}.setrow input.bad{box-shadow:inset 0 0 0 2px var(--kcal)}
 .undobar{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:61;display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:10px 14px;font-size:13px;box-shadow:0 8px 28px rgba(0,0,0,.4)}.undobar button{border:0;background:none;color:var(--kcal-hi);font:inherit;font-weight:700;padding:6px 4px}.gwn.pr{color:var(--kcal);font-size:10px;letter-spacing:.04em}.gwnote{width:100%;box-sizing:border-box;background:var(--surface2);border:0;border-radius:12px;padding:12px;color:var(--ink);font-size:16px;font-family:inherit;resize:none;margin-top:8px}
 .gwblk+.gwblk{margin-top:22px;padding-top:18px;border-top:1px solid var(--hair)}
+.gwcuebtn{border:0;background:none;color:var(--dim);font:inherit;font-size:12px;font-weight:600;padding:2px 0 10px;text-decoration:underline;text-underline-offset:3px}.gwcues{margin:0 0 12px;padding:10px 12px 10px 28px;background:var(--surface2);border-radius:12px;font-size:13px;line-height:1.5;color:var(--ink)}.gwcues li{margin:2px 0}
 </style>
 </head>
 <body>
@@ -1514,6 +1515,43 @@ function gwShow(){
   document.body.classList.add('gwon');el.style.display='flex';gwRender();
 }
 function gwClose(){restStop();const el=document.getElementById('gw');if(el)el.style.display='none';document.body.classList.remove('gwon');renderTrain();}
+/* Form cues. Written fresh for form.brb: short coaching reminders, no media. */
+const CUES={
+'Back Squat':'Bar sits on your upper back, ribs down, chest proud.|Knees track over your toes as you sit between your hips.|Drive the floor away and keep your heels flat.',
+'Front Squat':'Elbows high so the bar rests on your shoulders.|Stay tall through the torso as you drop.|Push up through the whole foot.',
+'Leg Press':'Feet shoulder width, lower back stays on the pad.|Lower until your knees are at about 90 degrees.|Press without locking the knees hard at the top.',
+'Hack Squat':'Back and hips flat on the pad.|Knees follow the line of your toes.|Control the way down, then push through the mid foot.',
+'Lunge':'Long step, torso upright.|Lower straight down until the back knee nearly touches.|Push through the front heel to stand.',
+'Romanian Deadlift':'Soft knees, push the hips back like closing a door.|Bar or bells stay close to your legs.|Stop when the hamstrings stretch, then squeeze the glutes to stand.',
+'Deadlift':'Bar over mid foot, shoulders just in front of it.|Brace your core, pull the slack out of the bar.|Push the floor away, then lock out with the hips.',
+'Hip Thrust':'Upper back on the bench, feet flat and close to your hips.|Chin tucked, ribs down.|Squeeze the glutes at the top and pause.',
+'Leg Curl':'Hips pressed into the pad.|Curl the heels toward your glutes with no swinging.|Lower slowly for a count of two or three.',
+'Leg Extension':'Pad rests just above your ankles.|Straighten the knees and squeeze the quads at the top.|Lower under control.',
+'Calf Raise':'Go as high on your toes as you can.|Pause at the top, then lower into a full stretch.|Keep the movement slow, no bouncing.',
+'Bench Press':'Shoulder blades back and down, feet planted.|Lower the bar to the lower chest with elbows about 45 degrees.|Press up and slightly back over the shoulders.',
+'Incline Bench Press':'Set the bench to a low incline.|Lower the bar to the upper chest.|Keep the shoulder blades pinned back as you press.',
+'Overhead Press':'Squeeze your glutes and brace your core.|Press the bar straight up past your face.|Finish with the bar over your mid foot and your head through.',
+'Dumbbell Shoulder Press':'Start with the bells at ear height, forearms vertical.|Press up and slightly in.|Lower slowly to the start.',
+'Chest Fly':'Slight bend in the elbows, kept the same throughout.|Open until you feel a chest stretch.|Bring the bells together as if hugging a tree.',
+'Push-Up':'Hands just outside the shoulders, body in one line.|Lower your chest to the floor.|Press away without letting the hips sag.',
+'Dip':'Lean slightly forward for more chest, upright for more triceps.|Lower until your upper arms are about parallel to the floor.|Press up without shrugging.',
+'Pull-Up':'Start from a full hang, shoulders pulled down.|Lead with your chest and pull elbows toward your ribs.|Lower all the way under control.',
+'Lat Pulldown':'Grip a little wider than your shoulders.|Pull the bar to your upper chest, elbows down.|Control the bar back up.',
+'Barbell Row':'Hinge forward with a flat back.|Pull the bar to your lower ribs.|Squeeze your shoulder blades, lower without jerking.',
+'Dumbbell Row':'One hand and knee on the bench, back flat.|Pull the elbow toward your hip.|Lower to a full stretch.',
+'Seated Row':'Sit tall, chest up.|Pull the handle to your stomach and squeeze the shoulder blades.|Let your arms extend slowly without rounding forward.',
+'Face Pull':'Rope at face height, elbows high.|Pull to your forehead and rotate the hands back.|Keep it light and slow.',
+'Bicep Curl':'Elbows stay by your sides.|Curl up without swinging the body.|Lower slowly for a count of two or three.',
+'Hammer Curl':'Palms face each other throughout.|Elbows stay pinned to your sides.|Squeeze at the top, lower under control.',
+'Triceps Pushdown':'Elbows locked against your sides.|Push down until your arms are straight.|Let the handle rise only to chest height.',
+'Triceps Extension':'Keep the upper arms still.|Lower the weight behind your head until you feel a stretch.|Straighten fully without flaring the elbows.',
+'Lateral Raise':'Slight bend in the elbows, lead with the elbows.|Raise to shoulder height, no higher.|Lower slowly, no swinging.',
+'Plank':'Forearms down, elbows under shoulders.|Body in one straight line, glutes tight.|Breathe steadily and do not let the hips sag.',
+'Crunch':'Lower back stays on the floor.|Curl the ribs toward the hips.|Exhale as you come up, lower slowly.',
+'Chest Press':'Seat height so the handles are at mid chest.|Press forward without shrugging.|Return slowly until you feel a light stretch.',
+'Shoulder Press':'Seat height so the handles start at ear level.|Press up without arching your back.|Lower under control to the start.'
+};
+function cuesFor(n){const c=CUES[n];return c?c.split('|'):null;}
 function gwGroups(){const st=[];let k=0;const n=gw.items.length;while(k<n){let e=k;while(gw.items[e].ss&&e+1<n)e++;st.push([k,e]);k=e+1;}return st;}
 function gwTimedFor(it){return it.timed===true||(it.timed==null&&it.exercise==='Plank');}
 function gwBlock(i,multi){
@@ -1521,6 +1559,7 @@ function gwBlock(i,multi){
   return '<div class="gwblk">'
     +'<div class="gwhead"><div><h2'+(multi?' style="font-size:20px"':'')+'>'+esc(ex.name)+'</h2><div class="gwsub">'+esc(eqLabel(exMeta(ex.name).e))+(T?' &middot; timed':'')+'</div><div class="gwlast">'+esc(ex.last)+'</div>'+(ex.lastNote?'<div class="gwlast">Last note: '+esc(ex.lastNote)+'</div>':'')+'</div><div class="gwfig">'+gwFig(ex.name)+'</div></div>'
     +(ex.why?'<div class="progwhy"><b>Why this weight</b>'+esc(ex.why)+'</div>':'')
+    +(cuesFor(ex.name)?'<button class="gwcuebtn" data-cue="'+i+'" type="button">'+(ex.cueOpen?'Hide form cues':'Form cues')+'</button>'+(ex.cueOpen?'<ul class="gwcues">'+cuesFor(ex.name).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':''):'')
     +'<div class="gwcols"><span></span><button class="gwunit" data-un="'+i+'" type="button">'+(T?'Added load':'Weight')+' ('+ex.unit+')</button><span>'+(T?'Seconds':'Reps')+'</span><span></span></div>'
     +ex.sets.map((s,k)=>{const run=gwTimer&&gwTimer.i===i&&gwTimer.k===k;
       return '<div class="gwset'+(s.d?' done':'')+'"><span class="gwn'+(s.pr?' pr':'')+'">'+(s.pr?'PR':(k+1))+'</span><input inputmode="decimal" data-i="'+i+'" data-k="'+k+'" data-f="w" value="'+s.w+'" placeholder="0"><input inputmode="numeric" data-i="'+i+'" data-k="'+k+'" data-f="r" value="'+(run?'':s.r)+'"'+(run?' id="gw-tleft" placeholder="" disabled':'')+'>'
@@ -1556,6 +1595,7 @@ function gwRender(){
   document.getElementById('gw-x').onclick=gwMenu;
   document.getElementById('gw-prev').onclick=()=>{gwTimerStop();gw.idx=groups[Math.max(0,gi-1)][0];gwPersist();gwRender();};
   document.getElementById('gw-next').onclick=()=>{restStop();gwTimerStop();gw.idx=g[1]+1;gwPersist();gwRender();};
+  el.querySelectorAll('[data-cue]').forEach(b=>b.onclick=()=>{const i=+b.dataset.cue;gw.ex[i].cueOpen=!gw.ex[i].cueOpen;gwRender();});
   el.querySelectorAll('[data-un]').forEach(b=>b.onclick=()=>{const i=+b.dataset.un,ex=gw.ex[i];ex.unit=ex.unit==='kg'?'lbs':'kg';gwSync(i);gwRender();});
   el.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{const i=+b.dataset.add,ex=gw.ex[i],l=ex.sets[ex.sets.length-1]||{w:'',r:gw.items[i].reps};ex.sets.push({w:l.w,r:l.r,d:0});gwPersist();gwRender();});
   el.querySelectorAll('[data-noteb]').forEach(b=>b.onclick=()=>{const i=+b.dataset.noteb;gw.ex[i].noteOpen=1;gwRender();const t=document.querySelector('[data-note="'+i+'"]');if(t)t.focus();});
