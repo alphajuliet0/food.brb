@@ -1278,7 +1278,7 @@ function trToday(){
   const bw=bwFor(tsel);
   el.innerHTML='<div class="titlerow"><button class="navchev" id="tprev" aria-label="Previous day">&lsaquo;</button><h1 class="today">'+title+'</h1><button class="navchev" id="tnext" aria-label="Next day"'+(isToday?' disabled':'')+'>&rsaquo;</button>'+(!isToday?'<button class="backchip" id="tback">Back to today</button>':'')+'</div>'
     +(bw!=null?'<div class="trbw">Bodyweight '+bw+' kg</div>':'')
-    +(gwLoad()?'<div class="trpad"><button class="sheetbtn primary" id="gw-resume" style="margin:2px 0 10px">Resume '+esc(gwLoad().name)+' &middot; exercise '+Math.min(gwLoad().idx+1,gwLoad().items.length)+' of '+gwLoad().items.length+'</button></div>':'')+'<div class="trpad"><button class="sheetbtn '+(gwLoad()?'ghost':'primary')+'" id="ex-add" style="margin:2px 0 16px">Log exercise</button></div>'
+    +(gwLoad()?'<div class="trpad"><button class="sheetbtn primary" id="gw-resume" style="margin:2px 0 10px">Resume '+esc(gwLoad().name)+' &middot; exercise '+Math.min(gwLoad().idx+1,gwLoad().items.length)+' of '+gwLoad().items.length+'</button></div>':'')+'<div class="trpad">'+(gwLoad()?'':'<button class="sheetbtn primary" id="gw-pick" style="margin:2px 0 10px">Start workout</button>')+'<button class="sheetbtn ghost" id="ex-add" style="margin:2px 0 16px">Log exercise</button></div>'
     +(groups.length?'<div class="trpad">'+groups.map(g=>{
         const defEq=exMeta(g.name).e,ovr=g.rows.find(w=>w.eq&&w.eq!==defEq);
         let n=0;const setLines=[];
@@ -1289,7 +1289,7 @@ function trToday(){
   document.getElementById('tprev').onclick=()=>{tsel=FOODBRB.shiftKey(tsel,-1);trToday();};
   document.getElementById('tnext').onclick=()=>{if(tsel<TODAY){tsel=FOODBRB.shiftKey(tsel,1);trToday();}};
   const bk=document.getElementById('tback');if(bk)bk.onclick=()=>{tsel=TODAY;trToday();};
-  document.getElementById('ex-add').onclick=()=>exPicker();const rsm=document.getElementById('gw-resume');if(rsm)rsm.onclick=gwResume;
+  document.getElementById('ex-add').onclick=()=>exPicker();const rsm=document.getElementById('gw-resume');if(rsm)rsm.onclick=gwResume;const gpk=document.getElementById('gw-pick');if(gpk)gpk.onclick=gwPick;
   el.querySelectorAll('[data-exs]').forEach(c=>c.onclick=()=>exDaySheet(c.dataset.exs));
 }
 function exDaySheet(name){
@@ -1450,6 +1450,14 @@ function gwStart(id){
   gw={rid:id,name:r.name,idx:0,start:Date.now(),date:TODAY,items:r.items.map(it=>({exercise:it.exercise,sets:it.sets,reps:it.reps,rest:it.rest||null,prog:it.prog||null})),ex:[]};
   gwPersist();gwShow();
 }
+function gwPick(){
+  const rs=(state.routines||[]).filter(r=>r.items&&r.items.length);
+  openSheet('<h3>Start workout</h3><div class="sub">'+(rs.length?'Pick a routine. You log one exercise at a time.':'No routines with exercises yet. Add some under Routines.')+'</div>'
+    +rs.map(r=>'<button class="pickrow" data-gw="'+esc(r.id)+'"><span>'+esc(r.name)+'</span><span class="trtgt">'+r.items.length+' exercises</span></button>').join('')
+    +'<button class="sheetbtn ghost" id="shcancel" style="margin-top:8px">Cancel</button>');
+  sheetEl.querySelector('#shcancel').onclick=closeSheet;
+  sheetEl.querySelectorAll('[data-gw]').forEach(b=>b.onclick=()=>{closeSheet();gwStart(b.dataset.gw);});
+}
 function gwResume(){const g=gwLoad();if(!g)return;gw=g;gwShow();}
 function gwShow(){
   let el=document.getElementById('gw');
@@ -1585,12 +1593,7 @@ function trRoutineDetail(id){
     save();trRoutines();toast(r.name+' deleted');
   };
 }
-function rtStart(id){
-  const r=(state.routines||[]).find(x=>x.id===id);if(!r||!r.items.length)return;
-  rtRun={rid:id,idx:0};
-  tview='today';tsel=TODAY;localStorage.setItem('foodBrbTrainView',tview);renderTrain();
-  exEntry(r.items[0].exercise,{sets:r.items[0].sets,reps:r.items[0].reps,item:r.items[0]});
-}
+function rtStart(id){gwStart(id);}
 let restT=null,restEnd=0;
 function restDefaultSec(){return parseInt(localStorage.getItem('foodBrbRestSec')||'180');}
 function restStop(){if(restT){clearInterval(restT);restT=null;}const bar=document.getElementById('restbar');if(bar)bar.style.display='none';}
