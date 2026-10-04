@@ -1632,6 +1632,7 @@ function gwSummary(){
   const vol=Math.round(logged.filter(e=>!e.timed).reduce((t,e)=>t+e.sets.filter(s=>s.d).reduce((x,s)=>x+(parseFloat(s.w)||0)*(parseInt(s.r)||0)*(e.unit==='lbs'?LB2KG:1),0),0));
   const prN=gw.ex.reduce((t,e)=>t+(e?e.sets.filter(x=>x.d&&x.pr).length:0),0);
   const mins=Math.max(1,Math.round((Date.now()-gw.start)/60000));
+  if(sets&&!gw.saved){gw.saved=1;state.sessions=state.sessions||{};state.sessions[gw.date]=(state.sessions[gw.date]||0)+mins;save();gwPersist();}
   el.innerHTML='<div class="gwtop"><span style="width:40px"></span><div class="gwmid"><b>'+esc(gw.name)+'</b><span>Workout complete</span></div><span style="width:40px"></span></div>'
     +'<div class="gwbody"><div class="gwhead"><div><h2>'+(sets?'Nicely done.':'Nothing logged.')+'</h2><div class="gwsub">'+(sets?'Everything is saved to your history.':'No sets were logged this time, so nothing was saved.')+'</div></div></div>'
     +'<div class="exsess" style="cursor:default;margin-top:12px"><div class="trset"><span>Exercises</span><span class="trtgt">'+logged.length+'</span></div><div class="trset"><span>Sets</span><span class="trtgt">'+sets+'</span></div><div class="trset"><span>Volume</span><span class="trtgt">'+vol.toLocaleString()+' kg</span></div>'+(prN?'<div class="trset"><span>New bests</span><span class="trtgt">'+prN+'</span></div>':'')+'<div class="trset"><span>Time</span><span class="trtgt">'+mins+' min</span></div></div></div>'
@@ -1825,10 +1826,85 @@ function mmSection(empty){
     return '<div class="trset"><span>'+MMNAME[k]+'</span><span class="trtgt">'+(Math.round(o.sets*2)/2)+(o.sets===1?' set':' sets')+' &middot; '+Math.round(o.vol).toLocaleString()+' kg &middot; '+(stale?'<b style="color:var(--kcal);font-weight:600">'+(o.last?last+' - 7+ days':'untouched')+'</b>':last)+'</span></div>';}).join('')
     +'</div><div class="ynote">Main muscles count a full set, helpers count half. Volume is weight x reps. Custom exercises use their muscle group. Body art: MuscleMap by Melih Colpan and MuscleMapJS by Abdofallah (both MIT).</div>';
   return h;}
+/* Trends overview: tiles, activity heatmap, balance / load / strength. All from logged data; nothing estimated. */
+let gMode='vol',gTab='bal',gRange=7;
+function gDays(){const o={};exEntries().forEach(w=>{if(!w.sets||!w.sets.length)return;const d=o[w.date]=o[w.date]||{vol:0,sets:0};d.sets+=w.sets.length;if(!w.t)d.vol+=w.sets.reduce((x,s)=>x+(+s.w||0)*(+s.r||0)*(w.unit==='lbs'?LB2KG:1),0);});return o;}
+function gDow(k){return (new Date(k+'T12:00:00').getDay()+6)%7;}
+function gWeekStart(k){return FOODBRB.shiftKey(k,-gDow(k));}
+function gStats(days){
+  const keys=Object.keys(days).sort(),mo=TODAY.slice(0,7);
+  const total=keys.length,thisM=keys.filter(k=>k.slice(0,7)===mo).length;
+  const wk=new Set(keys.map(gWeekStart));let ws=gWeekStart(TODAY),streak=0;
+  if(!wk.has(ws))ws=FOODBRB.shiftKey(ws,-7);
+  while(wk.has(ws)){streak++;ws=FOODBRB.shiftKey(ws,-7);}
+  const from=FOODBRB.shiftKey(TODAY,-30);
+  const wts=(state.weights||[]).filter(w=>w.date>=from&&w.date<=TODAY).sort((a,b)=>a.date<b.date?-1:1);
+  const wd=wts.length>1?Math.round((wts[wts.length-1].kg-wts[0].kg)*10)/10:null;
+  return {total:total,thisM:thisM,streak:streak,wd:wd};
+}
+function gHeat(days){
+  const sess=state.sessions||{},tm=gMode==='time';
+  const val=k=>tm?(sess[k]||0):((days[k]||{}).vol||0);
+  const endW=gWeekStart(TODAY),startW=FOODBRB.shiftKey(endW,-51*7);
+  const vals=[];for(let c=0;c<52;c++)for(let r=0;r<7;r++){const k=FOODBRB.shiftKey(startW,c*7+r);if(k<=TODAY){const v=val(k);if(v>0)vals.push(v);}}
+  vals.sort((a,b)=>a-b);
+  const lvl=v=>{if(!v)return 0;const q=vals.indexOf(v)/Math.max(1,vals.length-1);return q>.75?4:q>.5?3:q>.25?2:1;};
+  let g='',lab='',lastM='';
+  for(let c=0;c<52;c++){
+    const top=FOODBRB.shiftKey(startW,c*7);const m=top.slice(0,7);
+    if(m!==lastM&&top.slice(8,10)<='07'){lastM=m;lab+='<text x="'+(c*7)+'" y="6" font-size="5.5" fill="var(--dim)">'+MONS[+top.slice(5,7)-1].slice(0,3)+'</text>';}
+    for(let r=0;r<7;r++){const k=FOODBRB.shiftKey(startW,c*7+r);if(k>TODAY)continue;const l=lvl(val(k));
+      g+='<rect x="'+(c*7)+'" y="'+(9+r*7)+'" width="5.6" height="5.6" rx="1.3" style="fill:'+(l?'var(--kcal)':'var(--hair)')+';fill-opacity:'+(l?[0,.28,.5,.75,1][l]:.7)+'"/>';}
+  }
+  const none=!vals.length;
+  return '<div class="slabel">ACTIVITY &middot; LAST 12 MONTHS</div><div class="exsess" style="cursor:default"><div class="segrow" id="g-mode"><button class="segbtn'+(tm?'':' sel')+'" data-gm="vol">Volume</button><button class="segbtn'+(tm?' sel':'')+'" data-gm="time">Time</button></div>'
+    +'<svg viewBox="0 0 364 58" style="width:100%;height:auto;display:block;margin-top:10px" role="img" aria-label="Training activity heatmap">'+lab+g+'</svg>'
+    +'<div class="ynote" style="margin:6px 0 0">'+(none?(tm?'Time appears after your first guided workout. Older entries have no recorded duration, so none is guessed.':'Each square is a day. It fills in as you log workouts.'):(tm?'Minutes from guided workouts (start to finish).':'Volume = weight x reps, in kg.'))+'</div></div>';
+}
+function gRangeStats(days){
+  const from=days>=9999?'0000-00-00':FOODBRB.shiftKey(TODAY,-(days-1));const st={};MMORDER.forEach(k=>st[k]={sets:0});
+  exEntries().forEach(w=>{if(w.date<from||!w.sets||!w.sets.length)return;const mu=mmOf(w.exercise);[[mu.p,1],[mu.s,.5]].forEach(a=>a[0].forEach(k=>{if(st[k])st[k].sets+=w.sets.length*a[1];}));});
+  return st;
+}
+function gCard(days){
+  const tabs=[['bal','Muscle balance'],['load','Load'],['str','Strength']];
+  let h='<div class="exsess" style="cursor:default"><div class="segrow" id="g-tab">'+tabs.map(t=>'<button class="segbtn'+(gTab===t[0]?' sel':'')+'" data-gt="'+t[0]+'" style="font-size:12px">'+t[1]+'</button>').join('')+'</div>';
+  if(!Object.keys(days).length){return h+'<div class="ynote" style="margin:12px 2px 2px">'+({bal:'Muscle balance shows the sets you have done for each muscle, over the week, 30 days, 90 days or all time.',load:'Load compares this week to your usual week, per muscle. It is about volume, not recovery.',str:'Strength shows your best estimated 1RM for each lift and how it has moved.'})[gTab]+' Log a workout to start it.</div></div>';}
+  if(gTab==='bal'){
+    const rg=[[7,'Week'],[30,'30d'],[90,'90d'],[9999,'All']],st=gRangeStats(gRange),mx=Math.max(1,...MMORDER.map(k=>st[k].sets));
+    h+='<div class="segrow" id="g-range" style="margin-top:10px">'+rg.map(r=>'<button class="segbtn'+(gRange===r[0]?' sel':'')+'" data-gr="'+r[0]+'" style="font-size:12px;padding:6px 0">'+r[1]+'</button>').join('')+'</div><div style="margin-top:8px">'
+      +MMORDER.map(k=>'<div class="trset"><span>'+MMNAME[k]+'</span><span class="trtgt">'+(Math.round(st[k].sets*2)/2)+' sets</span></div><div class="pbar" style="margin:2px 0 8px"><i style="width:'+Math.round(st[k].sets/mx*100)+'%;background:var(--kcal)"></i></div>').join('')+'</div>';
+  } else if(gTab==='load'){
+    const w1=gRangeStats(7),w4=gRangeStats(35);
+    h+='<div style="margin-top:8px">'+MMORDER.map(k=>{const a=w1[k].sets,u=Math.max(0,(w4[k].sets-a)/4);const d=Math.round((a-u)*2)/2;
+      return '<div class="trset"><span>'+MMNAME[k]+'</span><span class="trtgt">'+(Math.round(a*2)/2)+' sets &middot; usual '+(Math.round(u*2)/2)+(u>0||a>0?' &middot; '+(d>0?'+':'')+d:'')+'</span></div>';}).join('')+'</div>'
+      +'<div class="ynote">Sets this week against your average of the 4 weeks before. This is training load only. form.brb does not estimate fatigue or recovery.</div>';
+  } else {
+    const names=exNamesLogged();let rows='';
+    names.forEach(n=>{const by={};exEntries().filter(w=>w.exercise===n&&!w.t).forEach(w=>w.sets.forEach(s=>{const kg=(+s.w||0)*(w.unit==='lbs'?LB2KG:1);if(kg<=0)return;const e=kg*(1+(+s.r||0)/30);if(!by[w.date]||e>by[w.date])by[w.date]=e;}));
+      const ds=Object.keys(by).sort();if(!ds.length)return;const f=by[ds[0]],l=by[ds[ds.length-1]],d=Math.round(l-f);
+      rows+='<div class="trset"><span>'+esc(n)+'</span><span class="trtgt">~'+Math.round(l)+' kg'+(ds.length>1?' &middot; '+(d>0?'+':'')+d+' since '+fmtDay(ds[0]):' &middot; first session')+'</span></div>';});
+    h+='<div style="margin-top:8px">'+(rows||'<div class="ynote">No weighted sets yet.</div>')+'</div><div class="ynote">Best estimated 1RM per session (Epley), so a rise means a better set, not a test.</div>';
+  }
+  return h+'</div>';
+}
+function gOverview(){
+  const days=gDays(),st=gStats(days);
+  const tile=(l,v,s)=>'<div class="exsess" style="cursor:default;margin:0"><div class="d">'+l+'</div><div class="s" style="font-size:24px">'+v+'</div>'+(s?'<div class="d" style="margin:2px 0 0;text-transform:none">'+s+'</div>':'')+'</div>';
+  return '<div class="slabel">YOUR TRAINING</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +tile('Workouts',st.total,st.total?'training days':'none yet')+tile('This month',st.thisM,'')+tile('Week streak',st.streak,st.streak?'weeks in a row':'starts with your first week')
+    +tile('Weight 30d',st.wd==null?'-':(st.wd>0?'+':'')+st.wd+' kg',st.wd==null?'needs 2 weigh-ins':'')+'</div>'
+    +'<div style="margin-top:16px">'+gHeat(days)+'</div><div style="margin-top:16px">'+gCard(days)+'</div><div style="height:16px"></div>';
+}
+function gWire(el){
+  el.querySelectorAll('[data-gm]').forEach(b=>b.onclick=()=>{gMode=b.dataset.gm;trTrends();});
+  el.querySelectorAll('[data-gt]').forEach(b=>b.onclick=()=>{gTab=b.dataset.gt;trTrends();});
+  el.querySelectorAll('[data-gr]').forEach(b=>b.onclick=()=>{gRange=+b.dataset.gr;trTrends();});
+}
 function trTrends(){
   const el=document.getElementById('trainbody');if(!el)return;
   const all=exEntries();
-  if(!all.length){el.innerHTML='<div class="trpad">'+mmSection(true)+'<div class="ynote">Trends appear once you have logged a few sessions.</div></div>';return;}
+  if(!all.length){el.innerHTML='<div class="trpad">'+gOverview()+mmSection(true)+'<div class="ynote">Trends appear once you have logged a few sessions.</div></div>';gWire(el);return;}
   const d7=FOODBRB.shiftKey(TODAY,-6),d14=FOODBRB.shiftKey(TODAY,-13),dPrev=FOODBRB.shiftKey(TODAY,-7);
   const thisW=all.filter(w=>w.date>=d7),lastW=all.filter(w=>w.date>=d14&&w.date<=dPrev);
   const volKg=rows=>Math.round(rows.filter(w=>!w.t).reduce((t,w)=>t+w.sets.reduce((x,s)=>x+(+s.w||0)*(+s.r||0)*(w.unit==='lbs'?LB2KG:1),0),0));
@@ -1836,7 +1912,7 @@ function trTrends(){
   const sess=rows=>new Set(rows.map(w=>w.date)).size;
   const dl=(a,b)=>{const d=a-b;return d===0?'&middot; no change':(d>0?'&middot; +':'&middot; ')+d+' vs before';};
   const dlv=(a,b,u)=>{const d=a-b;return d===0?'&middot; no change':'&middot; '+(d>0?'+':'')+d.toLocaleString()+' '+u+' vs before';};
-  let h='<div class="trpad">'+mmSection(false)+'<div class="slabel" style="margin-top:16px">LAST 7 DAYS &middot; VS THE 7 BEFORE</div>'
+  let h='<div class="trpad">'+gOverview()+mmSection(false)+'<div class="slabel" style="margin-top:16px">LAST 7 DAYS &middot; VS THE 7 BEFORE</div>'
     +'<div class="exsess" style="cursor:default">'
     +'<div class="trset"><span>Sessions</span><span class="trtgt">'+sess(thisW)+' '+dl(sess(thisW),sess(lastW))+'</span></div>'
     +'<div class="trset"><span>Sets</span><span class="trtgt">'+setsN(thisW)+' '+dl(setsN(thisW),setsN(lastW))+'</span></div>'
@@ -1870,7 +1946,7 @@ function trTrends(){
       +'</div>';
   }
   h+='<div class="ynote">Volume counts weighted sets only. Estimated 1RM uses the Epley formula - an estimate, not a test.</div></div>';
-  el.innerHTML=h;
+  el.innerHTML=h;gWire(el);
 }
 function exPicker(onPick){
   const all=new Set(LIFTS);(state.exercises||[]).forEach(n=>all.add(n));exEntries().forEach(w=>all.add(w.exercise));
