@@ -509,7 +509,8 @@ function toggleTheme(){const n=root.getAttribute('data-theme')==='dark'?'light':
 }
 /* ---------- navigation ---------- */
 document.getElementById('prevday').onclick=()=>{sel=FOODBRB.shiftKey(sel,-1);render();};
-document.getElementById('nextday').onclick=()=>{if(sel<TODAY){sel=FOODBRB.shiftKey(sel,1);render();}};
+const MAXSEL=FOODBRB.shiftKey(TODAY,7); /* plan ahead: up to a week */
+document.getElementById('nextday').onclick=()=>{if(sel<MAXSEL){sel=FOODBRB.shiftKey(sel,1);render();}};
 document.getElementById('backtoday').onclick=()=>{sel=TODAY;render();};
 /* ---------- render ---------- */
 let selRing='cal';
@@ -525,8 +526,8 @@ function render(){
   const kcalLeft=P.kcalTarget-T.kcal, over=kcalLeft<0&&FOODBRB.logged(D);
   const ringSteps=FOODBRB.stepsOf(D);
   /* title + nav */
-  document.getElementById('daytitle').textContent=isToday?'Today':(sel===FOODBRB.shiftKey(TODAY,-1)?'Yesterday':fmtDay(sel));
-  document.getElementById('nextday').disabled=sel>=TODAY;
+  document.getElementById('daytitle').textContent=isToday?'Today':(sel===FOODBRB.shiftKey(TODAY,-1)?'Yesterday':(sel===FOODBRB.shiftKey(TODAY,1)?'Tomorrow':fmtDay(sel)));
+  document.getElementById('nextday').disabled=sel>=MAXSEL;
   document.getElementById('backtoday').style.display=isToday?'none':'';
   /* week strip */
   document.getElementById('weekstrip').innerHTML=wk.map((k,i)=>{
@@ -595,10 +596,11 @@ function render(){
   const bankUsed=wkKeys.reduce((a,k)=>{const dd=state.days[k];return a+(FOODBRB.logged(dd)?FOODBRB.totals(dd).kcal:0);},0);
   const dayIdx=Math.max(1,wkKeys.indexOf(TODAY)+1);
   const paceExp=Math.round(wkBudget*dayIdx/7);
-  const paceDiff=Math.round(bankUsed-paceExp);
+  const bankUsedSoFar=wkKeys.reduce((a,k)=>{const dd=state.days[k];return a+(k<=TODAY&&FOODBRB.logged(dd)?FOODBRB.totals(dd).kcal:0);},0);
+  const paceDiff=Math.round(bankUsedSoFar-paceExp);
   const paceWord=Math.abs(paceDiff)<=wkBudget*0.05?'On pace':(paceDiff>0?paceDiff.toLocaleString()+' kcal ahead of pace':(-paceDiff).toLocaleString()+' kcal behind pace');
   const bankPct=Math.min(100,Math.round(bankUsed/wkBudget*100)),pacePct=Math.min(100,Math.round(dayIdx/7*100));
-  const wkLogged=wkKeys.filter(k=>FOODBRB.logged(state.days[k]));
+  const wkLogged=wkKeys.filter(k=>k<=TODAY&&FOODBRB.logged(state.days[k]));
   const proAvg=wkLogged.length?Math.round(wkLogged.reduce((a,k)=>a+FOODBRB.totals(state.days[k]).protein,0)/wkLogged.length):null;
   const proPct=proAvg!=null?Math.min(100,Math.round(proAvg/P.proteinTarget*100)):0;
   const stepPct=stepAvg!=null?Math.min(100,Math.round(stepAvg/P.stepsTarget*100)):0;
