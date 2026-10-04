@@ -334,6 +334,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .brand,h1.today,.ringcenter .big,.scenter .big,.br-center .n,.onbq{font-weight:700}
 .brand{letter-spacing:-.03em}
 .mmfig{display:flex;gap:6px;justify-content:center;padding:4px 0 2px}.mmfig>div{flex:1;max-width:150px;text-align:center}.mmfig svg{width:100%;height:auto;display:block}.mmfig span{display:block;font-size:11px;color:var(--dim);margin-top:2px}
+.progwhy{background:var(--surface2);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:12px;line-height:1.5;color:var(--dim)}.progwhy b{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);margin-bottom:2px}
 </style>
 </head>
 <body>
@@ -578,7 +579,7 @@ function render(){
   const wks=[];for(let i=29;i>=0;i--)wks.push(FOODBRB.shiftKey(TODAY,-i));
   const wWindow=wSeries.filter(w=>w.date>=wks[0]&&w.date<=TODAY);
   const wGoal=P.goalWeight||null;
-  const wCur=wWindow.length?wWindow[wWindow.length-1].kg:(latestW?latestW.kg:null);
+  const wCur=wWindow.length?wWindow[wWindow.length-1].kg:(state.weights&&state.weights.length?state.weights.slice().sort((a,b)=>a.date<b.date?1:-1)[0].kg:null);
   const wDelta=wWindow.length>1?Math.round((wWindow[wWindow.length-1].kg-wWindow[0].kg)*10)/10:null;
   const wChart=(()=>{
     if(!wWindow.length)return '<div class="ynote" style="margin:8px 0 0">No weight entries in the last 30 days - tap the Weight tile above to log.</div>';
@@ -1318,6 +1319,75 @@ function trRoutines(){
     };
   };
 }
+/*PROG-START*/
+/* Progression engine. Original to form.brb. Pure: no DOM, no storage. Weights in one unit (the caller converts).
+   rule: {mode:'linear'|'double', step, repMin, repMax, sets, reps}. sessions: oldest first, [{date, sets:[{w,r}]}]. */
+const PROG_DELOAD=0.9,PROG_STALLS=2;
+function progStep(unit,eq){const small=eq==='dumbbell'||eq==='cable';return unit==='lbs'?(small?2:5):(small?1:2.5);}
+function progRound(x,step){return step>0?Math.round(x/step)*step:x;}
+function progClean(x){return Math.round(x*100)/100;}
+function progWork(s){let top=0;s.sets.forEach(x=>{if(x.w>top)top=x.w;});const ws=s.sets.filter(x=>x.w===top);return {top:top,n:ws.length,min:Math.min.apply(null,ws.map(x=>x.r))};}
+function progFmtSets(s){return s.sets.map(x=>x.r).join(', ');}
+function nextTarget(rule,sessions,unit){
+  unit=unit||'kg';
+  const step=rule.step>0?rule.step:progStep(unit),dbl=rule.mode==='double';
+  const rMin=rule.repMin||rule.reps||8,rMax=Math.max(rule.repMax||rMin,rMin);
+  const tReps=dbl?rMin:(rule.reps||rMin);
+  const setsN=rule.sets||0;
+  const hist=(sessions||[]).filter(s=>s&&s.sets&&s.sets.some(x=>x.r>0));
+  if(!hist.length)return {weight:null,reps:tReps,sets:setsN||null,reason:'No history yet. Your first session sets the starting weight.',stalls:0,deload:false};
+  const f=progWork(hist[0]);
+  if(f.top===0){ // bodyweight: reps only
+    const l=progWork(hist[hist.length-1]);const goal=dbl?rMax:(rule.reps||rMax);
+    if(l.min>=goal)return {weight:0,reps:goal,sets:setsN||l.n,reason:'Bodyweight: you hit '+goal+' reps on every set. Try a harder variation or add weight.',stalls:0,deload:false};
+    return {weight:0,reps:Math.min(goal,l.min+1),sets:setsN||l.n,reason:'Bodyweight: last time '+progFmtSets(hist[hist.length-1])+' reps, so aim for '+Math.min(goal,l.min+1)+' on every set.',stalls:0,deload:false};
+  }
+  let plan={w:f.top,reps:dbl?Math.min(rMax,f.min+1):tReps},stalls=0,why='',deload=false;
+  const first=progWork(hist[0]);
+  // first session sets the baseline: it is judged against its own target
+  const judge=(s,pl)=>{const w=progWork(s);const okSets=!setsN||w.n>=setsN;return {w:w,hit:w.top>=pl.w&&w.min>=pl.reps&&(dbl||okSets)};};
+  let start=0;
+  { // baseline: treat session 0 as if it was planned at its own weight and target reps
+    const pl={w:first.top,reps:tReps};const j=judge(hist[0],pl);
+    if(dbl){ if(first.min>=rMax){plan={w:first.top+step,reps:rMin};why='up';}else{plan={w:first.top,reps:Math.min(rMax,first.min+1)};why='rep';} }
+    else if(j.hit){plan={w:first.top+step,reps:tReps};why='up';}
+    else {plan={w:first.top,reps:tReps};stalls=1;why='stall';}
+    start=1;
+  }
+  let last=hist[0],lastDeload=false;
+  for(let i=start;i<hist.length;i++){
+    const s=hist[i],w=progWork(s),pl=plan;const j=judge(s,pl);last=s;lastDeload=false;
+    if(j.hit){
+      stalls=0;
+      if(dbl){ if(w.min>=rMax){plan={w:w.top+step,reps:rMin};why='up';}else{plan={w:w.top,reps:Math.min(rMax,w.min+1)};why='rep';} }
+      else {plan={w:w.top+step,reps:tReps};why='up';}
+    } else {
+      stalls++;why='stall';
+      plan={w:pl.w<=w.top?w.top:pl.w,reps:pl.reps};
+      if(stalls>=PROG_STALLS){
+        plan={w:Math.max(step,progRound(w.top*PROG_DELOAD,step)),reps:dbl?rMin:tReps};
+        stalls=0;why='deload';lastDeload=true;
+      }
+    }
+  }
+  const l=progWork(last),u=unit;
+  const nm=x=>progClean(x)+' '+u;
+  let reason;
+  if(why==='up')reason='You hit '+(dbl?'the top of the range':'every target rep')+' at '+nm(l.top)+' last time ('+progFmtSets(last)+'), so go up '+nm(step)+'.';
+  else if(why==='rep')reason='Last time '+nm(l.top)+' for '+progFmtSets(last)+'. Same weight, aim for '+plan.reps+' reps on every set.';
+  else if(why==='deload')reason='Two sessions in a row short of target at '+nm(l.top)+', so a 10% deload to '+nm(plan.w)+'. Build back up from there.';
+  else reason='Last time '+nm(l.top)+' for '+progFmtSets(last)+', short of '+plan.reps+' reps. Same weight again. One more miss and it deloads by 10%.';
+  return {weight:progClean(plan.w),reps:plan.reps,sets:setsN||l.n,reason:reason,stalls:stalls,deload:why==='deload'};
+}
+/*PROG-END*/
+
+function progSessions(name,unit){
+  const by={};exEntries().filter(w=>w.exercise===name&&w.sets&&w.sets.length).forEach(w=>{
+    const k=(w.unit==='lbs'?1:0)!==(unit==='lbs'?1:0)?(unit==='lbs'?1/LB2KG:LB2KG):1;
+    (by[w.date]=by[w.date]||[]).push.apply(by[w.date],w.sets.map(x=>({w:Math.round((+x.w||0)*k*100)/100,r:+x.r||0})));});
+  return Object.keys(by).sort().map(d=>({date:d,sets:by[d]}));}
+function progRule(it,unit){const p=it.prog;if(!p||p.mode==='off'||!p.mode)return null;
+  return {mode:p.mode,step:p.step>0?p.step:progStep(unit,exMeta(it.exercise).e),repMin:p.repMin||it.reps,repMax:p.repMax||(it.reps+4),sets:it.sets,reps:it.reps};}
 let rtRun=null;
 function trRoutineDetail(id){
   const el=document.getElementById('trainbody');if(!el)return;
@@ -1325,7 +1395,7 @@ function trRoutineDetail(id){
   el.innerHTML='<div class="mealshead"><h2>'+esc(r.name)+'</h2><span>'+r.items.length+' exercises</span></div>'
     +'<button class="sheetbtn ghost" id="rt-back" style="width:auto;padding:8px 14px;margin:0 0 14px 20px">&lsaquo; Routines</button>'
     +'<div class="trpad"><button class="sheetbtn primary" id="rt-start" style="margin:0 0 16px"'+(r.items.length?'':' disabled')+'>Start routine</button></div>'
-    +'<div class="trpad">'+r.items.map((it,i)=>'<div class="exsess" data-rti="'+i+'"><div class="d">'+esc(eqLabel(exMeta(it.exercise).e))+'</div><div class="s" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">'+esc(it.exercise)+'<span class="trtgt" style="margin-left:0">'+it.sets+' x '+it.reps+'</span></div><div class="rtmove"><button data-mv="-1" data-i="'+i+'" aria-label="Move up">&uarr;</button><button data-mv="1" data-i="'+i+'" aria-label="Move down">&darr;</button></div></div>').join('')+'</div>'
+    +'<div class="trpad">'+r.items.map((it,i)=>'<div class="exsess" data-rti="'+i+'"><div class="d">'+esc(eqLabel(exMeta(it.exercise).e))+'</div><div class="s" style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">'+esc(it.exercise)+'<span class="trtgt" style="margin-left:0">'+it.sets+' x '+it.reps+'</span></div>'+(it.prog&&it.prog.mode&&it.prog.mode!=='off'?'<div class="d" style="margin:2px 0 0">Progression: '+(it.prog.mode==='double'?'double':'linear')+'</div>':'')+'<div class="rtmove"><button data-mv="-1" data-i="'+i+'" aria-label="Move up">&uarr;</button><button data-mv="1" data-i="'+i+'" aria-label="Move down">&darr;</button></div></div>').join('')+'</div>'
     +'<div class="trpad"><button class="sheetbtn ghost" id="rt-addex">+ Add exercise</button>'
     +'<button class="sheetbtn ghost" id="rt-rename">Rename routine</button>'
     +'<button class="sheetbtn danger" id="rt-del">Delete routine</button></div>';
@@ -1346,16 +1416,30 @@ function trRoutineDetail(id){
     openSheet('<h3>'+esc(it.exercise)+'</h3><div class="sub">Target in '+esc(r.name)+'</div>'
       +'<div class="exfld"><label>Sets</label><input class="picksearch" inputmode="numeric" id="rti-sets" value="'+it.sets+'"></div>'
       +'<div class="exfld"><label>Reps</label><input class="picksearch" inputmode="numeric" id="rti-reps" value="'+it.reps+'"></div>'
+      +'<div class="exfld"><label>Progression</label><div class="segrow" id="rti-pm"><button class="segbtn" data-pm="off">Off</button><button class="segbtn" data-pm="linear">Linear</button><button class="segbtn" data-pm="double">Double</button></div><div class="ynote" id="rti-pnote" style="margin-top:6px"></div><div id="rti-pf"></div></div>'
       +'<div class="exfld"><label>Rest after this exercise</label><button class="eqpick" id="rti-rest" type="button">'+restLbl(rtRest)+'</button></div>'
       +'<button class="sheetbtn primary" id="rti-save">Save target</button>'
       +'<button class="sheetbtn ghost" id="rti-rm" style="color:var(--kcal)">Remove from routine</button>'
       +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
     sheetEl.querySelector('#shcancel').onclick=closeSheet;
+    const pu=exUnitFor(it.exercise),pp=it.prog||{};
+    let pm=pp.mode||'off';
+    const pNote={off:'Off. Your targets stay exactly as you set them. Turn it on and the weight is suggested from what you have logged, with the reason shown.',linear:'Hit every target rep and the weight goes up by the step next time. Two short sessions in a row deloads 10%.',double:'Add reps at the same weight until you reach the top of the range, then go up by the step. Two short sessions in a row deloads 10%.'};
+    function pDraw(){
+      sheetEl.querySelectorAll('[data-pm]').forEach(b=>b.classList.toggle('sel',b.dataset.pm===pm));
+      document.getElementById('rti-pnote').textContent=pNote[pm];
+      document.getElementById('rti-pf').innerHTML=pm==='off'?'':'<div class="setrow" style="margin-top:8px"><div><label>Step ('+pu+')</label><input inputmode="decimal" id="rti-pstep" value="'+(pp.step>0?pp.step:progStep(pu,exMeta(it.exercise).e))+'"></div>'+(pm==='double'?'<div><label>Rep range</label><div style="display:flex;gap:6px"><input inputmode="numeric" id="rti-pmin" value="'+(pp.repMin||it.reps)+'"><input inputmode="numeric" id="rti-pmax" value="'+(pp.repMax||(it.reps+4))+'"></div></div>':'<div></div>')+'</div>';}
+    sheetEl.querySelectorAll('[data-pm]').forEach(b=>b.onclick=()=>{pm=b.dataset.pm;pDraw();});
+    pDraw();
     document.getElementById('rti-rest').onclick=()=>{rtRest=restOpts[(restOpts.indexOf(rtRest)+1)%restOpts.length];document.getElementById('rti-rest').textContent=restLbl(rtRest);};
     document.getElementById('rti-save').onclick=()=>{
       const s=parseInt(document.getElementById('rti-sets').value)||0,rp=parseInt(document.getElementById('rti-reps').value)||0;
       if(s<1||rp<1){toast('Sets and reps need to be 1 or more');return;}
-      it.sets=s;it.reps=rp;if(rtRest==null)delete it.rest;else it.rest=rtRest;save();closeSheet();trRoutineDetail(id);
+      it.sets=s;it.reps=rp;if(rtRest==null)delete it.rest;else it.rest=rtRest;
+      if(pm==='off')delete it.prog;else{const st=parseFloat((document.getElementById('rti-pstep')||{}).value)||progStep(pu,exMeta(it.exercise).e);
+        let a=rp,b=rp+4;if(pm==='double'){a=parseInt(document.getElementById('rti-pmin').value)||rp;b=parseInt(document.getElementById('rti-pmax').value)||a+4;if(b<a){toast('Top of the range must be at least the bottom');return;}}
+        it.prog={mode:pm,step:st,repMin:a,repMax:b};}
+      save();closeSheet();trRoutineDetail(id);
     };
     document.getElementById('rti-rm').onclick=()=>{r.items.splice(i,1);save();closeSheet();trRoutineDetail(id);toast(it.exercise+' removed');};
   });
@@ -1386,7 +1470,7 @@ function rtStart(id){
   const r=(state.routines||[]).find(x=>x.id===id);if(!r||!r.items.length)return;
   rtRun={rid:id,idx:0};
   tview='today';tsel=TODAY;localStorage.setItem('foodBrbTrainView',tview);renderTrain();
-  exEntry(r.items[0].exercise,{sets:r.items[0].sets,reps:r.items[0].reps});
+  exEntry(r.items[0].exercise,{sets:r.items[0].sets,reps:r.items[0].reps,item:r.items[0]});
 }
 let restT=null,restEnd=0;
 function restDefaultSec(){return parseInt(localStorage.getItem('foodBrbRestSec')||'180');}
@@ -1562,8 +1646,11 @@ function exEntry(name,target){
   let eq=exMeta(name).e;
   let sets=last?last.sets.map(s=>({w:s.w,r:s.r})):[{w:'',r:''}];
   if(target&&target.sets>0){const base=sets;sets=[];for(let i=0;i<target.sets;i++)sets.push(base[i]?{w:base[i].w,r:base[i].r}:(base.length?{w:base[base.length-1].w,r:base[base.length-1].r}:{w:'',r:target.reps||''}));}
+  let why='';
+  if(target&&target.item){const rl=progRule(target.item,unit);if(rl){const nt=nextTarget(rl,progSessions(name,unit),unit);why=nt.reason;
+    if(nt.weight!=null){sets=[];for(let i=0;i<(nt.sets||1);i++)sets.push({w:nt.weight,r:nt.reps});}}}
   openSheet('<h3>'+esc(name)+'</h3><div class="sub">'+(last?'Last time: '+esc(exSummary(last))+' on '+fmtDay(last.date):'First time logging this one.')+'</div>'
-    +'<div class="exfld"><label>Date</label><input type="date" id="ex-date" value="'+defDay+'" max="'+TODAY+'"></div>'
+    +(why?'<div class="progwhy"><b>Why this weight</b>'+esc(why)+'</div>':'')+'<div class="exfld"><label>Date</label><input type="date" id="ex-date" value="'+defDay+'" max="'+TODAY+'"></div>'
     +'<div class="exfld"><label>Units</label><div class="segrow" id="ex-seg"><button class="segbtn'+(unit==='kg'?' sel':'')+'" data-u="kg">kg</button><button class="segbtn'+(unit==='lbs'?' sel':'')+'" data-u="lbs">lbs</button></div></div>'
     +'<div class="exfld"><label>Equipment</label><button class="eqpick" id="ex-eq" type="button">'+eqLabel(eq)+'</button><div class="ynote" style="margin-top:4px">Tap to change - for this entry only.</div></div>'
     +'<div id="ex-sets"></div>'
@@ -1594,7 +1681,7 @@ function exEntry(name,target){
       const just=r?r.items[rtRun.idx]:null;
       restStart(just&&just.rest?just.rest:undefined);
       rtRun.idx++;
-      if(r&&rtRun.idx<r.items.length){const nxt=r.items[rtRun.idx];toast('Next: '+nxt.exercise);exEntry(nxt.exercise,{sets:nxt.sets,reps:nxt.reps});}
+      if(r&&rtRun.idx<r.items.length){const nxt=r.items[rtRun.idx];toast('Next: '+nxt.exercise);exEntry(nxt.exercise,{sets:nxt.sets,reps:nxt.reps,item:nxt});}
       else{rtRun=null;toast((r?r.name:'Routine')+' complete');if(r)rtFinishCheck(r);}
     } else {restStart();toast(name+' logged');}
   };
