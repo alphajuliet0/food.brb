@@ -335,6 +335,26 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .brand{letter-spacing:-.03em}
 .mmfig{display:flex;gap:6px;justify-content:center;padding:4px 0 2px}.mmfig>div{flex:1;max-width:150px;text-align:center}.mmfig svg{width:100%;height:auto;display:block}.mmfig span{display:block;font-size:11px;color:var(--dim);margin-top:2px}
 .progwhy{background:var(--surface2);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:12px;line-height:1.5;color:var(--dim)}.progwhy b{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);margin-bottom:2px}
+.gw{position:fixed;inset:0;z-index:34;background:var(--page);display:none;flex-direction:column;padding-top:env(safe-area-inset-top)}
+.gwon .restbar{bottom:calc(86px + env(safe-area-inset-bottom))}.gwon .toast{z-index:50}.gwon .restadj{padding:6px 9px}.gwon .restbar{gap:6px}
+.gwtop{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 4px}
+.gwx{width:40px;height:40px;border:0;border-radius:50%;background:var(--surface);color:var(--ink);font-size:24px;line-height:1;font-family:inherit}
+.gwmid{text-align:center}.gwmid b{display:block;font-size:14px}.gwmid span{font-size:11px;color:var(--dim)}
+.gwprog{display:flex;gap:4px;padding:8px 16px 0}.gwprog i{flex:1;height:3px;border-radius:2px;background:var(--hair)}.gwprog i.dn{background:var(--ink);opacity:.5}.gwprog i.on{background:var(--kcal)}
+.gwbody{flex:1;overflow-y:auto;padding:14px 16px 150px}
+.gwhead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:12px}
+.gwhead h2{font-family:'Space Grotesk',Inter,sans-serif;font-weight:700;font-size:24px;line-height:1.15;margin:0 0 4px}
+.gwsub{font-size:12px;color:var(--dim)}.gwlast{font-size:12px;color:var(--dim);margin-top:6px}
+.gwfig{display:flex;gap:2px;flex:none}.gwfig svg{width:56px;height:auto;display:block}
+.gwcols{display:grid;grid-template-columns:28px 1fr 1fr 48px;gap:8px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:600;margin:4px 0 6px}
+.gwunit{border:0;background:none;color:var(--dim);font:inherit;letter-spacing:inherit;text-transform:inherit;text-align:left;padding:0}
+.gwset{display:grid;grid-template-columns:28px 1fr 1fr 48px;gap:8px;align-items:center;margin-bottom:8px}
+.gwn{font-size:13px;color:var(--dim);text-align:center;font-weight:700}
+.gwset input{width:100%;min-width:0;box-sizing:border-box;background:var(--surface2);border:0;border-radius:12px;padding:13px 12px;color:var(--ink);font-size:17px;font-family:inherit}
+.gwck{width:44px;height:44px;border-radius:50%;border:2px solid var(--hair);background:transparent;color:#fff;font-size:20px;font-family:inherit;padding:0}
+.gwset.done .gwck{background:var(--kcal);border-color:var(--kcal)}.gwset.done input{opacity:.55}
+.gwnav{position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom));background:var(--page);border-top:1px solid var(--hair)}
+.gwnav .sheetbtn{margin:0}.gwnav .sheetbtn.ghost{flex:0 0 96px}.gwnav .sheetbtn.primary{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1257,7 +1277,7 @@ function trToday(){
   const bw=bwFor(tsel);
   el.innerHTML='<div class="titlerow"><button class="navchev" id="tprev" aria-label="Previous day">&lsaquo;</button><h1 class="today">'+title+'</h1><button class="navchev" id="tnext" aria-label="Next day"'+(isToday?' disabled':'')+'>&rsaquo;</button>'+(!isToday?'<button class="backchip" id="tback">Back to today</button>':'')+'</div>'
     +(bw!=null?'<div class="trbw">Bodyweight '+bw+' kg</div>':'')
-    +'<div class="trpad"><button class="sheetbtn primary" id="ex-add" style="margin:2px 0 16px">Log exercise</button></div>'
+    +(gwLoad()?'<div class="trpad"><button class="sheetbtn primary" id="gw-resume" style="margin:2px 0 10px">Resume '+esc(gwLoad().name)+' &middot; exercise '+Math.min(gwLoad().idx+1,gwLoad().items.length)+' of '+gwLoad().items.length+'</button></div>':'')+'<div class="trpad"><button class="sheetbtn '+(gwLoad()?'ghost':'primary')+'" id="ex-add" style="margin:2px 0 16px">Log exercise</button></div>'
     +(groups.length?'<div class="trpad">'+groups.map(g=>{
         const defEq=exMeta(g.name).e,ovr=g.rows.find(w=>w.eq&&w.eq!==defEq);
         let n=0;const setLines=[];
@@ -1268,7 +1288,7 @@ function trToday(){
   document.getElementById('tprev').onclick=()=>{tsel=FOODBRB.shiftKey(tsel,-1);trToday();};
   document.getElementById('tnext').onclick=()=>{if(tsel<TODAY){tsel=FOODBRB.shiftKey(tsel,1);trToday();}};
   const bk=document.getElementById('tback');if(bk)bk.onclick=()=>{tsel=TODAY;trToday();};
-  document.getElementById('ex-add').onclick=exPicker;
+  document.getElementById('ex-add').onclick=exPicker;const rsm=document.getElementById('gw-resume');if(rsm)rsm.onclick=gwResume;
   el.querySelectorAll('[data-exs]').forEach(c=>c.onclick=()=>exDaySheet(c.dataset.exs));
 }
 function exDaySheet(name){
@@ -1388,6 +1408,104 @@ function progSessions(name,unit){
   return Object.keys(by).sort().map(d=>({date:d,sets:by[d]}));}
 function progRule(it,unit){const p=it.prog;if(!p||p.mode==='off'||!p.mode)return null;
   return {mode:p.mode,step:p.step>0?p.step:progStep(unit,exMeta(it.exercise).e),repMin:p.repMin||it.reps,repMax:p.repMax||(it.reps+4),sets:it.sets,reps:it.reps};}
+/* Guided workout. Original to form.brb. State lives in localStorage (foodBrbGW) until the workout ends; every logged set is written to state.workouts straight away. */
+let gw=null,mmD=null;
+function gwLoad(){try{const g=JSON.parse(localStorage.getItem('foodBrbGW')||'null');if(g&&g.items&&g.date&&(Date.now()-g.start)<20*36e5)return g;}catch(e){}return null;}
+function gwPersist(){if(gw)localStorage.setItem('foodBrbGW',JSON.stringify(gw));}
+function gwFig(name){
+  if(!mmD)mmD=JSON.parse(document.getElementById('mmdata').textContent);
+  const mu=mmOf(name),fill={};
+  mu.s.forEach(k=>(MMG[k]||[]).forEach(sl=>fill[sl]=.4));mu.p.forEach(k=>(MMG[k]||[]).forEach(sl=>fill[sl]=1));
+  return ['f','k'].map(v=>{const D=mmD[v];let g='';
+    Object.keys(D.m).forEach(sl=>{const o=fill[sl];g+='<path d="'+D.m[sl]+'" style="fill:'+(o?'var(--kcal)':'var(--hair)')+';fill-opacity:'+(o||1)+'"/>';});
+    return '<svg viewBox="'+(v==='f'?'0':'718')+' 95 727 1280" aria-hidden="true"><path d="'+D.b+'" style="fill:var(--surface2)"/>'+g+'</svg>';}).join('');}
+function gwPrep(i){
+  const it=gw.items[i],name=it.exercise,unit=exUnitFor(name),last=exLast(name);
+  let sets=[];
+  for(let k=0;k<(it.sets||3);k++){const b=last&&last.sets.length?(last.sets[k]||last.sets[last.sets.length-1]):null;sets.push({w:b?b.w:'',r:b?b.r:it.reps,d:0});}
+  let why='';
+  const rl=progRule(it,unit);
+  if(rl){const nt=nextTarget(rl,progSessions(name,unit),unit);why=nt.reason;
+    if(nt.weight!=null)sets=sets.map(()=>({w:nt.weight,r:nt.reps,d:0}));}
+  gw.ex[i]={name:name,unit:unit,sets:sets,why:why,last:last?'Last time: '+exSummary(last)+' on '+fmtDay(last.date):'First time logging this one.',eid:null};
+}
+function gwSync(i){
+  const ex=gw.ex[i];if(!ex)return;
+  const clean=ex.sets.filter(s=>s.d&&(parseInt(s.r)||0)>0).map(s=>({w:parseFloat(s.w)||0,r:parseInt(s.r)||0}));
+  const wk=state.workouts||[];
+  if(!clean.length){
+    if(ex.eid){state.workouts=wk.filter(x=>x.id!==ex.eid);if(state.deletedIds)state.deletedIds.push(ex.eid);ex.eid=null;}
+  } else if(!ex.eid){
+    ex.eid=uid();
+    state.workouts=wk.concat([{id:ex.eid,date:gw.date,exercise:ex.name,unit:ex.unit,eq:exMeta(ex.name).e,sets:clean}]);
+    if(!EXEQ[ex.name]&&!(state.exmeta&&state.exmeta[ex.name])){state.exmeta=state.exmeta||{};state.exmeta[ex.name]={e:exMeta(ex.name).e,m:exMeta(ex.name).m||''};}
+  } else {const e=wk.find(x=>x.id===ex.eid);if(e){e.sets=clean;e.unit=ex.unit;}}
+  localStorage.setItem('foodBrbExUnit',ex.unit);
+  save();gwPersist();
+}
+function gwStart(id){
+  const r=(state.routines||[]).find(x=>x.id===id);if(!r||!r.items.length)return;
+  if(gwLoad()&&!confirm('A workout is already in progress. Start a new one instead?'))return;
+  gw={rid:id,name:r.name,idx:0,start:Date.now(),date:TODAY,items:r.items.map(it=>({exercise:it.exercise,sets:it.sets,reps:it.reps,rest:it.rest||null,prog:it.prog||null})),ex:[]};
+  gwPersist();gwShow();
+}
+function gwResume(){const g=gwLoad();if(!g)return;gw=g;gwShow();}
+function gwShow(){
+  let el=document.getElementById('gw');
+  if(!el){el=document.createElement('div');el.id='gw';el.className='gw';document.body.appendChild(el);}
+  document.body.classList.add('gwon');el.style.display='flex';gwRender();
+}
+function gwClose(){restStop();const el=document.getElementById('gw');if(el)el.style.display='none';document.body.classList.remove('gwon');renderTrain();}
+function gwRender(){
+  const el=document.getElementById('gw'),n=gw.items.length,i=gw.idx;
+  if(i>=n){gwSummary();return;}
+  if(!gw.ex[i])gwPrep(i);
+  const ex=gw.ex[i],it=gw.items[i];
+  el.innerHTML='<div class="gwtop"><button class="gwx" id="gw-x" aria-label="Close">&times;</button><div class="gwmid"><b>'+esc(gw.name)+'</b><span>Exercise '+(i+1)+' of '+n+'</span></div><span style="width:40px"></span></div>'
+    +'<div class="gwprog">'+gw.items.map((x,k)=>'<i class="'+(k<i?'dn':k===i?'on':'')+'"></i>').join('')+'</div>'
+    +'<div class="gwbody"><div class="gwhead"><div><h2>'+esc(ex.name)+'</h2><div class="gwsub">'+esc(eqLabel(exMeta(ex.name).e))+'</div><div class="gwlast">'+esc(ex.last)+'</div></div><div class="gwfig">'+gwFig(ex.name)+'</div></div>'
+    +(ex.why?'<div class="progwhy"><b>Why this weight</b>'+esc(ex.why)+'</div>':'')
+    +'<div class="gwcols"><span></span><button class="gwunit" id="gw-unit" type="button">Weight ('+ex.unit+')</button><span>Reps</span><span></span></div>'
+    +'<div id="gw-sets">'+ex.sets.map((s,k)=>'<div class="gwset'+(s.d?' done':'')+'"><span class="gwn">'+(k+1)+'</span><input inputmode="decimal" data-k="'+k+'" data-f="w" value="'+s.w+'" placeholder="0"><input inputmode="numeric" data-k="'+k+'" data-f="r" value="'+s.r+'"><button class="gwck" data-ck="'+k+'" aria-label="'+(s.d?'Undo set '+(k+1):'Log set '+(k+1))+'">'+(s.d?'&#10003;':'')+'</button></div>').join('')+'</div>'
+    +'<button class="sheetbtn ghost" id="gw-add" style="margin:8px 0 0">+ Add set</button><div class="ynote" style="text-align:center">Tap the circle to log a set. Tap it again to undo.</div></div>'
+    +'<div class="gwnav"><button class="sheetbtn ghost" id="gw-prev"'+(i?'':' disabled')+'>&lsaquo; Back</button><button class="sheetbtn primary" id="gw-next">'+(i<n-1?'Next: '+esc(gw.items[i+1].exercise):'Finish workout')+'</button></div>';
+  document.getElementById('gw-x').onclick=gwMenu;
+  document.getElementById('gw-prev').onclick=()=>{gw.idx=Math.max(0,i-1);gwPersist();gwRender();};
+  document.getElementById('gw-next').onclick=()=>{restStop();gw.idx=i+1;gwPersist();gwRender();};
+  document.getElementById('gw-unit').onclick=()=>{ex.unit=ex.unit==='kg'?'lbs':'kg';gwSync(i);gwRender();};
+  document.getElementById('gw-add').onclick=()=>{const l=ex.sets[ex.sets.length-1]||{w:'',r:it.reps};ex.sets.push({w:l.w,r:l.r,d:0});gwPersist();gwRender();};
+  el.querySelectorAll('#gw-sets input').forEach(inp=>inp.oninput=()=>{const s=ex.sets[+inp.dataset.k];s[inp.dataset.f]=inp.value;if(s.d)gwSync(i);else gwPersist();});
+  el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>{
+    const k=+b.dataset.ck,s=ex.sets[k];
+    if(s.d){s.d=0;gwSync(i);gwRender();return;}
+    if(!(parseInt(s.r)>0)){toast('Add the reps first');return;}
+    s.d=1;gwSync(i);gwRender();
+    const left=ex.sets.some(x=>!x.d);
+    if(left||i<n-1)restStart(it.rest||undefined);
+    else toast('Last set logged');
+  });
+}
+function gwMenu(){
+  openSheet('<h3>Leave the workout?</h3><div class="sub">Every set you logged is already saved.</div>'
+    +'<button class="sheetbtn primary" id="gwm-keep">Keep going</button>'
+    +'<button class="sheetbtn ghost" id="gwm-pause">Pause - resume from Train</button>'
+    +'<button class="sheetbtn ghost" id="gwm-end">Finish now</button>');
+  document.getElementById('gwm-keep').onclick=closeSheet;
+  document.getElementById('gwm-pause').onclick=()=>{closeSheet();gwPersist();gwClose();};
+  document.getElementById('gwm-end').onclick=()=>{closeSheet();gw.idx=gw.items.length;gwRender();};
+}
+function gwSummary(){
+  restStop();
+  const el=document.getElementById('gw');
+  const logged=gw.ex.filter(e=>e&&e.eid),sets=logged.reduce((t,e)=>t+e.sets.filter(s=>s.d).length,0);
+  const vol=Math.round(logged.reduce((t,e)=>t+e.sets.filter(s=>s.d).reduce((x,s)=>x+(parseFloat(s.w)||0)*(parseInt(s.r)||0)*(e.unit==='lbs'?LB2KG:1),0),0));
+  const mins=Math.max(1,Math.round((Date.now()-gw.start)/60000));
+  el.innerHTML='<div class="gwtop"><span style="width:40px"></span><div class="gwmid"><b>'+esc(gw.name)+'</b><span>Workout complete</span></div><span style="width:40px"></span></div>'
+    +'<div class="gwbody"><div class="gwhead"><div><h2>'+(sets?'Nicely done.':'Nothing logged.')+'</h2><div class="gwsub">'+(sets?'Everything is saved to your history.':'No sets were logged this time, so nothing was saved.')+'</div></div></div>'
+    +'<div class="exsess" style="cursor:default;margin-top:12px"><div class="trset"><span>Exercises</span><span class="trtgt">'+logged.length+'</span></div><div class="trset"><span>Sets</span><span class="trtgt">'+sets+'</span></div><div class="trset"><span>Volume</span><span class="trtgt">'+vol.toLocaleString()+' kg</span></div><div class="trset"><span>Time</span><span class="trtgt">'+mins+' min</span></div></div></div>'
+    +'<div class="gwnav"><button class="sheetbtn primary" id="gw-done">Done</button></div>';
+  document.getElementById('gw-done').onclick=()=>{const r=(state.routines||[]).find(x=>x.id===gw.rid);localStorage.removeItem('foodBrbGW');gw=null;gwClose();if(r&&sets)rtFinishCheck(r);};
+}
 let rtRun=null;
 function trRoutineDetail(id){
   const el=document.getElementById('trainbody');if(!el)return;
@@ -1400,7 +1518,7 @@ function trRoutineDetail(id){
     +'<button class="sheetbtn ghost" id="rt-rename">Rename routine</button>'
     +'<button class="sheetbtn danger" id="rt-del">Delete routine</button></div>';
   document.getElementById('rt-back').onclick=trRoutines;
-  document.getElementById('rt-start').onclick=()=>rtStart(id);
+  document.getElementById('rt-start').onclick=()=>gwStart(id);
   el.querySelectorAll('[data-mv]').forEach(b=>b.onclick=e=>{
     e.stopPropagation();
     const i=+b.dataset.i,d=+b.dataset.mv,t=i+d;
