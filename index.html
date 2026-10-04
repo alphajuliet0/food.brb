@@ -353,6 +353,10 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .gwset input{width:100%;min-width:0;box-sizing:border-box;background:var(--surface2);border:0;border-radius:12px;padding:13px 12px;color:var(--ink);font-size:17px;font-family:inherit}
 .gwck{width:44px;height:44px;border-radius:50%;border:2px solid var(--hair);background:transparent;color:#fff;font-size:20px;font-family:inherit;padding:0}
 .gwset.done .gwck{background:var(--kcal);border-color:var(--kcal)}.gwset.done input{opacity:.55}
+.swr{position:relative;margin-bottom:8px;border-radius:14px;overflow:hidden}.swr .exsess{margin:0;position:relative;z-index:1;transition:transform .2s ease;touch-action:pan-y}.swa{position:absolute;right:0;top:0;bottom:0;display:flex;width:156px}.swa button{flex:1;border:0;color:#fff;font:600 14px Inter,sans-serif}.swa .swe{background:#3a3a42}.swa .swd{background:var(--kcal)}
+.gwlive{position:fixed;left:12px;right:12px;bottom:calc(64px + env(safe-area-inset-bottom));z-index:36;display:none;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--kcal);border-radius:14px;padding:11px 14px;box-shadow:0 8px 28px rgba(0,0,0,.4);color:var(--ink);font:inherit;text-align:left;width:auto}.gwlive b{font-size:14px;display:block}.gwlive span{font-size:11px;color:var(--dim)}.gwlive .go{margin-left:auto;font-size:13px;font-weight:700;color:var(--kcal)}.gwlive .dot{width:8px;height:8px;border-radius:50%;background:var(--kcal);flex:none}
+body.gwlv .restbar{bottom:calc(126px + env(safe-area-inset-bottom))}
+.gwon .gwlive{display:none!important}
 .gwnav{position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;padding:12px 16px calc(14px + env(safe-area-inset-bottom));background:var(--page);border-top:1px solid var(--hair)}
 .gwnav .sheetbtn{margin:0}.gwnav .sheetbtn.ghost{flex:0 0 96px}.gwnav .sheetbtn.primary{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .exerr{background:rgba(229,50,27,.14);color:var(--kcal-hi);border-radius:12px;padding:10px 12px;margin:0 0 10px;font-size:13px;line-height:1.4}.setrow input.bad{box-shadow:inset 0 0 0 2px var(--kcal)}
@@ -1286,14 +1290,22 @@ function trToday(){
         const defEq=exMeta(g.name).e,ovr=g.rows.find(w=>w.eq&&w.eq!==defEq);
         let n=0;const setLines=[];
         g.rows.forEach(w=>{w.sets.forEach(s=>{n++;setLines.push('<div class="trset"><span class="trsetn">'+n+'</span><span class="trsetw">'+(+s.w?(Math.round(s.w*10)/10)+' '+(w.unit||'kg'):'Bodyweight')+'</span><span>'+s.r+(w.t?' s':' reps')+'</span></div>');});if(w.note)setLines.push('<div class="ynote" style="margin:2px 0 6px">'+esc(w.note)+'</div>');});
-        return '<div class="exsess" data-exs="'+esc(g.name)+'"><div class="d">'+esc(eqLabel(ovr?ovr.eq:defEq))+'</div><div class="s">'+esc(g.name)+'</div>'+setLines.join('')+'</div>';
+        return '<div class="swr"><div class="swa"><button class="swe" data-swe="'+esc(g.name)+'">Edit</button><button class="swd" data-swd="'+esc(g.name)+'">Delete</button></div><div class="exsess" data-exs="'+esc(g.name)+'"><div class="d">'+esc(eqLabel(ovr?ovr.eq:defEq))+'</div><div class="s">'+esc(g.name)+'</div>'+setLines.join('')+'</div></div>';
       }).join('')+'</div>'
       :'<div class="ynote trpad">Nothing logged '+(isToday?'yet today':'this day')+'.</div>');
   document.getElementById('tprev').onclick=()=>{tsel=FOODBRB.shiftKey(tsel,-1);trToday();};
   document.getElementById('tnext').onclick=()=>{if(tsel<TODAY){tsel=FOODBRB.shiftKey(tsel,1);trToday();}};
   const bk=document.getElementById('tback');if(bk)bk.onclick=()=>{tsel=TODAY;trToday();};
   document.getElementById('ex-add').onclick=()=>exPicker();const rsm=document.getElementById('gw-resume');if(rsm)rsm.onclick=gwResume;const gpk=document.getElementById('gw-pick');if(gpk)gpk.onclick=gwPick;
-  el.querySelectorAll('[data-exs]').forEach(c=>c.onclick=()=>exDaySheet(c.dataset.exs));
+  el.querySelectorAll('[data-exs]').forEach(c=>{
+    let x0=0,y0=0,dx=0,mv=false,open=false,lock=false;
+    c.addEventListener('touchstart',e=>{const t=e.touches[0];x0=t.clientX;y0=t.clientY;dx=0;mv=false;lock=false;c.style.transition='none';},{passive:true});
+    c.addEventListener('touchmove',e=>{const t=e.touches[0],ddx=t.clientX-x0,ddy=t.clientY-y0;if(!mv&&!lock){if(Math.abs(ddy)>8&&Math.abs(ddy)>Math.abs(ddx)){lock=true;return;}if(Math.abs(ddx)>8)mv=true;}if(mv){dx=Math.max(-156,Math.min(0,(open?-156:0)+ddx));c.style.transform='translateX('+dx+'px)';}},{passive:true});
+    c.addEventListener('touchend',()=>{c.style.transition='';if(mv){open=dx<-70;c.style.transform=open?'translateX(-156px)':'';c._sw=Date.now();}});
+    c.onclick=()=>{if(c._sw&&Date.now()-c._sw<350)return;if(open){open=false;c.style.transform='';return;}exDaySheet(c.dataset.exs);};
+  });
+  el.querySelectorAll('[data-swe]').forEach(b=>b.onclick=()=>{const rs=exEntries().filter(w=>w.date===tsel&&w.exercise===b.dataset.swe);if(rs.length===1)exEdit(rs[0].id,trToday);else exDaySheet(b.dataset.swe);});
+  el.querySelectorAll('[data-swd]').forEach(b=>b.onclick=()=>{const nm=b.dataset.swd,rs=exEntries().filter(w=>w.date===tsel&&w.exercise===nm);if(!rs.length)return;const ids=rs.map(w=>w.id);state.workouts=exEntries().filter(w=>ids.indexOf(w.id)<0);if(state.deletedIds)ids.forEach(i=>state.deletedIds.push(i));save();trToday();undoBar('Deleted '+nm,()=>{state.workouts=(state.workouts||[]).concat(rs);if(state.deletedIds)state.deletedIds=state.deletedIds.filter(i=>ids.indexOf(i)<0);save();trToday();toast('Restored');});});
 }
 
 function undoBar(msg,fn){
@@ -1512,9 +1524,17 @@ function gwResume(){const g=gwLoad();if(!g)return;gw=g;gwShow();}
 function gwShow(){
   let el=document.getElementById('gw');
   if(!el){el=document.createElement('div');el.id='gw';el.className='gw';document.body.appendChild(el);}
-  document.body.classList.add('gwon');el.style.display='flex';gwRender();
+  document.body.classList.add('gwon');el.style.display='flex';gwLive();gwRender();
 }
-function gwClose(){restStop();const el=document.getElementById('gw');if(el)el.style.display='none';document.body.classList.remove('gwon');renderTrain();}
+function gwLive(){
+  const g=gw||gwLoad();let b=document.getElementById('gwlive');
+  if(!g||document.body.classList.contains('gwon')){if(b)b.style.display='none';document.body.classList.remove('gwlv');return;}
+  if(!b){b=document.createElement('button');b.id='gwlive';b.type='button';b.className='gwlive';b.onclick=()=>{if(!gw)gw=gwLoad();if(gw)gwShow();};document.body.appendChild(b);}
+  b.innerHTML='<i class="dot"></i><div><b>'+esc(g.name)+' &middot; in progress</b><span>Exercise '+Math.min(g.idx+1,g.items.length)+' of '+g.items.length+' &middot; tap to continue</span></div><span class="go">Resume</span>';
+  b.style.display='flex';document.body.classList.add('gwlv');
+}
+function gwMinimize(){gwTimerStop();gwPersist();const el=document.getElementById('gw');if(el)el.style.display='none';document.body.classList.remove('gwon');renderTrain();gwLive();}
+function gwClose(){restStop();const el=document.getElementById('gw');if(el)el.style.display='none';document.body.classList.remove('gwon');renderTrain();gwLive();}
 /* Form cues. Written fresh for form.brb: short coaching reminders, no media. */
 const CUES={
 'Back Squat':'Bar sits on your upper back, ribs down, chest proud.|Knees track over your toes as you sit between your hips.|Drive the floor away and keep your heels flat.',
@@ -1591,10 +1611,10 @@ function gwRender(){
   el.innerHTML='<div class="gwtop"><button class="gwx" id="gw-x" aria-label="Close">&times;</button><div class="gwmid"><b>'+esc(gw.name)+'</b><span>'+(multi?'Superset &middot; ':'')+'Exercise '+(gi+1)+' of '+groups.length+'</span></div><span style="width:40px"></span></div>'
     +'<div class="gwprog">'+groups.map((x,k)=>'<i class="'+(k<gi?'dn':k===gi?'on':'')+'"></i>').join('')+'</div>'
     +'<div class="gwbody">'+(multi?'<div class="ynote" style="margin:0 0 10px">Superset: do one set of each, then rest.</div>':'')+blocks+'<div class="ynote" style="text-align:center">Tap the circle to log a set. Tap it again to undo.</div></div>'
-    +'<div class="gwnav"><button class="sheetbtn ghost" id="gw-prev"'+(gi?'':' disabled')+'>&lsaquo; Back</button><button class="sheetbtn primary" id="gw-next">'+(nx?'Next: '+esc(gw.items[nx[0]].exercise):'Finish workout')+'</button></div>';
+    +'<div class="gwnav"><button class="sheetbtn ghost" id="gw-prev">&lsaquo; Back</button><button class="sheetbtn primary" id="gw-next">'+(nx?'Next: '+esc(gw.items[nx[0]].exercise):'Finish workout')+'</button></div>';
   document.getElementById('gw-x').onclick=gwMenu;
-  document.getElementById('gw-prev').onclick=()=>{gwTimerStop();gw.idx=groups[Math.max(0,gi-1)][0];gwPersist();gwRender();};
-  document.getElementById('gw-next').onclick=()=>{restStop();gwTimerStop();gw.idx=g[1]+1;gwPersist();gwRender();};
+  document.getElementById('gw-prev').onclick=()=>{if(!gi){gwMinimize();return;}gwTimerStop();gw.idx=groups[gi-1][0];gwPersist();gwRender();};
+  document.getElementById('gw-next').onclick=()=>{gwTimerStop();gw.idx=g[1]+1;gwPersist();gwRender();};
   el.querySelectorAll('[data-cue]').forEach(b=>b.onclick=()=>{const i=+b.dataset.cue;gw.ex[i].cueOpen=!gw.ex[i].cueOpen;gwRender();});
   el.querySelectorAll('[data-un]').forEach(b=>b.onclick=()=>{const i=+b.dataset.un,ex=gw.ex[i];ex.unit=ex.unit==='kg'?'lbs':'kg';gwSync(i);gwRender();});
   el.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{const i=+b.dataset.add,ex=gw.ex[i],l=ex.sets[ex.sets.length-1]||{w:'',r:gw.items[i].reps};ex.sets.push({w:l.w,r:l.r,d:0});gwPersist();gwRender();});
@@ -1619,10 +1639,10 @@ function gwRender(){
 function gwMenu(){
   openSheet('<h3>Leave the workout?</h3><div class="sub">Every set you logged is already saved.</div>'
     +'<button class="sheetbtn primary" id="gwm-keep">Keep going</button>'
-    +'<button class="sheetbtn ghost" id="gwm-pause">Pause - resume from Train</button>'
+    +'<button class="sheetbtn ghost" id="gwm-pause">Minimise - keep it running</button>'
     +'<button class="sheetbtn ghost" id="gwm-end">Finish now</button>');
   document.getElementById('gwm-keep').onclick=closeSheet;
-  document.getElementById('gwm-pause').onclick=()=>{closeSheet();gwPersist();gwClose();};
+  document.getElementById('gwm-pause').onclick=()=>{closeSheet();gwMinimize();};
   document.getElementById('gwm-end').onclick=()=>{closeSheet();gw.idx=gw.items.length;gwRender();};
 }
 function gwSummary(){
@@ -1637,7 +1657,7 @@ function gwSummary(){
     +'<div class="gwbody"><div class="gwhead"><div><h2>'+(sets?'Nicely done.':'Nothing logged.')+'</h2><div class="gwsub">'+(sets?'Everything is saved to your history.':'No sets were logged this time, so nothing was saved.')+'</div></div></div>'
     +'<div class="exsess" style="cursor:default;margin-top:12px"><div class="trset"><span>Exercises</span><span class="trtgt">'+logged.length+'</span></div><div class="trset"><span>Sets</span><span class="trtgt">'+sets+'</span></div><div class="trset"><span>Volume</span><span class="trtgt">'+vol.toLocaleString()+' kg</span></div>'+(prN?'<div class="trset"><span>New bests</span><span class="trtgt">'+prN+'</span></div>':'')+'<div class="trset"><span>Time</span><span class="trtgt">'+mins+' min</span></div></div></div>'
     +'<div class="gwnav"><button class="sheetbtn primary" id="gw-done">Done</button></div>';
-  document.getElementById('gw-done').onclick=()=>{const r=(state.routines||[]).find(x=>x.id===gw.rid);localStorage.removeItem('foodBrbGW');gw=null;gwClose();if(r&&sets)rtFinishCheck(r);};
+  document.getElementById('gw-done').onclick=()=>{const r=(state.routines||[]).find(x=>x.id===gw.rid);localStorage.removeItem('foodBrbGW');gw=null;restStop();gwClose();if(r&&sets)rtFinishCheck(r);};
 }
 let rtRun=null;
 function trRoutineDetail(id){
@@ -1727,6 +1747,7 @@ function trRoutineDetail(id){
   };
 }
 function rtStart(id){gwStart(id);}
+setTimeout(()=>{try{gwLive();}catch(e){}},600);
 let restT=null,restEnd=0;
 function restDefaultSec(){return parseInt(localStorage.getItem('foodBrbRestSec')||'180');}
 function restStop(){if(restT){clearInterval(restT);restT=null;}const bar=document.getElementById('restbar');if(bar)bar.style.display='none';}
