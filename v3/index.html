@@ -369,6 +369,48 @@ body.gwlv .restbar{bottom:calc(126px + env(safe-area-inset-bottom))}
 @media (prefers-reduced-motion:reduce){.tabind{transition:none}.cfm::after{animation:none;display:none}.undobar{transition:none}}
 .gwblk+.gwblk{margin-top:22px;padding-top:18px;border-top:1px solid var(--hair)}
 .gwcuebtn{border:0;background:none;color:var(--dim);font:inherit;font-size:12px;font-weight:600;padding:2px 0 10px;text-decoration:underline;text-underline-offset:3px}.gwcues{margin:0 0 12px;padding:10px 12px 10px 28px;background:var(--surface2);border-radius:12px;font-size:13px;line-height:1.5;color:var(--ink)}.gwcues li{margin:2px 0}
+/* ---------- review dashboard ---------- */
+.revlink{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:12px;padding:12px 0 0;border-top:1px solid var(--hair);font-size:13px;font-weight:700;color:var(--ink)}
+.revlink span{color:var(--dim);font-weight:600}
+.revov{position:fixed;inset:0;z-index:46;background:var(--page);overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+.revov.on{display:block}
+.revhead{position:sticky;top:0;z-index:2;background:var(--page);padding:calc(14px + env(safe-area-inset-top)) 20px 10px;border-bottom:1px solid var(--hair)}
+.revtop{display:flex;align-items:center;justify-content:space-between}
+.revtop h2{font-family:var(--hd);font-size:24px;font-weight:700;letter-spacing:-.4px}
+.revclose{font-size:13px;font-weight:700;background:var(--surface2);border-radius:999px;padding:8px 16px}
+.revnav{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.revnav .navchev{width:34px;height:34px}
+.revnav b{font-size:14px;font-weight:700;text-align:center}
+.revnav b small{display:block;font-size:11px;color:var(--dim);font-weight:600;margin-top:1px}
+.revbody{padding:14px 16px 0;max-width:560px;margin:0 auto}
+.rvc{background:var(--surface);border-radius:18px;padding:16px;margin-bottom:12px}
+.rvc h3{font-family:var(--hd);font-size:16px;font-weight:700;letter-spacing:-.2px;margin-bottom:2px}
+.rvc .rvs{font-size:11.5px;color:var(--dim);line-height:1.45;margin-bottom:10px}
+.rvt{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.rvt th{font-size:9.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--kcal);font-weight:700;text-align:right;padding:0 0 7px}
+.rvt th:first-child,.rvt td:first-child{text-align:left}
+.rvt td{text-align:right;padding:8px 0;border-top:1px solid var(--hair);font-weight:600;vertical-align:top}
+.rvt td:first-child{color:var(--dim);font-weight:600;white-space:nowrap}
+.rvt td small{display:block;font-size:10.5px;font-weight:700;margin-top:1px}
+.rvt .up{color:var(--kcal)}.rvt .dn{color:var(--green)}.rvt .mut{color:var(--dim);font-weight:500}.rvt .odd{color:var(--amber)}
+.rvt tr.td td{background:var(--surface2)}
+.rvl{list-style:none}
+.rvl li{position:relative;padding:7px 0 7px 18px;font-size:13.5px;line-height:1.45;border-top:1px solid var(--hair)}
+.rvl li:first-child{border-top:0}
+.rvl li:before{content:"";position:absolute;left:2px;top:13px;width:8px;height:8px;border-radius:50%;background:var(--green)}
+.rvl.bad li:before{background:var(--kcal)}
+.rvl.chk li:before{background:var(--amber)}
+.rvl .rvgo{display:inline-block;margin-left:6px;font-size:12px;font-weight:700;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.rvnote{font-size:11px;color:var(--dim);line-height:1.5;margin-top:10px}
+.rvchart{display:block;width:100%;height:auto;overflow:visible}
+.rvchart text{font-family:Inter,-apple-system,sans-serif;fill:var(--dim);font-size:9px}
+.rvchart .rvtl{stroke:var(--dim);stroke-width:1;stroke-dasharray:3 3;opacity:.7}
+.rvb{transform-origin:50% 100%;transform-box:fill-box;animation:rvgrow .6s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*14ms)}
+@keyframes rvgrow{from{transform:scaleY(.02)}}
+.rvkey{display:flex;gap:12px;flex-wrap:wrap;font-size:10.5px;color:var(--dim);margin-top:8px}
+.rvkey i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.rvcopy{display:block;width:100%;padding:13px;border-radius:14px;background:var(--surface2);font-size:14px;font-weight:700;margin-top:4px}
+@media (prefers-reduced-motion:reduce){.rvb{animation:none}}
 </style>
 </head>
 <body>
@@ -387,6 +429,7 @@ body.gwlv .restbar{bottom:calc(126px + env(safe-area-inset-bottom))}
     <div class="legend" id="legend"></div>
   </div>
   <div class="bankrow" id="bankrow"></div>
+  <button class="revlink" id="revbtn">Weekly review<span>Charts, tables, what went well &rsaquo;</span></button>
 </div>
 <div class="mealshead"><h2>Meals</h2><span id="mealcount"></span></div>
 <div class="meals" id="meals"></div>
@@ -411,6 +454,7 @@ body.gwlv .restbar{bottom:calc(126px + env(safe-area-inset-bottom))}
   <div class="scanmsg" id="scanmsg">Point at the barcode.</div>
   <div class="scanman"><input id="scanmanin" inputmode="numeric" placeholder="Or type the barcode number"><button id="scanmanbtn">Look up</button></div>
 </div>
+<div class="revov" id="revov" role="dialog" aria-label="Review"></div>
 <div class="sheetbg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 <div class="onb" id="onb"></div>
@@ -2572,6 +2616,188 @@ async function doRefresh(){
   setTimeout(()=>location.reload(),400);
 }
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+/* ---------- review dashboard: weekly view built from logged data, plain SVG, nothing leaves the device ---------- */
+const REV={off:0};
+const REVSUS={fibre:60,fibreItem:40,protein:250,kcal:4500,steps:50000};
+function rvN(x){return Math.round(x).toLocaleString();}
+function rvF(x){return (Math.round(x*10)/10).toLocaleString();}
+function rvSd(k){return fmtDay(k).slice(4);}
+function rvDow(k){return fmtDay(k).slice(0,3);}
+function rvDay(k){
+  const d=state.days[k],lg=FOODBRB.logged(d),t=FOODBRB.totals(d),st=FOODBRB.stepsOf(d),fut=k>TODAY,today=k===TODAY,sus=[];
+  if(lg){
+    if(t.fibre>REVSUS.fibre||(d.foods||[]).some(f=>(f.fibre||0)>REVSUS.fibreItem))sus.push('fibre');
+    if(t.protein>REVSUS.protein)sus.push('protein');
+    if(t.kcal>REVSUS.kcal)sus.push('kcal');
+  }
+  if(st!=null&&st>REVSUS.steps)sus.push('steps');
+  return {k,fut,today,lg,kcal:t.kcal,protein:t.protein,fibre:t.fibre,steps:st,sus,complete:lg&&!fut&&!today};
+}
+function rvUse(d,m){
+  if(d.fut)return null;
+  if(m==='steps'){return (d.today||d.steps==null||d.sus.includes('steps'))?null:d.steps;}
+  if(!d.complete||d.sus.includes(m))return null;
+  return d[m];
+}
+function rvWeek(off){
+  const keys=FOODBRB.weekKeys(off),days=keys.map(rvDay);
+  const used=days.reduce((a,d)=>a+(d.lg&&!d.fut?d.kcal:0),0),budget=P.kcalTarget*7;
+  const elapsed=days.filter(d=>!d.fut).length;
+  const avg=m=>{const v=days.map(d=>rvUse(d,m)).filter(x=>x!=null);return v.length?{v:v.reduce((a,b)=>a+b,0)/v.length,n:v.length}:null;};
+  const trainSet=new Set((state.workouts||[]).map(w=>w.date).filter(x=>keys.includes(x)&&x<=TODAY));
+  return {off,keys,days,used,budget,elapsed,avg,train:trainSet.size,unlogged:days.filter(d=>!d.fut&&!d.today&&!d.lg),anyLogged:days.some(d=>d.lg)};
+}
+function rvBars(days,key,target,color,label){
+  const W=350,H=140,pt=14,pb=30,ph=H-pt-pb,n=days.length,step=W/n,bw=Math.min(12,step-4);
+  const vals=days.map(d=>d.fut?null:(d.sus.includes(key)&&key!=='kcal'?null:(key==='steps'?(d.steps):(d.lg?d[key]:null))));
+  const mx=Math.max(target*1.25,...vals.filter(v=>v!=null).map(v=>v*1.06));
+  const y=v=>pt+ph*(1-Math.min(1,v/mx));
+  let s='<svg class="rvchart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(label)+'">';
+  s+='<line class="rvtl" x1="0" x2="'+W+'" y1="'+y(target).toFixed(1)+'" y2="'+y(target).toFixed(1)+'"/><text x="'+W+'" y="'+(y(target)-3).toFixed(1)+'" text-anchor="end">target '+rvN(target)+'</text>';
+  s+='<line x1="0" x2="'+W+'" y1="'+(pt+ph)+'" y2="'+(pt+ph)+'" stroke="var(--hair)"/>';
+  days.forEach((d,i)=>{
+    const x=i*step+(step-bw)/2,cx=x+bw/2,v=vals[i];
+    if(d.k===days[0].k||rvDow(d.k)==='Mon'){s+='<line x1="'+(i*step).toFixed(1)+'" x2="'+(i*step).toFixed(1)+'" y1="'+pt+'" y2="'+(H-8)+'" stroke="var(--hair)"/><text x="'+(i*step+3).toFixed(1)+'" y="'+(H-3)+'">'+esc(rvSd(d.k))+'</text>';}
+    s+='<text x="'+cx.toFixed(1)+'" y="'+(H-15)+'" text-anchor="middle">'+rvDow(d.k)[0]+'</text>';
+    if(d.fut){s+='<circle cx="'+cx.toFixed(1)+'" cy="'+(pt+ph-1.5)+'" r="1.2" fill="var(--hair)"/>';return;}
+    if(d.sus.includes(key)&&key!=='kcal'){s+='<rect x="'+x.toFixed(1)+'" y="'+pt+'" width="'+bw+'" height="'+ph+'" rx="3" fill="none" stroke="var(--amber)" stroke-dasharray="3 2"/><text x="'+cx.toFixed(1)+'" y="'+(pt-3)+'" text-anchor="middle" style="fill:var(--amber);font-weight:700">?</text>';return;}
+    if(v==null){s+='<rect x="'+x.toFixed(1)+'" y="'+(pt+ph-2)+'" width="'+bw+'" height="2" rx="1" fill="var(--dim)" opacity=".5"/>';return;}
+    const good=key==='kcal'?v<=target:v>=target,c=good?'var(--green)':color,yy=y(v);
+    s+='<rect class="rvb" style="--i:'+i+'" x="'+x.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw+'" height="'+Math.max(2,pt+ph-yy).toFixed(1)+'" rx="3" fill="'+c+'"'+(d.today?' opacity=".5"':'')+'/>';
+  });
+  return s+'</svg>';
+}
+function rvBank(weeks){
+  const W=350,H=150,pt=16,pb=22,ph=H-pt-pb,n=weeks.length,step=W/n,bw=Math.min(36,step-14),budget=weeks[0].budget;
+  const mx=Math.max(budget*1.2,...weeks.map(w=>w.used*1.08)),y=v=>pt+ph*(1-Math.min(1,v/mx));
+  let s='<svg class="rvchart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Calories used each week against the weekly bank of '+rvN(budget)+'">';
+  s+='<line x1="0" x2="'+W+'" y1="'+(pt+ph)+'" y2="'+(pt+ph)+'" stroke="var(--hair)"/><line class="rvtl" x1="0" x2="'+W+'" y1="'+y(budget).toFixed(1)+'" y2="'+y(budget).toFixed(1)+'"/><text x="0" y="'+(y(budget)-3).toFixed(1)+'">bank '+rvN(budget)+'</text>';
+  weeks.forEach((w,i)=>{
+    const x=i*step+(step-bw)/2,cx=x+bw/2,cur=w.keys.includes(TODAY),lab=rvSd(w.keys[0])+(cur?' so far':'');
+    s+='<text x="'+cx.toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle">'+esc(lab)+'</text>';
+    if(!w.anyLogged){s+='<rect x="'+x.toFixed(1)+'" y="'+(pt+ph-2)+'" width="'+bw+'" height="2" rx="1" fill="var(--dim)" opacity=".5"/>';return;}
+    const yy=y(w.used),c=w.used<=w.budget?'var(--green)':'var(--kcal)';
+    s+='<rect class="rvb" style="--i:'+(i*2)+'" x="'+x.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw+'" height="'+Math.max(2,pt+ph-yy).toFixed(1)+'" rx="5" fill="'+c+'"'+(cur?' opacity=".55"':'')+'/><text x="'+cx.toFixed(1)+'" y="'+(yy-4).toFixed(1)+'" text-anchor="middle" style="fill:var(--ink);font-weight:700">'+rvN(w.used)+'</text>';
+  });
+  return s+'</svg>';
+}
+function rvInsights(W,L){
+  const well=[],bad=[],T=P.kcalTarget,cur=W.keys.includes(TODAY);
+  const comp=W.days.filter(d=>d.complete&&!d.sus.includes('kcal')||d.complete),N=comp.length;
+  const under=comp.filter(d=>d.kcal<=T),over=comp.filter(d=>d.kcal>T).sort((a,b)=>b.kcal-a.kcal);
+  if(under.length)well.push(under.length+' of '+N+' full days at or under '+rvN(T)+' kcal ('+under.slice(0,3).map(d=>rvDow(d.k)+' '+rvN(d.kcal)).join(', ')+')');
+  if(over.length)bad.push('Over '+rvN(T)+' kcal on '+over.length+' of '+N+' full days: '+over.slice(0,3).map(d=>rvDow(d.k)+' +'+rvN(d.kcal-T)).join(', '));
+  if(W.anyLogged){
+    if(W.used<=W.budget){
+      const pace=T*W.elapsed;
+      if(cur&&W.used>pace)bad.push('Ahead of pace by '+rvN(W.used-pace)+' kcal after '+W.elapsed+' day'+(W.elapsed>1?'s':'')+' ('+rvN(W.used)+' of '+rvN(W.budget)+' used)');
+      else well.push('Bank '+(cur?'on track':'held')+': '+rvN(W.used)+' of '+rvN(W.budget)+' kcal used, '+rvN(W.budget-W.used)+' left');
+    }else bad.push('Bank over by '+rvN(W.used-W.budget)+' kcal ('+rvN(W.used)+' of '+rvN(W.budget)+')');
+  }
+  if(W.unlogged.length)bad.push('Not logged: '+W.unlogged.map(d=>rvDow(d.k)).join(', ')+'. Shown as gaps, not counted as zero');
+  else if(W.elapsed>1&&W.days.filter(d=>!d.fut&&!d.today).every(d=>d.lg)&&W.anyLogged)well.push('Every past day logged');
+  const pa=W.avg('protein');
+  if(pa){const hit=comp.filter(d=>!d.sus.includes('protein')&&d.protein>=P.proteinTarget);
+    if(pa.v>=P.proteinTarget)well.push('Protein averaged '+rvF(pa.v)+'g, at or above '+P.proteinTarget+'g');
+    else bad.push('Protein averaged '+rvF(pa.v)+'g against '+P.proteinTarget+'g, short on '+(pa.n-hit.length)+' of '+pa.n+' days');
+    if(hit.length)well.push('Protein target hit on '+hit.length+' day'+(hit.length>1?'s':'')+': '+hit.slice(0,3).map(d=>rvDow(d.k)+' '+rvF(d.protein)+'g').join(', '));}
+  const fa=W.avg('fibre'),FG=P.fibreTarget||30;
+  if(fa){const hit=comp.filter(d=>!d.sus.includes('fibre')&&d.fibre>=FG);
+    if(fa.v>=FG)well.push('Fibre averaged '+rvF(fa.v)+'g, at or above '+FG+'g');
+    else bad.push('Fibre averaged '+rvF(fa.v)+'g against '+FG+'g, '+hit.length+' of '+fa.n+' days at target');
+    if(hit.length&&fa.v<FG)well.push('Fibre target hit on '+hit.map(d=>rvDow(d.k)+' '+rvF(d.fibre)+'g').slice(0,3).join(', '));}
+  const sa=W.avg('steps'),la=L&&L.avg('steps');
+  if(sa){const hits=W.days.filter(d=>rvUse(d,'steps')!=null&&d.steps>=P.stepsTarget).length;
+    if(la){const df=sa.v-la.v;(df>=0?well:bad).push('Steps averaged '+rvN(sa.v)+', '+(df>=0?'up ':'down ')+rvN(Math.abs(df))+' on last week ('+rvN(la.v)+')');}
+    else well.push('Steps averaged '+rvN(sa.v));
+    if(!hits)bad.push('No day reached '+rvN(P.stepsTarget)+' steps');else well.push(hits+' day'+(hits>1?'s':'')+' at '+rvN(P.stepsTarget)+' steps or more');}
+  if(W.train)well.push('Trained on '+W.train+' day'+(W.train>1?'s':''));else if(W.elapsed>=3)bad.push('No training logged');
+  if(over.length){const w=over[0],fs=((state.days[w.k]||{}).foods||[]).slice().sort((a,b)=>(b.kcal||0)-(a.kcal||0)).slice(0,2);
+    if(fs.length)bad.push('Biggest day '+rvDow(w.k)+' '+rvN(w.kcal)+' kcal: '+fs.map(f=>esc(f.name||'food')+' '+rvN(f.kcal||0)).join(', '));}
+  return {well,bad};
+}
+function rvSuspects(keys){
+  const out=[];
+  keys.forEach(k=>{const d=rvDay(k);if(d.fut)return;
+    const fd=((state.days[k]||{}).foods||[]);
+    if(d.sus.includes('fibre')){const big=fd.slice().sort((a,b)=>(b.fibre||0)-(a.fibre||0))[0];out.push({k,t:rvDow(k)+' '+rvSd(k)+': fibre '+rvF(d.fibre)+'g'+(big&&big.fibre>REVSUS.fibreItem?' (from '+esc(big.name||'one item')+', '+rvF(big.fibre)+'g)':'')+' looks too high. Left out of fibre averages'});}
+    if(d.sus.includes('protein'))out.push({k,t:rvDow(k)+' '+rvSd(k)+': protein '+rvF(d.protein)+'g looks too high. Left out of protein averages'});
+    if(d.sus.includes('kcal'))out.push({k,t:rvDow(k)+' '+rvSd(k)+': '+rvN(d.kcal)+' kcal is unusually high. Counted in the bank, worth a check'});
+    if(d.sus.includes('steps'))out.push({k,t:rvDow(k)+' '+rvSd(k)+': '+rvN(d.steps)+' steps looks too high. Left out of step averages'});
+  });
+  return out;
+}
+function rvTable(head,rows,cls){
+  return '<table class="rvt'+(cls?' '+cls:'')+'"><thead><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr'+(r.cls?' class="'+r.cls+'"':'')+'>'+r.c.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+}
+function rvBuild(){
+  const W=rvWeek(REV.off),L=rvWeek(REV.off-1),cur=W.keys.includes(TODAY);
+  const w3=[].concat(rvWeek(REV.off-2).days,rvWeek(REV.off-1).days,W.days);
+  const weeks6=[];for(let i=5;i>=0;i--)weeks6.push(rvWeek(REV.off-i));
+  const ins=rvInsights(W,L),sus=rvSuspects(w3.map(d=>d.k)),FG=P.fibreTarget||30;
+  const pv=(a,u)=>a?rvF(a.v)+(u||''):'<span class="mut">no data</span>';
+  const g=[
+    {c:['Calories used',rvN(W.used),rvN(W.budget),L.anyLogged?rvN(L.used):'<span class="mut">none</span>']},
+    {c:['Protein avg',pv(W.avg('protein'),'g'),P.proteinTarget+'g',pv(L.avg('protein'),'g')]},
+    {c:['Fibre avg',pv(W.avg('fibre'),'g'),FG+'g',pv(L.avg('fibre'),'g')]},
+    {c:['Steps avg',W.avg('steps')?rvN(W.avg('steps').v):'<span class="mut">no data</span>',rvN(P.stepsTarget),L.avg('steps')?rvN(L.avg('steps').v):'<span class="mut">no data</span>']},
+    {c:['Days logged',W.days.filter(d=>d.lg).length+' of '+W.elapsed,W.elapsed===7?'7 of 7':'7',L.days.filter(d=>d.lg).length+' of 7']},
+    {c:['Training days',String(W.train),'<span class="mut">no target</span>',String(L.train)]}
+  ];
+  const dd=W.days.map(d=>{
+    if(d.fut)return {c:[rvDow(d.k),'<span class="mut">-</span>','<span class="mut">-</span>','<span class="mut">-</span>','<span class="mut">-</span>']};
+    const diff=d.lg?d.kcal-P.kcalTarget:null;
+    const kc=d.lg?rvN(d.kcal)+'<small class="'+(diff>0?'up':'dn')+'">'+(diff>0?'+':'-')+rvN(Math.abs(diff))+'</small>':'<span class="mut">no log</span>';
+    const mark=(m,txt)=>!d.lg?'<span class="mut">-</span>':(d.sus.includes(m)?'<span class="odd">'+txt+' ?</span>':txt);
+    return {cls:d.today?'td':'',c:[rvDow(d.k)+(d.today?'<small class="mut">today</small>':''),kc,mark('protein',rvF(d.protein)+'g'),mark('fibre',rvF(d.fibre)+'g'),d.steps==null?'<span class="mut">-</span>':(d.sus.includes('steps')?'<span class="odd">'+rvN(d.steps)+' ?</span>':rvN(d.steps))]};
+  });
+  const wow=weeks6.slice(2).map(w=>{const p=w.avg('protein'),f=w.avg('fibre'),s=w.avg('steps');
+    return {c:[rvSd(w.keys[0])+(w.keys.includes(TODAY)?'<small class="mut">so far</small>':''),w.anyLogged?rvN(w.used):'<span class="mut">none</span>',p?rvF(p.v)+'g':'<span class="mut">-</span>',f?rvF(f.v)+'g':'<span class="mut">-</span>',s?rvN(s.v):'<span class="mut">-</span>']};});
+  const avgOf=m=>{const a=m==='kcal'?null:rvWeek(REV.off).avg(m);return a;};
+  const nb=weeks6.filter(w=>w.anyLogged).length;
+  let h='';
+  h+='<div class="rvc"><h3>Week at a glance</h3><div class="rvs">'+(cur?'Today is not counted in averages until the day is over.':'Full week.')+' Gaps are never counted as zero.</div>'+rvTable(['','Week','Target','Week before'],g)+'</div>';
+  h+='<div class="rvc"><h3>What went well</h3><div class="rvs">Worked out by rules from your logs, not by guesswork.</div>'+(ins.well.length?'<ul class="rvl">'+ins.well.map(t=>'<li>'+t+'</li>').join('')+'</ul>':'<div class="rvs" style="margin:0">Nothing to show yet.</div>')+'</div>';
+  h+='<div class="rvc"><h3>What went badly</h3><div class="rvs">Same rules, same numbers.</div>'+(ins.bad.length?'<ul class="rvl bad">'+ins.bad.map(t=>'<li>'+t+'</li>').join('')+'</ul>':'<div class="rvs" style="margin:0">Nothing flagged.</div>')+'</div>';
+  if(sus.length)h+='<div class="rvc"><h3>Check these entries</h3><div class="rvs">Numbers that look off. They are kept out of averages where noted, never changed.</div><ul class="rvl chk">'+sus.map(s=>'<li>'+s.t+'<button class="rvgo" data-rvopen="'+s.k+'">Open day</button></li>').join('')+'</ul></div>';
+  const chartKey='<div class="rvkey"><span><i style="background:var(--green)"></i>on target</span><span><i style="background:COL"></i>missed</span><span>grey dash: not logged</span></div>';
+  h+='<div class="rvc"><h3>Calories per day</h3><div class="rvs">Three weeks to '+rvSd(W.keys[6])+'. Green is at or under '+rvN(P.kcalTarget)+'.</div>'+rvBars(w3,'kcal',P.kcalTarget,'var(--kcal)','Daily calories against '+P.kcalTarget)+chartKey.replace('COL','var(--kcal)').replace('missed','over')+'</div>';
+  h+='<div class="rvc"><h3>Weekly bank</h3><div class="rvs">Calories used each week against '+rvN(W.budget)+'.</div>'+rvBank(weeks6)+'</div>';
+  h+='<div class="rvc"><h3>Protein per day</h3><div class="rvs">Target '+P.proteinTarget+'g.</div>'+rvBars(w3,'protein',P.proteinTarget,'var(--protein)','Daily protein against '+P.proteinTarget+' grams')+chartKey.replace('COL','var(--protein)')+'</div>';
+  h+='<div class="rvc"><h3>Fibre per day</h3><div class="rvs">Target '+FG+'g. A dashed ? bar is an entry that looks wrong.</div>'+rvBars(w3,'fibre',FG,'var(--fibre)','Daily fibre against '+FG+' grams')+chartKey.replace('COL','var(--fibre)')+'</div>';
+  h+='<div class="rvc"><h3>Steps per day</h3><div class="rvs">Target '+rvN(P.stepsTarget)+'.</div>'+rvBars(w3,'steps',P.stepsTarget,'var(--steps)','Daily steps against '+P.stepsTarget)+chartKey.replace('COL','var(--steps)')+'</div>';
+  h+='<div class="rvc"><h3>Daily detail</h3><div class="rvs">Calories show the gap to '+rvN(P.kcalTarget)+'.</div>'+rvTable(['Day','Kcal','Protein','Fibre','Steps'],dd)+'</div>';
+  h+='<div class="rvc"><h3>Week on week</h3><div class="rvs">Calories are the week total. The rest are daily averages over full days.</div>'+rvTable(['Week','Kcal','Protein','Fibre','Steps'],wow)+'</div>';
+  h+='<div class="rvc"><h3>Data notes</h3><div class="rvnote" style="margin:0">Targets used: '+rvN(P.kcalTarget)+' kcal a day, '+rvN(W.budget)+' a week, '+P.proteinTarget+'g protein, '+FG+'g fibre, '+rvN(P.stepsTarget)+' steps. Averages use full days only. An entry is flagged when a day has over '+REVSUS.fibre+'g fibre, one item over '+REVSUS.fibreItem+'g fibre, over '+REVSUS.protein+'g protein, over '+rvN(REVSUS.kcal)+' kcal or over '+rvN(REVSUS.steps)+' steps. Everything here is read from this device and never sent anywhere.</div><button class="rvcopy" id="rvcopy" style="margin-top:12px">Copy summary as text</button></div>';
+  return {html:h,W,L,ins,sus};
+}
+function rvSummary(r){
+  const W=r.W,t=['form.brb review, '+rvSd(W.keys[0])+' to '+rvSd(W.keys[6]),'Calories used '+rvN(W.used)+' of '+rvN(W.budget)];
+  const pa=W.avg('protein'),fa=W.avg('fibre'),sa=W.avg('steps');
+  if(pa)t.push('Protein avg '+rvF(pa.v)+'g (target '+P.proteinTarget+'g)');if(fa)t.push('Fibre avg '+rvF(fa.v)+'g (target '+(P.fibreTarget||30)+'g)');if(sa)t.push('Steps avg '+rvN(sa.v)+' (target '+rvN(P.stepsTarget)+')');
+  t.push('Went well:');r.ins.well.forEach(x=>t.push('- '+x.replace(/&amp;/g,'&')));t.push('Went badly:');r.ins.bad.forEach(x=>t.push('- '+x.replace(/&amp;/g,'&')));
+  return t.join('\n');
+}
+let revCur=null;
+function renderReview(keepScroll){
+  const ov=document.getElementById('revov');if(!ov)return;
+  const r=rvBuild();revCur=r;const W=r.W,cur=W.keys.includes(TODAY);
+  ov.innerHTML='<div class="revhead"><div class="revtop"><h2>Review</h2><button class="revclose" id="revclose">Close</button></div><div class="revnav"><button class="navchev" data-rvnav="-1" aria-label="Previous week">&lsaquo;</button><b>'+rvSd(W.keys[0])+' to '+rvSd(W.keys[6])+'<small>'+(cur?'This week':REV.off===-1?'Last week':Math.abs(REV.off)+' weeks ago')+'</small></b><button class="navchev" data-rvnav="1" aria-label="Next week"'+(REV.off>=0?' disabled':'')+'>&rsaquo;</button></div></div><div class="revbody">'+r.html+'</div>';
+}
+function openReview(){REV.off=rvWeek(0).days.some(d=>d.complete)?0:-1;const ov=document.getElementById('revov');ov.classList.add('on');renderReview();ov.scrollTop=0;document.body.style.overflow='hidden';}
+function closeReview(){const ov=document.getElementById('revov');ov.classList.remove('on');document.body.style.overflow='';}
+(function(){
+  const ov=document.getElementById('revov'),btn=document.getElementById('revbtn');
+  if(btn)btn.onclick=openReview;
+  ov.addEventListener('click',e=>{
+    const t=e.target.closest('button');if(!t)return;
+    if(t.id==='revclose')closeReview();
+    else if(t.dataset.rvnav){const o=REV.off+Number(t.dataset.rvnav);if(o>0)return;REV.off=o;renderReview();ov.scrollTop=0;}
+    else if(t.dataset.rvopen){closeReview();setTab('food');sel=t.dataset.rvopen;render();window.scrollTo(0,0);}
+    else if(t.id==='rvcopy'){const s=rvSummary(revCur);(navigator.clipboard?navigator.clipboard.writeText(s):Promise.reject()).then(()=>toast('Summary copied'),()=>toast('Could not copy'));}
+  });
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ov.classList.contains('on'))closeReview();});
+})();
 </script>
 </body>
 </html>
