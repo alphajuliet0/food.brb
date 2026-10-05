@@ -2591,7 +2591,9 @@ else if(location.hash==='#onboarding') showOnboarding(true);
 let ptrY=null, ptrPull=0, ptrBusy=false;
 window.addEventListener('touchstart',e=>{
   if(ptrBusy)return;
-  if(window.scrollY<=2&&!sheetEl.classList.contains('on')&&!document.getElementById('onb').classList.contains('on'))ptrY=e.touches[0].clientY;else ptrY=null;
+  let ok=window.scrollY<=2&&!sheetEl.classList.contains('on')&&!document.getElementById('onb').classList.contains('on')&&!document.getElementById('revov').classList.contains('on');
+  for(let n=e.target;ok&&n&&n!==document.body&&n.nodeType===1;n=n.parentNode){if(n.scrollTop>0)ok=false;}
+  ptrY=ok?e.touches[0].clientY:null;
 },{passive:true});
 window.addEventListener('touchmove',e=>{
   if(ptrY===null)return;
