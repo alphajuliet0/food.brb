@@ -135,6 +135,7 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .mealcard .minfo{flex:1;min-width:0}
 .mealcard .mname2{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mealcard .mmacros{font-size:12px;color:var(--dim);margin-top:2px}
+.mealcard .mmacros .mprot{color:var(--ink);font-weight:700}.mealcard .mmacros .mamt{color:var(--dim)}
 .mealcard .mkcal{font-weight:800;font-size:15px;white-space:nowrap}
 .mealcard .mkcal span{font-size:11px;color:var(--dim);font-weight:500}
 .quickchips{display:flex;gap:8px;padding:16px 20px 4px}
@@ -629,9 +630,9 @@ function render(){
     html+='<div class="mealhead tappable" data-slot="'+sl+'">'+label+'<span>'+(items.length?items.length+' item'+(items.length>1?'s':'')+' · '+slotKcal.toLocaleString()+' cal &nbsp;+':'+')+'</span></div>';
     for(const f of items){
       if(!f.id){f.id=uid();dirty=true;}
-      const mac=[f.protein?'P '+Math.round(f.protein)+'g':'',f.carbs?'C '+Math.round(f.carbs)+'g':'',f.fat?'F '+Math.round(f.fat)+'g':''].filter(Boolean).join(' · ');
+      const mac=[f.g?'<span class="mamt">'+Math.round(f.g)+' g</span>':'',f.protein?'<b class="mprot">'+Math.round(f.protein)+'g protein</b>':'',f.carbs?'C '+Math.round(f.carbs)+'g':'',f.fat?'F '+Math.round(f.fat)+'g':''].filter(Boolean).join(' · ');
       html+='<div class="mealwrap"><div class="swipebg right">Copy to today</div><div class="swipebg left"><button class="mc" data-mcopy="'+f.id+'">Copy to</button><button class="md" data-mdel="'+f.id+'">Delete</button></div>'
-        +'<div class="mealcard" data-id="'+f.id+'"><div class="thumb">'+icon+'</div><div class="minfo"><div class="mname2">'+esc(f.name||'')+'</div><div class="mmacros">'+(mac||'&nbsp;')+'</div></div>'
+        +'<div class="mealcard" data-id="'+f.id+'"><div class="minfo"><div class="mname2">'+esc(f.name||'')+'</div><div class="mmacros">'+(mac||'&nbsp;')+'</div></div>'
         +'<div class="mkcal">'+(f.kcal||0).toLocaleString()+' <span>cal</span></div><button class="copybtn" data-copy="'+f.id+'" aria-label="Copy to another day">&#10697;</button></div></div>';
     }
   }
