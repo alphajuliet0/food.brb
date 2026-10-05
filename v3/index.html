@@ -221,9 +221,10 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .mealhead.tappable{cursor:pointer}
 .mealhead.tappable:active{color:var(--ink)}
 .mealwrap{position:relative;border-radius:18px;overflow:hidden}
-.swipebg{position:absolute;inset:0;display:flex;align-items:center;font-size:12px;font-weight:700;padding:0 18px;border-radius:18px}
-.swipebg.right{background:var(--protein);color:#fff;justify-content:flex-start}
-.swipebg.left{padding:0;justify-content:flex-end;background:var(--surface2)}.swipebg.left button{width:78px;height:100%;border:0;color:#fff;font:700 13px Inter,sans-serif}.swipebg.left .mc{background:#3a3a42}.swipebg.left .md{background:var(--kcal)}
+.swipebg{position:absolute;inset:0;display:flex;align-items:center;padding:0;border-radius:18px;background:var(--surface2);overflow:hidden}
+.swipebg.left{inset:0 0 0 auto;justify-content:flex-end}.swipebg.right{inset:0 auto 0 0;justify-content:flex-start}
+.swipebg button{width:78px;height:100%;border:0;color:#fff;font:700 13px Inter,sans-serif}.swipebg .mc,.swipebg .me{background:#3a3a42}.swipebg .md{background:var(--kcal);width:96px}
+.mealcard .mmacros .mamt{color:var(--dim)}
 .mealcard{position:relative;transition:transform .18s ease;touch-action:pan-y}
 .copybtn{display:none;width:32px;height:32px;border-radius:50%;background:var(--surface2);color:var(--dim);font-size:14px;align-items:center;justify-content:center;flex:0 0 auto}
 @media(hover:hover){.mealcard:hover .copybtn{display:flex}}
@@ -630,8 +631,9 @@ function render(){
     html+='<div class="mealhead tappable" data-slot="'+sl+'">'+label+'<span>'+(items.length?items.length+' item'+(items.length>1?'s':'')+' · '+slotKcal.toLocaleString()+' cal &nbsp;+':'+')+'</span></div>';
     for(const f of items){
       if(!f.id){f.id=uid();dirty=true;}
-      const mac=[f.g?'<span class="mamt">'+Math.round(f.g)+' g</span>':'',f.protein?'<b class="mprot">'+Math.round(f.protein)+'g protein</b>':'',f.carbs?'C '+Math.round(f.carbs)+'g':'',f.fat?'F '+Math.round(f.fat)+'g':''].filter(Boolean).join(' · ');
-      html+='<div class="mealwrap"><div class="swipebg right">Copy to today</div><div class="swipebg left"><button class="mc" data-mcopy="'+f.id+'">Copy to</button><button class="md" data-mdel="'+f.id+'">Delete</button></div>'
+      const mac=[f.g?'<span class="mamt">'+Math.round(f.g)+' g</span>':(f.pm&&f.pm!==1?'<span class="mamt">x'+f.pm+'</span>':''),f.protein?'<b class="mprot">'+Math.round(f.protein)+'g protein</b>':'',f.carbs?'C '+Math.round(f.carbs)+'g':'',f.fat?'F '+Math.round(f.fat)+'g':''].filter(Boolean).join(' · ');
+      const pDel='<button class="md" data-mdel="'+f.id+'">Delete</button>',pAct='<button class="me" data-medit="'+f.id+'">Edit</button><button class="mc" data-mcopy="'+f.id+'">Copy to</button>';
+      html+='<div class="mealwrap"><div class="swipebg right">'+(SWDEL<0?pAct:pDel)+'</div><div class="swipebg left">'+(SWDEL<0?pDel:pAct)+'</div>'
         +'<div class="mealcard" data-id="'+f.id+'"><div class="minfo"><div class="mname2">'+esc(f.name||'')+'</div><div class="mmacros">'+(mac||'&nbsp;')+'</div></div>'
         +'<div class="mkcal">'+(f.kcal||0).toLocaleString()+' <span>cal</span></div><button class="copybtn" data-copy="'+f.id+'" aria-label="Copy to another day">&#10697;</button></div></div>';
     }
@@ -789,6 +791,7 @@ function dayPickSheet(onpick){
 function copyFood(fromDay,id,toDay,slot){
   const f=findFood(fromDay,id);if(!f)return;
   const c={id:uid(),name:f.name,kcal:f.kcal||0,protein:f.protein||0,carbs:f.carbs||0,fat:f.fat||0,fibre:f.fibre||0,slot:slot,snack:slot==='snack',source:'copy'};
+  if(f.g>0&&f.base){c.g=f.g;c.base=f.base;}if(f.pm>0&&f.pbase){c.pm=f.pm;c.pbase=f.pbase;}
   foodsOf(toDay).push(c);save();
   if(toDay===sel||fromDay===sel)render();
   toast('Copied to '+(toDay===TODAY?'today':fmtDay(toDay)));
@@ -798,13 +801,19 @@ function num(v){const n=parseFloat(v);return isNaN(n)?0:n;}
 function editSheet(dayKey,id){
   const f=findFood(dayKey,id);if(!f)return;
   const cur=f.slot||(f.snack?'snack':'breakfast');
-  let EBASE=f.base&&f.g>0?f.base:null,EG=f.g>0?f.g:0;
+  let EBASE=f.base&&f.g>0?f.base:null,EG=f.g>0?f.g:0,UNIT='g',SC=100,INNAME=false;
+  if(!EBASE&&f.pbase&&f.pm>0){EBASE=f.pbase;EG=f.pm;UNIT='x';SC=1;}
   if(!EBASE){const m=String(f.name||'').match(/,\s*(\d+(?:\.\d+)?)\s*g\s*$/i),gg=m?parseFloat(m[1]):0;
     if(gg>0&&(f.kcal||0)>0){const k=100/gg;EBASE={k:(f.kcal||0)*k,p:(f.protein||0)*k,c:(f.carbs||0)*k,f:(f.fat||0)*k,fi:(f.fibre||0)*k};EG=gg;}}
+  if(!EBASE&&(f.kcal||0)>0){
+    const m2=String(f.name||'').match(/(\d+(?:\.\d+)?)\s*g\b/i),g2=m2?parseFloat(m2[1]):0;
+    if(g2>=5){const k=100/g2;EBASE={k:(f.kcal||0)*k,p:(f.protein||0)*k,c:(f.carbs||0)*k,f:(f.fat||0)*k,fi:(f.fibre||0)*k};EG=g2;INNAME=true;}
+    else{EBASE={k:f.kcal||0,p:f.protein||0,c:f.carbs||0,f:f.fat||0,fi:f.fibre||0};EG=1;UNIT='x';SC=1;}
+  }
   openSheet('<h3>Edit food</h3><div class="sub">'+esc(fmtDay(dayKey))+'</div>'
     +'<div class="fld fldrel"><label>Name</label><input id="ef-name" value="'+esc(f.name||'')+'"><div class="suggest below" id="ef-suggest"></div></div>'
     +'<div class="fld"><label>Meal</label><div class="mchiprow" style="margin-bottom:0">'+SLOTCH.map(([v,l])=>'<button class="mchip'+(v===cur?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')+'</div></div>'
-    +(EBASE?'<div class="fld"><label>Amount (g)</label><input id="ef-g" inputmode="decimal" value="'+EG+'"><div class="ynote" style="margin-top:6px">Change the grams and the calories and macros rescale.</div></div>':'')
+    +(EBASE?'<div class="fld"><label>'+(UNIT==='g'?'Amount (g)':'Portions (1 = as logged)')+'</label><input id="ef-g" inputmode="decimal" value="'+EG+'"><div class="ynote" style="margin-top:6px">'+(UNIT==='g'?'Change the grams and the calories and macros rescale.':'Type 1.5 for one and a half portions and the calories and macros rescale.')+'</div></div>':'')
     +'<div class="fld"><label>Calories</label><input id="ef-kcal" inputmode="numeric" value="'+(f.kcal||0)+'"></div>'
     +'<div class="grid3">'
     +'<div class="fld"><label>Protein g</label><input id="ef-p" inputmode="decimal" value="'+(f.protein||0)+'"></div>'
@@ -819,9 +828,9 @@ function editSheet(dayKey,id){
   if(egI){
     egI.addEventListener('focus',()=>{try{egI.select();}catch(e){}});
     egI.addEventListener('input',()=>{const g=parseFloat(egI.value)||0,r1=v=>Math.round(v*10)/10;
-      sheetEl.querySelector('#ef-kcal').value=Math.round(EBASE.k*g/100);
-      sheetEl.querySelector('#ef-p').value=r1(EBASE.p*g/100);sheetEl.querySelector('#ef-c').value=r1(EBASE.c*g/100);
-      sheetEl.querySelector('#ef-f').value=r1(EBASE.f*g/100);sheetEl.querySelector('#ef-fi').value=r1(EBASE.fi*g/100);manual=false;});
+      sheetEl.querySelector('#ef-kcal').value=Math.round(EBASE.k*g/SC);
+      sheetEl.querySelector('#ef-p').value=r1(EBASE.p*g/SC);sheetEl.querySelector('#ef-c').value=r1(EBASE.c*g/SC);
+      sheetEl.querySelector('#ef-f').value=r1(EBASE.f*g/SC);sheetEl.querySelector('#ef-fi').value=r1(EBASE.fi*g/SC);manual=false;});
     ['#ef-kcal','#ef-p','#ef-c','#ef-f','#ef-fi'].forEach(q=>sheetEl.querySelector(q).addEventListener('input',()=>{manual=true;}));
   }
   sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
@@ -841,9 +850,11 @@ function editSheet(dayKey,id){
     f.protein=num(sheetEl.querySelector('#ef-p').value);f.carbs=num(sheetEl.querySelector('#ef-c').value);
     f.fat=num(sheetEl.querySelector('#ef-f').value);f.fibre=num(sheetEl.querySelector('#ef-fi').value);
     if(egI){const g=parseFloat(egI.value)||0;
-      if(manual||g<=0){delete f.base;delete f.g;}
-      else{f.base=EBASE;f.g=Math.round(g*10)/10;
-        if(g!==EG){const suf=', '+f.g+' g';f.name=f.name.replace(/\s*\(\d[\d.]*\s*(small|medium|large)\)\s*$/i,suf).replace(/,\s*\d+(\.\d+)?\s*g\s*$/i,suf);if(f.name.indexOf(suf)<0)f.name=f.name+suf;}}}
+      if(manual||g<=0){delete f.base;delete f.g;delete f.pbase;delete f.pm;}
+      else if(UNIT==='x'){f.pbase=EBASE;f.pm=Math.round(g*100)/100;delete f.base;delete f.g;}
+      else{f.base=EBASE;f.g=Math.round(g*10)/10;delete f.pbase;delete f.pm;
+        if(g!==EG&&INNAME){const mm=f.name.match(/(\d+(?:\.\d+)?)(\s*g\b)/i);if(mm)f.name=f.name.replace(mm[0],f.g+mm[2]);}
+        else if(g!==EG){const suf=', '+f.g+' g';f.name=f.name.replace(/\s*\(\d[\d.]*\s*(small|medium|large)\)\s*$/i,suf).replace(/,\s*\d+(\.\d+)?\s*g\s*$/i,suf);if(f.name.indexOf(suf)<0)f.name=f.name+suf;}}}
     f.slot=meal;f.snack=meal==='snack';
     save();closeSheet();render();toast('Saved');
   };
@@ -1026,29 +1037,32 @@ function addSheet(pre){
   setTimeout(()=>sheetEl.querySelector('#af-name').focus(),300);
 }
 /* ---------- meal row handlers: tap edit, swipe copy, hover copy ---------- */
+/* swipe direction: -1 = swipe left deletes, swipe right gives Edit and Copy to. 1 = the reverse. */
+const SWDEL=-1;
 function attachMealHandlers(){
   document.querySelectorAll('.mealcard').forEach(card=>{
     const id=card.dataset.id;
-    card.addEventListener('click',e=>{if(card._swiped){card._swiped=false;return;}if(card._open){card._open=false;card.style.transform='';return;}editSheet(sel,id);});
+    const WL=SWDEL<0?96:156,WR=SWDEL<0?156:96;/* panel widths revealed by moving left / right */
+    card._o=0;
+    card.addEventListener('click',e=>{if(card._swiped){card._swiped=false;return;}if(card._o){card._o=0;card.style.transform='';return;}editSheet(sel,id);});
     card.addEventListener('touchstart',e=>{const t=e.touches[0];card._x=t.clientX;card._y=t.clientY;card._dx=0;card._horiz=null;},{passive:true});
     card.addEventListener('touchmove',e=>{
       const t=e.touches[0],dx=t.clientX-card._x,dy=t.clientY-card._y;
       if(card._horiz===null&&(Math.abs(dx)>8||Math.abs(dy)>8))card._horiz=Math.abs(dx)>Math.abs(dy);
-      if(card._horiz){const base=card._open?-156:0;card._dx=dx;card.style.transition='none';card.style.transform='translateX('+Math.max(-156,Math.min(120,base+dx))+'px)';}
+      if(card._horiz){card._dx=dx;card.style.transition='none';card.style.transform='translateX('+Math.max(-WL,Math.min(WR,card._o+dx))+'px)';}
     },{passive:true});
     card.addEventListener('touchend',()=>{
       card.style.transition='';
       const dx=card._dx||0;card._dx=0;
       if(!card._horiz){return;}
       if(Math.abs(dx)>24)card._swiped=true;
-      const ff=findFood(sel,id);if(!ff){card._horiz=null;card.style.transform='';return;}
-      const eff=(card._open?-156:0)+dx;
-      if(eff<-70){card._open=true;card.style.transform='translateX(-156px)';}
-      else{card._open=false;card.style.transform='';}
-      if(!card._open&&dx>64){mealPickSheet('Copy to today','Which meal?',ff.slot||(ff.snack?'snack':'breakfast'),slot=>copyFood(sel,id,TODAY,slot));}
+      const eff=card._o+dx;
+      if(eff<-WL*0.45){card._o=-WL;}else if(eff>WR*0.45){card._o=WR;}else{card._o=0;}
+      card.style.transform=card._o?'translateX('+card._o+'px)':'';
       card._horiz=null;
     });
   });
+  document.querySelectorAll('[data-medit]').forEach(b=>b.onclick=e=>{e.stopPropagation();editSheet(sel,b.dataset.medit);});
   document.querySelectorAll('[data-mcopy]').forEach(b=>b.onclick=e=>{e.stopPropagation();const id=b.dataset.mcopy,src=sel;dayPickSheet(day=>{const f=findFood(src,id);if(f)mealPickSheet('Copy to '+fmtDay(day),'Which meal?',f.slot||(f.snack?'snack':'breakfast'),slot=>copyFood(src,id,day,slot));});});
   document.querySelectorAll('[data-mdel]').forEach(b=>{cfm(b,'Confirm');b.onclick=e=>{e.stopPropagation();const id=b.dataset.mdel,day=sel,arr=foodsOf(day),i=arr.findIndex(x=>x.id===id);if(i<0)return;const rm=arr.splice(i,1)[0];state.deletedIds=[...(state.deletedIds||[]),rm.id].slice(-500);save();render();undoBar('Deleted '+(rm.name||'item'),()=>{foodsOf(day).splice(Math.min(i,foodsOf(day).length),0,rm);state.deletedIds=(state.deletedIds||[]).filter(x=>x!==rm.id);save();render();toast('Restored');});};});
   document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=e=>{
