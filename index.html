@@ -797,9 +797,13 @@ function num(v){const n=parseFloat(v);return isNaN(n)?0:n;}
 function editSheet(dayKey,id){
   const f=findFood(dayKey,id);if(!f)return;
   const cur=f.slot||(f.snack?'snack':'breakfast');
+  let EBASE=f.base&&f.g>0?f.base:null,EG=f.g>0?f.g:0;
+  if(!EBASE){const m=String(f.name||'').match(/,\s*(\d+(?:\.\d+)?)\s*g\s*$/i),gg=m?parseFloat(m[1]):0;
+    if(gg>0&&(f.kcal||0)>0){const k=100/gg;EBASE={k:(f.kcal||0)*k,p:(f.protein||0)*k,c:(f.carbs||0)*k,f:(f.fat||0)*k,fi:(f.fibre||0)*k};EG=gg;}}
   openSheet('<h3>Edit food</h3><div class="sub">'+esc(fmtDay(dayKey))+'</div>'
     +'<div class="fld fldrel"><label>Name</label><input id="ef-name" value="'+esc(f.name||'')+'"><div class="suggest below" id="ef-suggest"></div></div>'
     +'<div class="fld"><label>Meal</label><div class="mchiprow" style="margin-bottom:0">'+SLOTCH.map(([v,l])=>'<button class="mchip'+(v===cur?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')+'</div></div>'
+    +(EBASE?'<div class="fld"><label>Amount (g)</label><input id="ef-g" inputmode="decimal" value="'+EG+'"><div class="ynote" style="margin-top:6px">Change the grams and the calories and macros rescale.</div></div>':'')
     +'<div class="fld"><label>Calories</label><input id="ef-kcal" inputmode="numeric" value="'+(f.kcal||0)+'"></div>'
     +'<div class="grid3">'
     +'<div class="fld"><label>Protein g</label><input id="ef-p" inputmode="decimal" value="'+(f.protein||0)+'"></div>'
@@ -809,9 +813,19 @@ function editSheet(dayKey,id){
     +'<button class="sheetbtn primary" id="ef-save">Save</button>'
     +'<button class="sheetbtn danger" id="ef-del">Delete</button>'
     +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
-  let meal=cur;
+  let meal=cur,manual=false;
+  const egI=sheetEl.querySelector('#ef-g');
+  if(egI){
+    egI.addEventListener('focus',()=>{try{egI.select();}catch(e){}});
+    egI.addEventListener('input',()=>{const g=parseFloat(egI.value)||0,r1=v=>Math.round(v*10)/10;
+      sheetEl.querySelector('#ef-kcal').value=Math.round(EBASE.k*g/100);
+      sheetEl.querySelector('#ef-p').value=r1(EBASE.p*g/100);sheetEl.querySelector('#ef-c').value=r1(EBASE.c*g/100);
+      sheetEl.querySelector('#ef-f').value=r1(EBASE.f*g/100);sheetEl.querySelector('#ef-fi').value=r1(EBASE.fi*g/100);manual=false;});
+    ['#ef-kcal','#ef-p','#ef-c','#ef-f','#ef-fi'].forEach(q=>sheetEl.querySelector(q).addEventListener('input',()=>{manual=true;}));
+  }
   sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
   wireSheetTypeahead('#ef-name','#ef-suggest',s=>{
+    manual=true;
     sheetEl.querySelector('#ef-name').value=s.name;
     sheetEl.querySelector('#ef-kcal').value=s.kcal;
     sheetEl.querySelector('#ef-p').value=s.protein;
@@ -825,6 +839,10 @@ function editSheet(dayKey,id){
     f.name=name;f.kcal=num(sheetEl.querySelector('#ef-kcal').value);
     f.protein=num(sheetEl.querySelector('#ef-p').value);f.carbs=num(sheetEl.querySelector('#ef-c').value);
     f.fat=num(sheetEl.querySelector('#ef-f').value);f.fibre=num(sheetEl.querySelector('#ef-fi').value);
+    if(egI){const g=parseFloat(egI.value)||0;
+      if(manual||g<=0){delete f.base;delete f.g;}
+      else{f.base=EBASE;f.g=Math.round(g*10)/10;
+        if(g!==EG){const suf=', '+f.g+' g';f.name=f.name.replace(/\s*\(\d[\d.]*\s*(small|medium|large)\)\s*$/i,suf).replace(/,\s*\d+(\.\d+)?\s*g\s*$/i,suf);if(f.name.indexOf(suf)<0)f.name=f.name+suf;}}}
     f.slot=meal;f.snack=meal==='snack';
     save();closeSheet();render();toast('Saved');
   };
@@ -862,6 +880,8 @@ function prevSheet(){
     const hits=(ql?all.filter(f=>f.name.toLowerCase().indexOf(ql)>=0):all).slice(0,40);
     list.innerHTML=hits.length?hits.map((f,i)=>'<div class="yrow tappable pvrow" data-i="'+i+'"><span class="yl" style="color:var(--ink)">'+esc(f.name)+'</span><span class="yv">'+f.kcal+' kcal</span></div>').join(''):'<div class="sub" style="padding:12px 0">No personal matches yet - quick add it instead.</div>';
     list.querySelectorAll('.pvrow').forEach(b=>b.onclick=()=>{const f=hits[+b.dataset.i];closeSheet();addSheet(f);});
+    const fu=fruitUnitFor(ql);
+    if(fu){const up=fruitPortion(fu,ql),row=document.createElement('div');row.className='yrow tappable pvrow';row.innerHTML='<span class="yl" style="color:var(--ink)">'+esc(fu.name)+', whole (small, medium, large)</span><span class="yv">'+Math.round(fu.k*fu.sz[1][1]/100)+' kcal</span>';row.onclick=()=>portionSheet(up);list.insertBefore(row,list.firstChild);}
     const dbbox=sheetEl.querySelector('#pv-db');
     if(ql.length>=2){loadFoodDB().then(()=>{
       const seen={};hits.forEach(f=>seen[f.name.toLowerCase()]=1);
@@ -905,7 +925,8 @@ function suggRows(ql){
   hist.sort((a,b)=>a.name.toLowerCase().indexOf(ql)-b.name.toLowerCase().indexOf(ql));
   const seen={};hist.forEach(f=>seen[f.name.toLowerCase()]=1);
   const db=dbMatches(ql,seen);
-  return hist.slice(0,4).map(f=>({f,hist:true})).concat(db.slice(0,6).map(f=>({f,hist:false}))).slice(0,6);
+  const fu=fruitUnitFor(ql),urow=fu?[{f:{name:fu.name+', whole (small, medium, large)',kcal:Math.round(fu.k*fu.sz[1][1]/100),protein:0,carbs:0,fat:0,fibre:0,unit:fruitPortion(fu,ql)},hist:false,unit:true}]:[];
+  return urow.concat(hist.slice(0,4).map(f=>({f,hist:true}))).concat(db.slice(0,6).map(f=>({f,hist:false}))).slice(0,6);
 }
 function drawSuggestInto(box,input,onPick){
   if(!box)return;
@@ -916,6 +937,7 @@ function drawSuggestInto(box,input,onPick){
   box.querySelectorAll('.suggrow').forEach(b=>b.onclick=()=>{
     const s=rows[+b.dataset.i].f;
     box.classList.remove('on');box.innerHTML='';
+    if(s.unit){hideSuggest();if(typeof loginput!=='undefined'&&input===loginput)loginput.value='';portionSheet(s.unit);return;}
     onPick(s);
   });
 }
@@ -1101,35 +1123,65 @@ async function lookupBarcode(code){
 }
 
 /* ---------- portion sheet: scan result, amount always visible + editable ---------- */
+/* Whole-fruit units: typical weights, values per 100 g are standard reference figures. Shown as small / medium / large. */
+const FRUITU=[
+  {re:/\b(apple|pink lady|gala|braeburn|granny smith|fuji)\b/,skip:/juice|sauce|pie|crumble|tiser|cider|strudel|chips/,name:'Apple',k:52,p:0.3,c:13.8,f:0.2,fi:2.4,sz:[['Small',149],['Medium',182],['Large',223]]},
+  {re:/\bbananas?\b/,skip:/bread|cake|chips|milkshake|smoothie/,name:'Banana',k:89,p:1.1,c:22.8,f:0.3,fi:2.6,sz:[['Small',101],['Medium',118],['Large',136]]},
+  {re:/\borange\b/,skip:/juice|squash|cake|chocolate/,name:'Orange',k:47,p:0.9,c:11.8,f:0.1,fi:2.4,sz:[['Small',96],['Medium',131],['Large',184]]},
+  {re:/\bpears?\b/,skip:/juice|cider/,name:'Pear',k:57,p:0.4,c:15.2,f:0.1,fi:3.1,sz:[['Small',148],['Medium',178],['Large',230]]},
+  {re:/\bkiwi/,skip:/juice/,name:'Kiwi',k:61,p:1.1,c:14.7,f:0.5,fi:3,sz:[['Small',50],['Medium',69],['Large',91]]},
+  {re:/\bpeach(es)?\b/,skip:/juice|tea/,name:'Peach',k:39,p:0.9,c:9.5,f:0.3,fi:1.5,sz:[['Small',130],['Medium',150],['Large',175]]},
+  {re:/\b(clementine|satsuma|mandarin)s?\b/,skip:/juice/,name:'Clementine',k:47,p:0.9,c:11.5,f:0.2,fi:1.7,sz:[['Small',60],['Medium',74],['Large',90]]},
+  {re:/\bplums?\b/,skip:/juice|jam|sauce/,name:'Plum',k:46,p:0.7,c:11.4,f:0.3,fi:1.4,sz:[['Small',50],['Medium',66],['Large',90]]}
+];
+function fruitUnitFor(ql){for(const u of FRUITU){if(u.re.test(ql)&&!u.skip.test(ql))return u;}return null;}
+function fruitPortion(u,ql){
+  let nm=u.name;if(/pink lady/.test(ql))nm='Pink Lady apple';
+  return {name:nm,kcal100:u.k,p100:u.p,c100:u.c,f100:u.f,fi100:u.fi,sizes:u.sz,source:'common'};
+}
 function portionSheet(p){
   const replacing=!!draftCtx;
   const hr=new Date().getHours();
   const def=hr<11?'breakfast':hr<15?'lunch':hr<21?'dinner':'snack';
-  const modes=[['g','grams']];
-  if(p.serveGrams)modes.push(['s','serving ('+esc(p.serveLabel)+')']);
-  openSheet('<h3>'+esc(p.name)+'</h3><div class="sub">Pack data is per 100 g'+(p.serveGrams?' · serving = '+esc(p.serveLabel):' · no serving size on record')+' - set how much you had.</div>'
-    +'<div class="fld"><label>Amount</label><div class="portrow"><input id="pt-qty" inputmode="decimal" value="'+(p.serveGrams?'1':'100')+'"><div class="mchiprow" style="margin-bottom:0" id="pt-modes">'
-    +modes.map(([v,l],i)=>'<button class="mchip'+(i===(p.serveGrams?1:0)?' sel':'')+'" data-mode="'+v+'">'+l+'</button>').join('')+'</div></div></div>'
+  const sizes=p.sizes||null, sg=(p.serveGrams&&p.serveGrams!==100)?p.serveGrams:0;
+  const modes=[];
+  if(sizes)sizes.forEach((z,i)=>modes.push(['z'+i,z[0]]));
+  if(sg)modes.push(['s','serving ('+esc(p.serveLabel)+')']);
+  modes.push(['g','grams']);
+  let mode=sizes?'z1':(sg?'s':'g'), meal=def;
+  const unitG=m=>m==='g'?1:m==='s'?sg:sizes[+m.slice(1)][1];
+  const sub=sizes?'Typical sizes: '+sizes.map(z=>z[0].toLowerCase()+' about '+z[1]+' g').join(', ')+'. Pick a size and how many, or switch to grams.'
+    :'Nutrition is per 100 g'+(sg?' · serving = '+esc(p.serveLabel):'')+'. Type how much you had, in grams or servings.';
+  openSheet('<h3>'+esc(p.name)+'</h3><div class="sub">'+sub+'</div>'
+    +'<div class="fld"><label>Amount</label><div class="portrow"><input id="pt-qty" inputmode="decimal" value="'+(mode==='g'?'100':'1')+'"><div class="mchiprow" style="margin-bottom:0" id="pt-modes">'
+    +modes.map(([v,l])=>'<button class="mchip'+(v===mode?' sel':'')+'" data-mode="'+v+'">'+l+'</button>').join('')+'</div></div></div>'
     +'<div class="portpreview" id="pt-prev"></div>'
     +(replacing?'':'<div class="fld"><label>Meal</label><div class="mchiprow" style="margin-bottom:0">'+SLOTCH.map(([v,l])=>'<button class="mchip'+(v===def?' sel':'')+'" data-meal="'+v+'">'+l+'</button>').join('')+'</div></div>')
     +'<button class="sheetbtn primary" id="pt-save">'+(replacing?'Replace item':'Add to '+(sel===TODAY?'today':fmtDay(sel)))+'</button>'
     +'<button class="sheetbtn ghost" id="shcancel">Cancel</button>');
-  let mode=p.serveGrams?'s':'g', meal=def;
   const qty=sheetEl.querySelector('#pt-qty');
-  function grams(){const q=parseFloat(qty.value)||0;return (mode==='s'&&p.serveGrams)?q*p.serveGrams:q;}
+  function grams(){const q=parseFloat(qty.value)||0;return q*unitG(mode);}
   function preview(){
     const g=grams();
-    sheetEl.querySelector('#pt-prev').innerHTML='<b>'+Math.round(p.kcal100*g/100)+' kcal</b> <span>· P '+Math.round(p.p100*g/100)+'g · C '+Math.round(p.c100*g/100)+'g · F '+Math.round(p.f100*g/100)+'g · Fibre '+Math.round(p.fi100*g/100)+'g ('+Math.round(g)+'g)</span>';
+    sheetEl.querySelector('#pt-prev').innerHTML='<b>'+Math.round(p.kcal100*g/100)+' kcal</b> <span>· P '+(Math.round(p.p100*g/10)/10)+'g · C '+(Math.round(p.c100*g/10)/10)+'g · F '+(Math.round(p.f100*g/10)/10)+'g · Fibre '+(Math.round(p.fi100*g/10)/10)+'g ('+Math.round(g)+'g)</span>';
   }
   qty.addEventListener('input',preview);
-  sheetEl.querySelectorAll('#pt-modes [data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;sheetEl.querySelectorAll('#pt-modes [data-mode]').forEach(x=>x.classList.toggle('sel',x===b));preview();});
+  qty.addEventListener('focus',()=>{try{qty.select();}catch(e){}});
+  sheetEl.querySelectorAll('#pt-modes [data-mode]').forEach(b=>b.onclick=()=>{
+    const g=grams();mode=b.dataset.mode;
+    const q=g/unitG(mode);qty.value=g>0?(mode==='g'?String(Math.round(g)):String(Math.round(q*100)/100)):qty.value;
+    sheetEl.querySelectorAll('#pt-modes [data-mode]').forEach(x=>x.classList.toggle('sel',x===b));preview();});
   sheetEl.querySelectorAll('[data-meal]').forEach(b=>b.onclick=()=>{meal=b.dataset.meal;sheetEl.querySelectorAll('[data-meal]').forEach(x=>x.classList.toggle('sel',x===b));});
   sheetEl.querySelector('#pt-save').onclick=()=>{
     const g=grams();
     if(g<=0){toast('Amount needed');return;}
-    const it={name:p.name,kcal:Math.round(p.kcal100*g/100),protein:Math.round(p.p100*g/1000)*10,carbs:Math.round(p.c100*g/1000)*10,fat:Math.round(p.f100*g/1000)*10,fibre:Math.round(p.fi100*g/1000)*10};
+    const r1=v=>Math.round(v*10)/10;
+    let nm=p.name;
+    if(sizes){const q=parseFloat(qty.value)||0;nm=mode==='g'?p.name+', '+Math.round(g)+' g':p.name+' ('+(Math.round(q*100)/100)+' '+sizes[+mode.slice(1)][0].toLowerCase()+')';}
+    if(!sizes&&!/,\s*\d+(\.\d+)?\s*g\s*$/i.test(nm))nm=nm+', '+(Math.round(g*10)/10)+' g';
+    const it={name:nm,kcal:Math.round(p.kcal100*g/100),protein:r1(p.p100*g/100),carbs:r1(p.c100*g/100),fat:r1(p.f100*g/100),fibre:r1(p.fi100*g/100),g:Math.round(g*10)/10,base:{k:p.kcal100,p:p.p100,c:p.c100,f:p.f100,fi:p.fi100}};
     if(draftCtx){draftCtx.items[draftCtx.index]=it;const its=draftCtx.items;draftCtx=null;draftSheet(its);toast('Item replaced');return;}
-    foodsOf(sel).push(Object.assign({id:uid(),slot:meal,snack:meal==='snack',source:'barcode'},it));
+    foodsOf(sel).push(Object.assign({id:uid(),slot:meal,snack:meal==='snack',source:p.source||'barcode'},it));
     save();closeSheet();render();toast('Added');
   };
   sheetEl.querySelector('#shcancel').onclick=()=>{if(draftCtx){const its=draftCtx.items;draftCtx=null;draftSheet(its);}else closeSheet();};
