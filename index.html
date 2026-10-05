@@ -361,6 +361,12 @@ body.gwlv .restbar{bottom:calc(126px + env(safe-area-inset-bottom))}
 .gwnav .sheetbtn{margin:0}.gwnav .sheetbtn.ghost{flex:0 0 96px}.gwnav .sheetbtn.primary{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .exerr{background:rgba(229,50,27,.14);color:var(--kcal-hi);border-radius:12px;padding:10px 12px;margin:0 0 10px;font-size:13px;line-height:1.4}.setrow input.bad{box-shadow:inset 0 0 0 2px var(--kcal)}
 .undobar{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:61;display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--surface2);border:1px solid var(--hair);border-radius:14px;padding:10px 14px;font-size:13px;box-shadow:0 8px 28px rgba(0,0,0,.4)}.undobar button{border:0;background:none;color:var(--kcal-hi);font:inherit;font-weight:700;padding:6px 4px}.gwn.pr{color:var(--kcal);font-size:10px;letter-spacing:.04em}.gwnote{width:100%;box-sizing:border-box;background:var(--surface2);border:0;border-radius:12px;padding:12px;color:var(--ink);font-size:16px;font-family:inherit;resize:none;margin-top:8px}
+
+/* polish: number roll, tab indicator, confirm buttons */
+.tabbar{position:fixed}.tabind{position:absolute;top:0;left:0;width:36px;height:3px;border-radius:0 0 3px 3px;background:var(--kcal);transition:transform .32s cubic-bezier(.3,.8,.3,1);pointer-events:none;opacity:0}.tabind.on{opacity:1}
+.cfm{position:relative;overflow:hidden;background:var(--kcal)!important;color:#fff!important;border-color:var(--kcal)!important}.cfm::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.65);transform-origin:left;animation:cfmw 3s linear forwards}@keyframes cfmw{to{transform:scaleX(0)}}
+.undobar button.done{color:var(--green,#4cc38a)}.undobar{transition:opacity .25s}
+@media (prefers-reduced-motion:reduce){.tabind{transition:none}.cfm::after{animation:none;display:none}.undobar{transition:none}}
 .gwblk+.gwblk{margin-top:22px;padding-top:18px;border-top:1px solid var(--hair)}
 .gwcuebtn{border:0;background:none;color:var(--dim);font:inherit;font-size:12px;font-weight:600;padding:2px 0 10px;text-decoration:underline;text-underline-offset:3px}.gwcues{margin:0 0 12px;padding:10px 12px 10px 28px;background:var(--surface2);border-radius:12px;font-size:13px;line-height:1.5;color:var(--ink)}.gwcues li{margin:2px 0}
 </style>
@@ -387,7 +393,7 @@ body.gwlv .restbar{bottom:calc(126px + env(safe-area-inset-bottom))}
 <div id="activity"></div>
 <div class="quickchips"><button class="qchip" id="prevchip">↻ Previous items</button></div>
 </div>
-<div class="tabbar">
+<div class="tabbar"><i class="tabind" id="tabind"></i>
   <button class="tab sel" data-tab="food" aria-label="Food"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Z"/><path d="M21 15v7"/></svg>Food</button>
   <button class="tab" data-tab="train" aria-label="Train"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="4" height="6" rx="1"/><rect x="18" y="9" width="4" height="6" rx="1"/><path d="M6 12h12"/></svg>Train</button>
 </div>
@@ -780,11 +786,11 @@ function editSheet(dayKey,id){
   };
   const del=sheetEl.querySelector('#ef-del');
   del.onclick=()=>{
-    if(!del.classList.contains('arm')){del.classList.add('arm');del.textContent='Tap again to delete';return;}
     const arr=foodsOf(dayKey),i=arr.findIndex(x=>x.id===id);
     if(i>=0){const rm=arr.splice(i,1)[0];if(rm&&rm.id)state.deletedIds=[...(state.deletedIds||[]),rm.id].slice(-500);}
     save();closeSheet();render();toast('Deleted');
   };
+  cfm(del,'Tap again to delete');
   sheetEl.querySelector('#shcancel').onclick=closeSheet;
 }
 /* ---------- previous items (history search) ---------- */
@@ -1307,7 +1313,7 @@ function trToday(){
     c.onclick=()=>{if(c._sw&&Date.now()-c._sw<350)return;if(open){open=false;c.style.transform='';return;}exDaySheet(c.dataset.exs);};
   });
   el.querySelectorAll('[data-swe]').forEach(b=>b.onclick=()=>{const rs=exEntries().filter(w=>w.date===tsel&&w.exercise===b.dataset.swe);if(rs.length===1)exEdit(rs[0].id,trToday);else exDaySheet(b.dataset.swe);});
-  el.querySelectorAll('[data-swd]').forEach(b=>b.onclick=()=>{const nm=b.dataset.swd,rs=exEntries().filter(w=>w.date===tsel&&w.exercise===nm);if(!rs.length)return;const ids=rs.map(w=>w.id);state.workouts=exEntries().filter(w=>ids.indexOf(w.id)<0);if(state.deletedIds)ids.forEach(i=>state.deletedIds.push(i));save();trToday();undoBar('Deleted '+nm,()=>{state.workouts=(state.workouts||[]).concat(rs);if(state.deletedIds)state.deletedIds=state.deletedIds.filter(i=>ids.indexOf(i)<0);save();trToday();toast('Restored');});});
+  el.querySelectorAll('[data-swd]').forEach(b=>{cfm(b,'Confirm');b.onclick=()=>{const nm=b.dataset.swd,rs=exEntries().filter(w=>w.date===tsel&&w.exercise===nm);if(!rs.length)return;const ids=rs.map(w=>w.id);state.workouts=exEntries().filter(w=>ids.indexOf(w.id)<0);if(state.deletedIds)ids.forEach(i=>state.deletedIds.push(i));save();trToday();undoBar('Deleted '+nm,()=>{state.workouts=(state.workouts||[]).concat(rs);if(state.deletedIds)state.deletedIds=state.deletedIds.filter(i=>ids.indexOf(i)<0);save();trToday();toast('Restored');});};});
 }
 
 function undoBar(msg,fn){
@@ -1315,7 +1321,7 @@ function undoBar(msg,fn){
   if(!b){b=document.createElement('div');b.id='undobar';b.className='undobar';document.body.appendChild(b);}
   b.innerHTML='<span>'+esc(msg)+'</span><button type="button" id="undo-go">Undo</button>';b.style.display='flex';
   clearTimeout(b._x);b._x=setTimeout(()=>{b.style.display='none';},7000);
-  document.getElementById('undo-go').onclick=()=>{b.style.display='none';fn();};
+  document.getElementById('undo-go').onclick=function(){const u=this;u.classList.add('done');u.textContent='Restored \u2713';clearTimeout(b._x);setTimeout(()=>{b.style.display='none';fn();},REDUCED?0:650);};
 }
 function exDelete(id,after,label){
   const w=exEntries().find(x=>x.id===id);if(!w)return;
@@ -1346,7 +1352,7 @@ function exEdit(id,after){
   draw();
   sheetEl.querySelector('#shcancel').onclick=closeSheet;
   document.getElementById('ee-add').onclick=()=>{const l=sets[sets.length-1]||{w:'',r:''};sets.push({w:l.w,r:l.r});draw();};
-  document.getElementById('ee-del').onclick=()=>{closeSheet();exDelete(id,after,'Entry deleted');};
+  document.getElementById('ee-del').onclick=()=>{closeSheet();exDelete(id,after,'Entry deleted');};cfm(document.getElementById('ee-del'),'Tap again to delete');
   document.getElementById('ee-save').onclick=()=>{
     const clean=sets.map(s=>({w:parseFloat(s.w)||0,r:parseInt(s.r)||0})).filter(s=>s.r>0);
     if(!clean.length){toast('Add reps for at least one set');return;}
@@ -1743,10 +1749,10 @@ function trRoutineDetail(id){
   };
   const del=document.getElementById('rt-del');
   del.onclick=()=>{
-    if(!del.classList.contains('arm')){del.classList.add('arm');del.textContent='Tap again to delete';return;}
     state.routines=(state.routines||[]).filter(x=>x.id!==id);
     save();trRoutines();toast(r.name+' deleted');
   };
+  cfm(del,'Tap again to delete');
 }
 function rtStart(id){gwStart(id);}
 setTimeout(()=>{try{gwLive();}catch(e){}},600);
@@ -2284,6 +2290,32 @@ function deviceSheet(){
 /* boot sync */
 if(localStorage.getItem(SYNC_TOKEN_KEY)){syncStatus('ok','Connected');cloudSync();}
 render();
+
+/* polish helpers (plain CSS/JS, written for form.brb) */
+const REDUCED=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function cfm(btn,label){if(!btn)return;btn.addEventListener('click',e=>{if(btn.classList.contains('cfm')){clearTimeout(btn._cf);return;}e.stopImmediatePropagation();e.preventDefault();btn._t=btn.textContent;btn.classList.add('cfm');btn.textContent=label||'Tap again to confirm';btn._cf=setTimeout(()=>{btn.classList.remove('cfm');btn.textContent=btn._t;},3000);},true);}
+const rollMem={day:null,v:{}};
+function rollEl(el,key){
+  const m=/^([\d,]+(?:\.\d+)?)([\s\S]*)$/.exec(el.textContent.trim());if(!m)return;
+  const to=parseFloat(m[1].replace(/,/g,'')),dec=(m[1].split('.')[1]||'').length,rest=m[2],comma=m[1].indexOf(',')>=0;
+  const from=rollMem.v[key];rollMem.v[key]=to;
+  if(REDUCED||from==null||from===to||Math.abs(to-from)<1)return;
+  const fmt=v=>{const r=dec?v.toFixed(dec):String(Math.round(v));return comma?Number(r).toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec}):r;};
+  const t0=performance.now(),D=520;el._roll=t0;
+  const step=t=>{if(el._roll!==t0)return;const p=Math.min(1,(t-t0)/D),e=1-Math.pow(1-p,3);el.textContent=fmt(from+(to-from)*e)+rest;if(p<1)requestAnimationFrame(step);};
+  el.textContent=fmt(from)+rest;requestAnimationFrame(step);setTimeout(()=>{if(el._roll===t0){el._roll=0;el.textContent=fmt(to)+rest;}},D+120);
+}
+function rollNums(){
+  const k=sel+'|'+selRing;if(rollMem.day!==sel){rollMem.day=sel;rollMem.v={};}
+  const big=document.querySelector('#stack .scenter .big');if(big)rollEl(big,'big|'+selRing);
+  document.querySelectorAll('#legend .lline b').forEach((b,i)=>rollEl(b,'lg'+i));
+  const bk=document.querySelector('#bankrow strong');if(bk)rollEl(bk,'bank');
+}
+(function(){const r0=render;render=function(){const r=r0.apply(this,arguments);try{rollNums();}catch(e){}return r;};})();
+function posTabInd(){const ind=document.getElementById('tabind'),t=document.querySelector('.tab.sel');if(!ind||!t)return;ind.style.transform='translateX('+(t.offsetLeft+t.offsetWidth/2-18)+'px)';ind.classList.add('on');}
+new MutationObserver(posTabInd).observe(root,{attributes:true,attributeFilter:['data-tab']});
+document.querySelectorAll('.tab').forEach(b=>new MutationObserver(posTabInd).observe(b,{attributes:true,attributeFilter:['class']}));
+window.addEventListener('resize',posTabInd);setTimeout(()=>{const i=document.getElementById('tabind');if(i){const tr=i.style.transition;i.style.transition='none';posTabInd();void i.offsetWidth;i.style.transition=tr;}},0);
 /* ---------- tabs ---------- */
 function setTab(t){if(t!=='food'&&t!=='train')t='food';root.setAttribute('data-tab',t);localStorage.setItem('foodBrbTab',t);document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('sel',b.dataset.tab===t));if(t==='train')renderTrain();}
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
