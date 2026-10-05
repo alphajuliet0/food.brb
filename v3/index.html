@@ -221,8 +221,8 @@ button.avatar{cursor:pointer;border:0;font:inherit}
 .mealhead.tappable:active{color:var(--ink)}
 .mealwrap{position:relative;border-radius:18px;overflow:hidden}
 .swipebg{position:absolute;inset:0;display:flex;align-items:center;font-size:12px;font-weight:700;padding:0 18px;border-radius:18px}
-.swipebg.right{background:var(--kcal);color:#fff;justify-content:flex-start}
-.swipebg.left{background:var(--protein);color:#fff;justify-content:flex-end}
+.swipebg.right{background:var(--protein);color:#fff;justify-content:flex-start}
+.swipebg.left{padding:0;justify-content:flex-end;background:var(--surface2)}.swipebg.left button{width:78px;height:100%;border:0;color:#fff;font:700 13px Inter,sans-serif}.swipebg.left .mc{background:#3a3a42}.swipebg.left .md{background:var(--kcal)}
 .mealcard{position:relative;transition:transform .18s ease;touch-action:pan-y}
 .copybtn{display:none;width:32px;height:32px;border-radius:50%;background:var(--surface2);color:var(--dim);font-size:14px;align-items:center;justify-content:center;flex:0 0 auto}
 @media(hover:hover){.mealcard:hover .copybtn{display:flex}}
@@ -586,7 +586,7 @@ function render(){
     for(const f of items){
       if(!f.id){f.id=uid();dirty=true;}
       const mac=[f.protein?'P '+Math.round(f.protein)+'g':'',f.carbs?'C '+Math.round(f.carbs)+'g':'',f.fat?'F '+Math.round(f.fat)+'g':''].filter(Boolean).join(' · ');
-      html+='<div class="mealwrap"><div class="swipebg right">&#8594; copy to today</div><div class="swipebg left">copy to day &#8592;</div>'
+      html+='<div class="mealwrap"><div class="swipebg right">Copy to today</div><div class="swipebg left"><button class="mc" data-mcopy="'+f.id+'">Copy to</button><button class="md" data-mdel="'+f.id+'">Delete</button></div>'
         +'<div class="mealcard" data-id="'+f.id+'"><div class="thumb">'+icon+'</div><div class="minfo"><div class="mname2">'+esc(f.name||'')+'</div><div class="mmacros">'+(mac||'&nbsp;')+'</div></div>'
         +'<div class="mkcal">'+(f.kcal||0).toLocaleString()+' <span>cal</span></div><button class="copybtn" data-copy="'+f.id+'" aria-label="Copy to another day">&#10697;</button></div></div>';
     }
@@ -962,24 +962,28 @@ function addSheet(pre){
 function attachMealHandlers(){
   document.querySelectorAll('.mealcard').forEach(card=>{
     const id=card.dataset.id;
-    card.addEventListener('click',e=>{if(card._swiped){card._swiped=false;return;}editSheet(sel,id);});
+    card.addEventListener('click',e=>{if(card._swiped){card._swiped=false;return;}if(card._open){card._open=false;card.style.transform='';return;}editSheet(sel,id);});
     card.addEventListener('touchstart',e=>{const t=e.touches[0];card._x=t.clientX;card._y=t.clientY;card._dx=0;card._horiz=null;},{passive:true});
     card.addEventListener('touchmove',e=>{
       const t=e.touches[0],dx=t.clientX-card._x,dy=t.clientY-card._y;
       if(card._horiz===null&&(Math.abs(dx)>8||Math.abs(dy)>8))card._horiz=Math.abs(dx)>Math.abs(dy);
-      if(card._horiz){card._dx=dx;card.style.transition='none';card.style.transform='translateX('+dx+'px)';}
+      if(card._horiz){const base=card._open?-156:0;card._dx=dx;card.style.transition='none';card.style.transform='translateX('+Math.max(-156,Math.min(120,base+dx))+'px)';}
     },{passive:true});
     card.addEventListener('touchend',()=>{
-      card.style.transition='';card.style.transform='';
+      card.style.transition='';
       const dx=card._dx||0;card._dx=0;
-      if(!card._horiz)return;
+      if(!card._horiz){return;}
       if(Math.abs(dx)>24)card._swiped=true;
-      const ff=findFood(sel,id);if(!ff){card._horiz=null;return;}
-      if(dx>64){mealPickSheet('Copy to today','Which meal?',ff.slot||(ff.snack?'snack':'breakfast'),slot=>copyFood(sel,id,TODAY,slot));}
-      else if(dx<-64){const src=sel;dayPickSheet(day=>{const f=findFood(src,id);mealPickSheet('Copy to '+fmtDay(day),'Which meal?',f.slot||(f.snack?'snack':'breakfast'),slot=>copyFood(src,id,day,slot));});}
+      const ff=findFood(sel,id);if(!ff){card._horiz=null;card.style.transform='';return;}
+      const eff=(card._open?-156:0)+dx;
+      if(eff<-70){card._open=true;card.style.transform='translateX(-156px)';}
+      else{card._open=false;card.style.transform='';}
+      if(!card._open&&dx>64){mealPickSheet('Copy to today','Which meal?',ff.slot||(ff.snack?'snack':'breakfast'),slot=>copyFood(sel,id,TODAY,slot));}
       card._horiz=null;
     });
   });
+  document.querySelectorAll('[data-mcopy]').forEach(b=>b.onclick=e=>{e.stopPropagation();const id=b.dataset.mcopy,src=sel;dayPickSheet(day=>{const f=findFood(src,id);if(f)mealPickSheet('Copy to '+fmtDay(day),'Which meal?',f.slot||(f.snack?'snack':'breakfast'),slot=>copyFood(src,id,day,slot));});});
+  document.querySelectorAll('[data-mdel]').forEach(b=>{cfm(b,'Confirm');b.onclick=e=>{e.stopPropagation();const id=b.dataset.mdel,day=sel,arr=foodsOf(day),i=arr.findIndex(x=>x.id===id);if(i<0)return;const rm=arr.splice(i,1)[0];state.deletedIds=[...(state.deletedIds||[]),rm.id].slice(-500);save();render();undoBar('Deleted '+(rm.name||'item'),()=>{foodsOf(day).splice(Math.min(i,foodsOf(day).length),0,rm);state.deletedIds=(state.deletedIds||[]).filter(x=>x!==rm.id);save();render();toast('Restored');});};});
   document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=e=>{
     e.stopPropagation();
     const id=b.dataset.copy,src=sel,f=findFood(src,id);
@@ -2311,7 +2315,11 @@ function rollNums(){
   document.querySelectorAll('#legend .lline b').forEach((b,i)=>rollEl(b,'lg'+i));
   const bk=document.querySelector('#bankrow strong');if(bk)rollEl(bk,'bank');
 }
-(function(){const r0=render;render=function(){const r=r0.apply(this,arguments);try{rollNums();}catch(e){}return r;};})();
+(function(){const r0=render;render=function(){
+  const old={};try{document.querySelectorAll('#stack .rv').forEach(c=>{old[c.dataset.ring]=c.style.strokeDashoffset||c.getAttribute('stroke-dashoffset');});}catch(e){}
+  const r=r0.apply(this,arguments);try{rollNums();}catch(e){}
+  try{if(!REDUCED&&rollMem.ringDay===sel){document.querySelectorAll('#stack .rv').forEach(c=>{const o=old[c.dataset.ring],n=c.getAttribute('stroke-dashoffset');if(o==null||o===''||o===n)return;c.style.transition='none';c.style.strokeDashoffset=o;void c.getBoundingClientRect();c.style.transition='stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1)';c.style.strokeDashoffset=n;});}rollMem.ringDay=sel;}catch(e){}
+  return r;};})();
 function posTabInd(){const ind=document.getElementById('tabind'),t=document.querySelector('.tab.sel');if(!ind||!t)return;ind.style.transform='translateX('+(t.offsetLeft+t.offsetWidth/2-18)+'px)';ind.classList.add('on');}
 new MutationObserver(posTabInd).observe(root,{attributes:true,attributeFilter:['data-tab']});
 document.querySelectorAll('.tab').forEach(b=>new MutationObserver(posTabInd).observe(b,{attributes:true,attributeFilter:['class']}));
