@@ -415,11 +415,12 @@ body.gwlv .restbar{bottom:calc(126px + env(safe-area-inset-bottom))}
 @media (prefers-reduced-motion:reduce){.rvb{animation:none}}
 </style>
 </head>
-<body><details style="padding:8px"><summary>Food inbox</summary><p id="food-inbox-status" role="status">Checking food inbox…</p><button id="food-inbox-retry">Retry import</button><form id="food-inbox-connect"><label>Private inbox reader credential <input id="food-inbox-reader" type="password" autocomplete="off"></label><button>Connect inbox</button></form></details>
+<body>
 <div class="top">
   <div class="brand">form.<svg aria-label="brb" viewBox="0 0 1726 757" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" transform="translate(-76 757) scale(1 -1)" d="M76 757V226C76 74 143 0 270 0H416C556 0 644 86 644 264C644 442 556 528 416 528H182V757ZM405 426C497 426 537 378 537 264C537 150 497 103 405 103H301C215 103 182 141 182 231V426Z"/><path fill="#e5321b" transform="translate(619 757) scale(1 -1)" d="M218 528C114 528 75 480 75 374V0H181V358C181 404 202 426 249 426H435V528Z"/><path fill="currentColor" transform="translate(1082 757) scale(1 -1)" d="M76 757V226C76 74 143 0 270 0H416C556 0 644 86 644 264C644 442 556 528 416 528H182V757ZM405 426C497 426 537 378 537 264C537 150 497 103 405 103H301C215 103 182 141 182 231V426Z"/></svg></div>
   <div class="topbtns"><button class="miniring" id="stepsring" aria-label="Steps today"><svg class="ring" viewBox="0 0 34 34"><circle class="mr-track" cx="17" cy="17" r="14"/><circle class="mr-arc" id="mrarc" cx="17" cy="17" r="14" stroke-dasharray="87.96" stroke-dashoffset="87.96"/></svg><svg class="mr-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4.5" r="1.6"/><path d="M12.5 8l-2.8 4.6 2.3 2.2.8 5.2"/><path d="M12.5 8l2.6 2.8 2.4 1.2"/><path d="M9.7 12.6 7 15.3"/></svg></button><button class="avatar" id="avatar" aria-label="You: sync, targets and ring">A</button></div>
 </div>
+<button id="food-inbox-indicator" hidden style="margin:0 20px 8px;padding:4px 8px;font:inherit;font-size:12px;border-radius:12px" aria-label="Food inbox awaiting sync — open profile">Awaiting sync</button>
 <div id="ptr"><div class="ptrring"></div></div>
 <div id="view-food">
 <div class="dateline" id="dateline"></div>
@@ -2332,6 +2333,7 @@ function youSheet(){
   const row=(l,v)=>'<div class="yrow"><span class="yl">'+l+'</span><span class="yv">'+v+'</span></div>';
   openSheet('<h3>You</h3>'
     +'<div class="yhead"><div class="yava">'+esc((P.name||'You').trim()[0].toUpperCase())+'</div><div><b>'+esc(P.name||'You')+'</b><div class="sub">'+FOODBRB.streak(state)+'-day streak</div></div></div>'
+    +inboxProfileMarkup()
     +row('Cloud sync','<span class="syncdot '+syncState+'"></span> '+esc(syncText))
     +(tok?'<button class="sheetbtn ghost" id="y-syncnow">Sync now</button>':'<button class="sheetbtn primary" id="y-connect">Connect private sync</button>')
     +'<div class="yrow tappable" data-t="kcalTarget" data-l="Calories"><span class="yl">Calories</span><span class="yv">'+P.kcalTarget.toLocaleString()+' kcal</span></div>'
@@ -2348,6 +2350,7 @@ function youSheet(){
     +'<button class="sheetbtn ghost" id="y-setup">Redo setup</button>'
     +'<div class="ynote">Everything lives on this phone, private to you. Cloud sync keeps a private backup and feeds the nightly MyFitnessPal import.</div>'
     +'<button class="sheetbtn ghost" id="shcancel">Close</button>');
+  bindInboxProfileControls();
   const sn=sheetEl.querySelector('#y-syncnow');if(sn)sn.onclick=()=>{cloudSync();};
   const cn=sheetEl.querySelector('#y-connect');if(cn)cn.onclick=connectCloudSync;
   const yr=sheetEl.querySelector('#y-ring');if(yr)yr.onclick=()=>{closeSheet();startRingSync();};
@@ -2872,7 +2875,19 @@ function closeReview(){const ov=document.getElementById('revov');ov.classList.re
 const foodInboxImporter=new FORM_FOOD_INBOX.InboxImporter(localStorage);
 const FOOD_INBOX_ORIGIN='https://form-brb-food-inbox.ajay-7a2.workers.dev';
 const FOOD_INBOX_READER_KEY='form-brb-inbox-reader-v1';
-function inboxStatus(message){document.getElementById('food-inbox-status').textContent=message;}
+let foodInboxMessage='Checking food inbox…',foodInboxNeedsAttention=false;
+function inboxStatus(message){
+ foodInboxMessage=message;
+ if(message!=='Checking food inbox…')foodInboxNeedsAttention=/pending|awaiting|paused|incomplete|could not|Connect diary sync/.test(message);
+ const status=document.getElementById('food-inbox-status');if(status)status.textContent=message;
+ const indicator=document.getElementById('food-inbox-indicator');if(indicator)indicator.hidden=!(foodInboxNeedsAttention||foodInboxImporter.queue().length);
+}
+function inboxProfileMarkup(){return '<details id="food-inbox-settings"><summary>Food inbox</summary><p id="food-inbox-status" role="status">'+esc(foodInboxMessage)+'</p><button class="sheetbtn ghost" id="food-inbox-retry">Retry import</button><form id="food-inbox-connect"><label>Private inbox reader credential <input id="food-inbox-reader" type="password" autocomplete="off"></label><button class="sheetbtn ghost">Connect inbox</button></form></details>';}
+function bindInboxProfileControls(){
+ document.getElementById('food-inbox-retry').onclick=()=>importFoodInboxOnOpen();
+ document.getElementById('food-inbox-connect').onsubmit=e=>{e.preventDefault();const input=document.getElementById('food-inbox-reader');const token=input.value.trim();if(token.length<40){inboxStatus('Connection details incomplete');return;}try{localStorage.setItem(FOOD_INBOX_READER_KEY,token);input.value='';inboxStatus('Inbox connected on this phone');importFoodInboxOnOpen();}catch{inboxStatus('This phone could not save the inbox connection');}};
+}
+
 async function inboxRequest(path,options={}){
  const token=localStorage.getItem(FOOD_INBOX_READER_KEY);if(!token)throw Error('Inbox not connected');
  const r=await fetch(FOOD_INBOX_ORIGIN+path,{...options,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('Inbox unavailable');return r.json();
@@ -2888,8 +2903,8 @@ async function importFoodInboxOnOpen(){
  await foodInboxImporter.open({fetchPending:async()=>{const j=await inboxRequest('/pending');more=j.hasMore;return j.items;},getState:()=>state,saveLocal:next=>{localStorage.setItem(FOODBRB.STORE,JSON.stringify(next));state=next;render();},sync:()=>cloudSync(),status:inboxStatus});
  if(more)inboxStatus('More inbox foods pending — Retry import for the next batch');
 }
-document.getElementById('food-inbox-retry').onclick=()=>importFoodInboxOnOpen();
-document.getElementById('food-inbox-connect').onsubmit=e=>{e.preventDefault();const input=document.getElementById('food-inbox-reader');const token=input.value.trim();if(token.length<40){inboxStatus('Connection details incomplete');return;}try{localStorage.setItem(FOOD_INBOX_READER_KEY,token);input.value='';inboxStatus('Inbox connected on this phone');importFoodInboxOnOpen();}catch{inboxStatus('This phone could not save the inbox connection');}};
+document.getElementById('food-inbox-indicator').onclick=()=>{youSheet();document.getElementById('food-inbox-settings').open=true;};
+inboxStatus(foodInboxMessage);
 window.addEventListener('pageshow',()=>importFoodInboxOnOpen());
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')importFoodInboxOnOpen();});
 window.addEventListener('online',()=>importFoodInboxOnOpen());

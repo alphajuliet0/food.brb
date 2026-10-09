@@ -1,5 +1,5 @@
 // food.brb service worker. Cache cleanup never touches localStorage.
-const CACHE='food-brb-inbox-25c7137ebe158aa7';
+const CACHE='food-brb-inbox-e461b21b4dece58c';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icon.svg','./fonts.css','./sg.css','./data.js','./food-inbox.js'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
