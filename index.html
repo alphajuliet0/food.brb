@@ -415,7 +415,7 @@ body.gwlv .restbar{bottom:calc(126px + env(safe-area-inset-bottom))}
 @media (prefers-reduced-motion:reduce){.rvb{animation:none}}
 </style>
 </head>
-<body>
+<body><details style="padding:8px"><summary>Food inbox</summary><p id="food-inbox-status" role="status">Checking food inbox…</p><button id="food-inbox-retry">Retry import</button><form id="food-inbox-connect"><label>Private inbox reader credential <input id="food-inbox-reader" type="password" autocomplete="off"></label><button>Connect inbox</button></form></details>
 <div class="top">
   <div class="brand">form.<svg aria-label="brb" viewBox="0 0 1726 757" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" transform="translate(-76 757) scale(1 -1)" d="M76 757V226C76 74 143 0 270 0H416C556 0 644 86 644 264C644 442 556 528 416 528H182V757ZM405 426C497 426 537 378 537 264C537 150 497 103 405 103H301C215 103 182 141 182 231V426Z"/><path fill="#e5321b" transform="translate(619 757) scale(1 -1)" d="M218 528C114 528 75 480 75 374V0H181V358C181 404 202 426 249 426H435V528Z"/><path fill="currentColor" transform="translate(1082 757) scale(1 -1)" d="M76 757V226C76 74 143 0 270 0H416C556 0 644 86 644 264C644 442 556 528 416 528H182V757ZM405 426C497 426 537 378 537 264C537 150 497 103 405 103H301C215 103 182 141 182 231V426Z"/></svg></div>
   <div class="topbtns"><button class="miniring" id="stepsring" aria-label="Steps today"><svg class="ring" viewBox="0 0 34 34"><circle class="mr-track" cx="17" cy="17" r="14"/><circle class="mr-arc" id="mrarc" cx="17" cy="17" r="14" stroke-dasharray="87.96" stroke-dashoffset="87.96"/></svg><svg class="mr-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4.5" r="1.6"/><path d="M12.5 8l-2.8 4.6 2.3 2.2.8 5.2"/><path d="M12.5 8l2.6 2.8 2.4 1.2"/><path d="M9.7 12.6 7 15.3"/></svg></button><button class="avatar" id="avatar" aria-label="You: sync, targets and ring">A</button></div>
@@ -460,7 +460,7 @@ body.gwlv .restbar{bottom:calc(126px + env(safe-area-inset-bottom))}
 <div class="sheetbg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 <div class="onb" id="onb"></div>
-<script>/* food.brb v3 - data layer. Direction-independent: reads the shared food.brb
+<script src="food-inbox.js"></script><script>/* food.brb v3 - data layer. Direction-independent: reads the shared food.brb
    state (same origin localStorage, same schema as the live app + worker).
    Pure logic only - no rendering. Keeps his 65 days, MFP pipeline and sync
    working untouched (read-only here; writes stay with the live app until the
@@ -632,9 +632,10 @@ function render(){
     for(const f of items){
       if(!f.id){f.id=uid();dirty=true;}
       const mac=[f.g?'<span class="mamt">'+Math.round(f.g)+' g</span>':(f.pm&&f.pm!==1?'<span class="mamt">x'+f.pm+'</span>':''),f.protein?'<b class="mprot">'+Math.round(f.protein)+'g protein</b>':'',f.carbs?'C '+Math.round(f.carbs)+'g':'',f.fat?'F '+Math.round(f.fat)+'g':''].filter(Boolean).join(' · ');
+      const inboxNote=f.source==='cipher-inbox'?(['protein','carbs','fat','fibre'].filter(k=>f[k]==null).map(k=>k+' unknown').join(' · ')+(f.provenance?.estimated?' · Estimated':'')):'';
       const pDel='<button class="md" data-mdel="'+f.id+'">Delete</button>',pAct='<button class="me" data-medit="'+f.id+'">Edit</button><button class="mc" data-mcopy="'+f.id+'">Copy to</button>';
       html+='<div class="mealwrap"><div class="swipebg right">'+(SWDEL<0?pAct:pDel)+'</div><div class="swipebg left">'+(SWDEL<0?pDel:pAct)+'</div>'
-        +'<div class="mealcard" data-id="'+f.id+'"><div class="minfo"><div class="mname2">'+esc(f.name||'')+'</div><div class="mmacros">'+(mac||'&nbsp;')+'</div></div>'
+        +'<div class="mealcard" data-id="'+f.id+'"><div class="minfo"><div class="mname2">'+esc(f.name||'')+'</div><div class="mmacros">'+(mac||'&nbsp;')+(inboxNote?'<span class="ynote">'+esc(inboxNote)+'</span>':'')+'</div></div>'
         +'<div class="mkcal">'+(f.kcal||0).toLocaleString()+' <span>cal</span></div><button class="copybtn" data-copy="'+f.id+'" aria-label="Copy to another day">&#10697;</button></div></div>';
     }
   }
@@ -723,7 +724,7 @@ const ULTRAHUMAN_SYNC_ORIGIN='https://food-brb-ultrahuman.ajay-7a2.workers.dev';
 let syncTimer=null,syncBusy=false,syncState='off',syncText='Not connected';
 function syncStatus(s,t){syncState=s;syncText=t;}
 function mergeBy(arrA,arrB,key){const m=new Map();for(const x of [...(arrA||[]),...(arrB||[])]){const k=x&&x[key];if(k!=null)m.set(k,Object.assign({},m.get(k)||{},x));}return [...m.values()];}
-function mergeCloud(local,remote){if(!remote)return local;const out=Object.assign({v:1},remote,local);out.profile=Object.assign({},remote.profile||{},local.profile||{});out.weights=mergeBy(remote.weights,local.weights,'date');const deleted=new Set([...(remote.deletedIds||[]),...(local.deletedIds||[])]);out.deletedIds=[...deleted].slice(-500);out.workouts=mergeBy(remote.workouts,local.workouts,'id').filter(x=>!deleted.has(x.id));out.exercises=[...new Set([...(remote.exercises||[]),...(local.exercises||[])])];out.exmeta=Object.assign({},remote.exmeta||{},local.exmeta||{});out.days={};for(const k of new Set([...Object.keys(remote.days||{}),...Object.keys(local.days||{})])){const a=remote.days&&remote.days[k]||{},b=local.days&&local.days[k]||{};out.days[k]=Object.assign({},a,b,{foods:mergeBy(a.foods,b.foods,'id').filter(x=>!deleted.has(x.id))});}return out;}
+function mergeCloud(local,remote){if(!remote)return local;const out=Object.assign({v:1},remote,local);out.profile=Object.assign({},remote.profile||{},local.profile||{});out.weights=mergeBy(remote.weights,local.weights,'date');const deleted=new Set([...(remote.deletedIds||[]),...(local.deletedIds||[])]);out.deletedIds=[...deleted].slice(-500);out.foodInboxImportedIds=FORM_FOOD_INBOX.mergeImportedMarkers(local,remote);out.workouts=mergeBy(remote.workouts,local.workouts,'id').filter(x=>!deleted.has(x.id));out.exercises=[...new Set([...(remote.exercises||[]),...(local.exercises||[])])];out.exmeta=Object.assign({},remote.exmeta||{},local.exmeta||{});out.days={};for(const k of new Set([...Object.keys(remote.days||{}),...Object.keys(local.days||{})])){const a=remote.days&&remote.days[k]||{},b=local.days&&local.days[k]||{};out.days[k]=Object.assign({},a,b,{foods:mergeBy(a.foods,b.foods,'id').filter(x=>!deleted.has(x.id))});}return out;}
 function cloudSafe(){const x=JSON.parse(JSON.stringify(state));delete x.photos;if(x.profile)delete x.profile.geminiKey;return x;}
 async function cloudSync(){const token=localStorage.getItem(SYNC_TOKEN_KEY);if(!token||syncBusy)return;syncBusy=true;syncStatus('busy','Syncing...');try{
   let rev=Number(localStorage.getItem(SYNC_REV_KEY)||0);
@@ -734,7 +735,7 @@ async function cloudSync(){const token=localStorage.getItem(SYNC_TOKEN_KEY);if(!
   let w=await fetch(FOOD_SYNC_API_ORIGIN+'/data',{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json','If-Match':String(rev)},body:JSON.stringify({state:cloudSafe()})});
   if(w.status===409){j=await w.json();state=mergeCloud(state,j.state);w=await fetch(FOOD_SYNC_API_ORIGIN+'/data',{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json','If-Match':String(j.rev)},body:JSON.stringify({state:cloudSafe()})});}
   if(!w.ok)throw Error('Sync could not save');
-  j=await w.json();localStorage.setItem(SYNC_REV_KEY,String(j.rev));localStorage.setItem(FOODBRB.STORE,JSON.stringify(state));
+  j=await w.json();await inboxAck(j);localStorage.setItem(SYNC_REV_KEY,String(j.rev));localStorage.setItem(FOODBRB.STORE,JSON.stringify(state));
   P=FOODBRB.profile(state);FIBRE_GOAL=P.fibreTarget||30;
   const t=new Date();syncStatus('ok','Synced '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0'));
   render();
@@ -2867,6 +2868,33 @@ function closeReview(){const ov=document.getElementById('revov');ov.classList.re
   });
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ov.classList.contains('on'))closeReview();});
 })();
+// Added only to a review build; existing diary protocol and provider writers stay intact.
+const foodInboxImporter=new FORM_FOOD_INBOX.InboxImporter(localStorage);
+const FOOD_INBOX_ORIGIN='https://form-brb-food-inbox.ajay-7a2.workers.dev';
+const FOOD_INBOX_READER_KEY='form-brb-inbox-reader-v1';
+function inboxStatus(message){document.getElementById('food-inbox-status').textContent=message;}
+async function inboxRequest(path,options={}){
+ const token=localStorage.getItem(FOOD_INBOX_READER_KEY);if(!token)throw Error('Inbox not connected');
+ const r=await fetch(FOOD_INBOX_ORIGIN+path,{...options,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('Inbox unavailable');return r.json();
+}
+async function inboxAck(envelope){if(!foodInboxImporter.queue().length)return;try{await foodInboxImporter.acknowledge(envelope,ids=>inboxRequest('/ack',{method:'POST',body:JSON.stringify({ids})}));inboxStatus(foodInboxImporter.queue().length?'Food inbox pending':'Food inbox imported');}catch{inboxStatus('Diary saved — inbox acknowledgement pending');}}
+async function importFoodInboxOnOpen(){
+ if(!localStorage.getItem(FOOD_INBOX_READER_KEY)){inboxStatus('Food inbox not connected');return;}
+ if(!localStorage.getItem(SYNC_TOKEN_KEY)){inboxStatus('Connect diary sync before importing foods');return;}
+ // Existing sync may already be in flight at startup. Do not replace its local state mid-flight.
+ for(let n=0;syncBusy&&n<100;n++)await new Promise(resolve=>setTimeout(resolve,100));
+ if(syncBusy){inboxStatus('Diary sync busy — inbox import pending');return;}
+ let more=false;
+ await foodInboxImporter.open({fetchPending:async()=>{const j=await inboxRequest('/pending');more=j.hasMore;return j.items;},getState:()=>state,saveLocal:next=>{localStorage.setItem(FOODBRB.STORE,JSON.stringify(next));state=next;render();},sync:()=>cloudSync(),status:inboxStatus});
+ if(more)inboxStatus('More inbox foods pending — Retry import for the next batch');
+}
+document.getElementById('food-inbox-retry').onclick=()=>importFoodInboxOnOpen();
+document.getElementById('food-inbox-connect').onsubmit=e=>{e.preventDefault();const input=document.getElementById('food-inbox-reader');const token=input.value.trim();if(token.length<40){inboxStatus('Connection details incomplete');return;}try{localStorage.setItem(FOOD_INBOX_READER_KEY,token);input.value='';inboxStatus('Inbox connected on this phone');importFoodInboxOnOpen();}catch{inboxStatus('This phone could not save the inbox connection');}};
+window.addEventListener('pageshow',()=>importFoodInboxOnOpen());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')importFoodInboxOnOpen();});
+window.addEventListener('online',()=>importFoodInboxOnOpen());
+importFoodInboxOnOpen();
+
 </script>
 </body>
 </html>
