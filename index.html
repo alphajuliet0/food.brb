@@ -461,7 +461,7 @@ body.gwlv .restbar{bottom:calc(126px + env(safe-area-inset-bottom))}
 <div class="sheetbg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 <div class="onb" id="onb"></div>
-<script src="food-inbox.js"></script><script>/* food.brb v3 - data layer. Direction-independent: reads the shared food.brb
+<script src="food-inbox.js"></script><script src="read-access.js"></script><script>/* food.brb v3 - data layer. Direction-independent: reads the shared food.brb
    state (same origin localStorage, same schema as the live app + worker).
    Pure logic only - no rendering. Keeps his 65 days, MFP pipeline and sync
    working untouched (read-only here; writes stay with the live app until the
@@ -740,6 +740,7 @@ async function cloudSync(){const token=localStorage.getItem(SYNC_TOKEN_KEY);if(!
   P=FOODBRB.profile(state);FIBRE_GOAL=P.fibreTarget||30;
   const t=new Date();syncStatus('ok','Synced '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0'));
   render();
+  scheduleReadSnapshot().catch(()=>{});
   if(window.__onbRestore){const f=window.__onbRestore;window.__onbRestore=null;f(true);}
 }catch(e){syncStatus('err',e.name==='TypeError'?'Sync network blocked':(e.message||'Sync paused'));if(window.__onbRestore){const f=window.__onbRestore;window.__onbRestore=null;f(false);}}finally{syncBusy=false;}}
 function scheduleCloudSync(){if(!localStorage.getItem(SYNC_TOKEN_KEY))return;clearTimeout(syncTimer);syncTimer=setTimeout(cloudSync,700);}
@@ -2333,7 +2334,7 @@ function youSheet(){
   const row=(l,v)=>'<div class="yrow"><span class="yl">'+l+'</span><span class="yv">'+v+'</span></div>';
   openSheet('<h3>You</h3>'
     +'<div class="yhead"><div class="yava">'+esc((P.name||'You').trim()[0].toUpperCase())+'</div><div><b>'+esc(P.name||'You')+'</b><div class="sub">'+FOODBRB.streak(state)+'-day streak</div></div></div>'
-    +inboxProfileMarkup()
+    +inboxProfileMarkup()+readProfileMarkup()
     +row('Cloud sync','<span class="syncdot '+syncState+'"></span> '+esc(syncText))
     +(tok?'<button class="sheetbtn ghost" id="y-syncnow">Sync now</button>':'<button class="sheetbtn primary" id="y-connect">Connect private sync</button>')
     +'<div class="yrow tappable" data-t="kcalTarget" data-l="Calories"><span class="yl">Calories</span><span class="yv">'+P.kcalTarget.toLocaleString()+' kcal</span></div>'
@@ -2350,7 +2351,7 @@ function youSheet(){
     +'<button class="sheetbtn ghost" id="y-setup">Redo setup</button>'
     +'<div class="ynote">Everything lives on this phone, private to you. Cloud sync keeps a private backup and feeds the nightly MyFitnessPal import.</div>'
     +'<button class="sheetbtn ghost" id="shcancel">Close</button>');
-  bindInboxProfileControls();
+  bindInboxProfileControls();bindReadProfile();
   const sn=sheetEl.querySelector('#y-syncnow');if(sn)sn.onclick=()=>{cloudSync();};
   const cn=sheetEl.querySelector('#y-connect');if(cn)cn.onclick=connectCloudSync;
   const yr=sheetEl.querySelector('#y-ring');if(yr)yr.onclick=()=>{closeSheet();startRingSync();};
@@ -2909,6 +2910,18 @@ window.addEventListener('pageshow',()=>importFoodInboxOnOpen());
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')importFoodInboxOnOpen();});
 window.addEventListener('online',()=>importFoodInboxOnOpen());
 importFoodInboxOnOpen();
+
+const READ_API='https://form-brb-read-api.ajay-7a2.workers.dev',READ_PUBLISHER_KEY='form-brb-read-publisher-token-v1';let readSnapshotBusy=false,readSnapshotMessage='Snapshot sharing not connected';
+function readSnapshotStatus(s){readSnapshotMessage=s;const el=document.getElementById('read-snapshot-status');if(el)el.textContent=s;}
+function readProfileMarkup(){return '<details><summary>Assistant read access</summary><p id="read-snapshot-status" role="status">'+esc(readSnapshotMessage)+'</p><p>Shares a filtered snapshot after sync. Assistants cannot write your diary. Your targets and health history are included; settings, keys and photos are excluded.</p><a href="'+READ_API+'/owner" target="_blank" rel="noopener noreferrer">Google sign-in and read token controls</a><form id="read-publisher-connect"><label>Private snapshot publisher token <input type="password" id="read-publisher-token" autocomplete="off"></label><button class="sheetbtn ghost">Connect snapshot sharing</button></form><button class="sheetbtn ghost" id="read-snapshot-refresh">Refresh read snapshot</button><button class="sheetbtn ghost" id="read-snapshot-disable">Stop snapshot sharing on this phone</button></details>';}
+function bindReadProfile(){document.getElementById('read-publisher-connect').onsubmit=e=>{e.preventDefault();const input=document.getElementById('read-publisher-token');if(input.value.length<64){readSnapshotStatus('Publisher token incomplete');return;}try{localStorage.setItem(READ_PUBLISHER_KEY,input.value);input.value='';readSnapshotStatus('Snapshot sharing connected — sync required');cloudSync();}catch{readSnapshotStatus('Could not save publisher connection');}};document.getElementById('read-snapshot-refresh').onclick=()=>cloudSync();document.getElementById('read-snapshot-disable').onclick=()=>{localStorage.removeItem(READ_PUBLISHER_KEY);readSnapshotStatus('Snapshot sharing stopped on this phone. Existing exported snapshot remains; revoke assistant access in owner controls.');};}
+async function scheduleReadSnapshot(){if(readSnapshotBusy||!localStorage.getItem(READ_PUBLISHER_KEY)||syncState!=='ok')return;readSnapshotBusy=true;const token=localStorage.getItem(READ_PUBLISHER_KEY),diaryToken=localStorage.getItem(SYNC_TOKEN_KEY);try{
+ const request=async(path,body)=>{const r=await fetch(READ_API+path,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error();return r.json();};
+ const lease=await request('/publisher/lease',{});
+ // Observe the legacy GET after acquiring the single-publisher lease; never send the diary bearer to READ_API.
+ const r=await fetch(FOOD_SYNC_API_ORIGIN+'/data',{headers:{Authorization:'Bearer '+diaryToken},cache:'no-store',signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error();const accepted=await r.json();if(localStorage.getItem(READ_PUBLISHER_KEY)!==token)throw Error();
+ const publisher=new FORM_READ_ACCESS.SnapshotPublisher({storage:localStorage,status:readSnapshotStatus,send:filtered=>request('/publisher/snapshot',{...filtered,lease:lease.lease})});await publisher.accepted(accepted,lease.generation);
+}catch{readSnapshotStatus('Read snapshot pending — diary sync is unaffected');}finally{readSnapshotBusy=false;}}
 
 </script>
 </body>
